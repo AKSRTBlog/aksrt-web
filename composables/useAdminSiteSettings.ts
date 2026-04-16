@@ -8,6 +8,7 @@ import type {
 
 export function useAdminSiteSettings() {
   const { adminApiFetch } = useAdminSession()
+  const { invalidatePublicData } = usePublicDataInvalidation()
 
   const loading = ref(false)
   const saving = ref(false)
@@ -207,6 +208,7 @@ export function useAdminSiteSettings() {
         settings.value.publicConfig = result
       }
 
+      invalidatePublicData()
       successMessage.value = '设置已保存'
     } catch (e) {
       error.value = e instanceof Error ? e.message : '保存失败'
@@ -232,6 +234,7 @@ export function useAdminSiteSettings() {
         settings.value.publicConfig = result
       }
 
+      invalidatePublicData()
       successMessage.value = '自定义代码已保存'
     } catch (e) {
       error.value = e instanceof Error ? e.message : '保存失败'
@@ -352,6 +355,7 @@ export function useAdminSiteSettings() {
         enabledOnLogin: result.enabledOnLogin,
       }
 
+      invalidatePublicData({ keys: ['site-settings'] })
       successMessage.value = '验证码设置已保存'
     } catch (e) {
       error.value = e instanceof Error ? e.message : '保存失败'

@@ -33,6 +33,7 @@ const props = defineProps<{
 }>()
 
 const { adminApiFetch, logout, hydrateSession } = useAdminSession();
+const { invalidatePublicData } = usePublicDataInvalidation()
 
 const isEditing = computed(() => Boolean(props.articleId))
 const draftKey = computed(() => props.articleId ?? 'new')
@@ -305,6 +306,7 @@ async function saveArticle(targetStatus: 'draft' | 'published') {
     clearDraftSnapshot(draftKey.value)
     form.value = mapArticleToEditorForm(saved)
     persistedUpdatedAt.value = saved.updatedAt
+    invalidatePublicData()
     successMessage.value = targetStatus === 'draft' ? 'Draft saved.' : 'Article published.'
 
     if (!isEditing.value) {

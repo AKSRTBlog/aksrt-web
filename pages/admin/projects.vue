@@ -21,6 +21,7 @@ useHead({
 })
 
 const { adminApiFetch } = useAdminSession()
+const { invalidatePublicData } = usePublicDataInvalidation()
 
 const items = ref<ProjectItem[]>([])
 const loading = ref(true)
@@ -166,6 +167,7 @@ async function saveProjects() {
     })
 
     items.value = normalizeProjectItems(result || [])
+    invalidatePublicData()
 
     clearSuccessTimer()
     successMessage.value = '项目已保存'

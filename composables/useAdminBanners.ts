@@ -27,6 +27,7 @@ const emptyBannerDraft: BannerDraft = {
 
 export function useAdminBanners() {
   const { adminApiFetch } = useAdminSession()
+  const { invalidatePublicData } = usePublicDataInvalidation()
 
   // 状态
   const items = ref<BannerItem[]>([])
@@ -69,10 +70,6 @@ export function useAdminBanners() {
         successMessage.value = ''
       }, 3000)
     }
-  }
-
-  function invalidatePublicBannerViews() {
-    clearNuxtData('home-banners')
   }
 
   // 加载 Banner 列表
@@ -120,7 +117,7 @@ export function useAdminBanners() {
       })
 
       items.value = items.value.map(item => (item.id === result.id ? result : item))
-      invalidatePublicBannerViews()
+      invalidatePublicData()
     }
     catch (e) {
       showMessage(e instanceof Error ? e.message : '更新状态失败', true)
@@ -145,7 +142,7 @@ export function useAdminBanners() {
       })
 
       items.value = items.value.filter(item => item.id !== banner.id)
-      invalidatePublicBannerViews()
+      invalidatePublicData()
       showMessage('Banner 已删除')
     }
     catch (e) {
@@ -223,7 +220,7 @@ export function useAdminBanners() {
         })
 
         items.value = items.value.map(item => (item.id === result.id ? result : item))
-        invalidatePublicBannerViews()
+        invalidatePublicData()
         showMessage('Banner 已更新')
       }
       else {
@@ -233,7 +230,7 @@ export function useAdminBanners() {
         })
 
         items.value = [...items.value, result]
-        invalidatePublicBannerViews()
+        invalidatePublicData()
         showMessage('Banner 已创建')
       }
 

@@ -6,6 +6,7 @@ import type {
 
 export function useAdminFriendLinks() {
   const { adminApiFetch } = useAdminSession()
+  const { invalidatePublicData } = usePublicDataInvalidation()
 
   // 状态
   const items = ref<FooterLinkItem[]>([])
@@ -160,6 +161,7 @@ export function useAdminFriendLinks() {
       })
 
       items.value = result.length > 0 ? result : [makeLinkItem()]
+      invalidatePublicData()
       showMessage('友情链接已保存')
     }
     catch (e) {
@@ -218,6 +220,7 @@ export function useAdminFriendLinks() {
       reviewNote.value = result.reviewNote ?? ''
 
       await loadItems()
+      invalidatePublicData()
 
       showMessage(
         status === 'approved'

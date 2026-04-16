@@ -13,6 +13,7 @@ export interface UpdateStandalonePageInput {
 
 export function useAdminStandalonePages() {
   const { adminApiFetch } = useAdminSession()
+  const { invalidatePublicData } = usePublicDataInvalidation()
 
   // 状态
   const items = ref<StandalonePageItem[]>([])
@@ -115,6 +116,7 @@ export function useAdminStandalonePages() {
       const nextItems = result.length > 0 ? result : [makePage()]
       items.value = nextItems
       activeId.value = nextItems.find(item => item.id === activeId.value)?.id ?? nextItems[0]?.id ?? null
+      invalidatePublicData()
       showMessage('独立页已保存')
     }
     catch (e) {
