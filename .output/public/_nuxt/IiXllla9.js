@@ -1,0 +1,1 @@
+import{a as s}from"./BbhoS_WC.js";import{l as o}from"./BIWylcDp.js";import{R as a,s as e}from"./BG7gE4MW.js";import"./DybaoB94.js";const m=a(()=>{if(o()?.accessToken)return e(s.dashboard)});export{m as default};

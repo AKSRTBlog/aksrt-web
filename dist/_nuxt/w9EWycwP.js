@@ -1,0 +1,1 @@
+import{w as o}from"./RSZcr6S8.js";import{e as r,c,u as s,o as a,i as p}from"./BG7gE4MW.js";const m=["innerHTML"],u=r({__name:"MarkdownContent",props:{content:{}},setup(n){const e=n,t=p(()=>o(e.content));return(i,d)=>(a(),c("div",{class:"article-content px-6 py-8 md:px-10 md:py-12",innerHTML:s(t)},null,8,m))}});export{u as _};

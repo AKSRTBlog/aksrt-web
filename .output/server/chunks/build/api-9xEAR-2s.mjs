@@ -1,0 +1,255 @@
+import { marked } from 'marked';
+import { e as estimateReadingTime } from './admin-editor-CUf6Pf5Q.mjs';
+import { r as resolveRuntimeApiBase } from './api-base-COxdl8qP.mjs';
+import { d as useRuntimeConfig } from './server.mjs';
+
+const FALLBACK_COVER = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%221200%22 height=%22675%22 viewBox=%220 0 1200 675%22%3E%3Crect width=%221200%22 height=%22675%22 fill=%22%23e2e8f0%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%2364758b%22 font-family=%22sans-serif%22 font-size=%2242%22%3ENo Cover%3C/text%3E%3C/svg%3E";
+const blogAuthor = {
+  id: "default-author",
+  name: "Kate",
+  avatar: "https://cravatar.cn/avatar/70061913523553034d98bdb9cbecd3ac?s=160&d=identicon",
+  bio: "Engineer, writer, and product-minded builder documenting systems, implementation details, and long-term practice.",
+  github: "https://github.com/Lexo0522"
+};
+marked.setOptions({
+  gfm: true,
+  breaks: true
+});
+function slugify(value) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+}
+function getFetchError(error) {
+  return error;
+}
+function renderMarkdown(markdown) {
+  const safeMarkdown = typeof markdown === "string" ? markdown : "";
+  const renderer = new marked.Renderer();
+  renderer.heading = ({ tokens, depth }) => {
+    const text = tokens.map((token) => "text" in token ? token.text : "").join("");
+    const id = slugify(text);
+    return `<h${depth} id="${id}" class="scroll-mt-24">${marked.Parser.parseInline(tokens)}</h${depth}>`;
+  };
+  renderer.image = ({ href, title, text }) => {
+    return `<img src="${typeof href === "string" ? href : ""}" alt="${typeof text === "string" ? text : ""}" title="${typeof title === "string" ? title : ""}" loading="lazy" />`;
+  };
+  return marked.parse(safeMarkdown, { renderer });
+}
+async function apiFetch(path, init) {
+  var _a, _b, _c;
+  const config = useRuntimeConfig();
+  const apiBase = resolveRuntimeApiBase(config);
+  try {
+    const response = await $fetch(`${apiBase}${path}`, init);
+    return response.data;
+  } catch (error) {
+    const fetchError = getFetchError(error);
+    const message = ((_a = fetchError.data) == null ? void 0 : _a.message) || ((_c = (_b = fetchError.response) == null ? void 0 : _b._data) == null ? void 0 : _c.message) || fetchError.message || "Public request failed.";
+    throw new Error(message);
+  }
+}
+function mapArticleSummary(item) {
+  var _a;
+  return {
+    id: item.id,
+    title: item.title,
+    slug: item.slug,
+    excerpt: item.excerpt,
+    coverImage: item.coverImageUrl || FALLBACK_COVER,
+    publishedAt: (_a = item.publishedAt) != null ? _a : item.updatedAt,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    allowComment: item.allowComment,
+    categories: item.categories || [],
+    tags: item.tags || []
+  };
+}
+function mapArticleDetail(item) {
+  return {
+    ...mapArticleSummary(item),
+    content: item.content,
+    readingTime: estimateReadingTime(item.content)
+  };
+}
+function mapComment(item) {
+  return {
+    id: item.id,
+    parentId: item.parentId,
+    nickname: item.nickname,
+    avatarUrl: item.avatarUrl,
+    content: item.content,
+    createdAt: item.createdAt,
+    replies: item.replies.map(mapComment)
+  };
+}
+function formatDate(date) {
+  return new Date(date).toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
+function formatLongDate(date) {
+  return new Date(date).toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long"
+  });
+}
+function sortArticles(list, sort = "latest") {
+  const next = [...list];
+  if (sort === "reading") {
+    return next.sort((left, right) => estimateReadingTime(right.excerpt) - estimateReadingTime(left.excerpt));
+  }
+  if (sort === "popular") {
+    return next.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  }
+  return next.sort((left, right) => new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime());
+}
+function filterArticles(list, options = {}) {
+  const { keyword = "", category, tag, sort = "latest" } = options;
+  const needle = keyword.trim().toLowerCase();
+  const filtered = list.filter((article) => {
+    if (category && !article.categories.some((cat) => cat.slug === category)) {
+      return false;
+    }
+    if (tag && !article.tags.some((item) => item.slug === tag)) {
+      return false;
+    }
+    if (!needle) {
+      return true;
+    }
+    return [article.title, article.excerpt, ...article.categories.map((cat) => cat.name), ...article.tags.map((item) => item.name)].join(" ").toLowerCase().includes(needle);
+  });
+  return sortArticles(filtered, sort);
+}
+function mergeCategories(categories, articles) {
+  var _a;
+  const counts = /* @__PURE__ */ new Map();
+  for (const article of articles) {
+    for (const cat of article.categories) {
+      counts.set(cat.slug, ((_a = counts.get(cat.slug)) != null ? _a : 0) + 1);
+    }
+  }
+  return categories.map((category) => {
+    var _a2;
+    return {
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      count: (_a2 = counts.get(category.slug)) != null ? _a2 : 0
+    };
+  }).sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+}
+function deriveTags(articles) {
+  var _a;
+  const map = /* @__PURE__ */ new Map();
+  for (const article of articles) {
+    for (const tag of article.tags) {
+      const current = map.get(tag.slug);
+      map.set(tag.slug, {
+        id: tag.id,
+        name: tag.name,
+        slug: tag.slug,
+        count: ((_a = current == null ? void 0 : current.count) != null ? _a : 0) + 1
+      });
+    }
+  }
+  return [...map.values()].sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+}
+function buildArchiveGroups(articles) {
+  const grouped = /* @__PURE__ */ new Map();
+  for (const article of articles) {
+    const date = new Date(article.publishedAt);
+    const year = String(date.getFullYear());
+    const month = date.toLocaleDateString("zh-CN", { month: "long" });
+    if (!grouped.has(year)) {
+      grouped.set(year, /* @__PURE__ */ new Map());
+    }
+    const yearGroup = grouped.get(year);
+    if (!yearGroup.has(month)) {
+      yearGroup.set(month, []);
+    }
+    yearGroup.get(month).push(article);
+  }
+  return [...grouped.entries()].sort((left, right) => Number(right[0]) - Number(left[0])).map(([year, months]) => ({
+    year,
+    total: [...months.values()].flat().length,
+    months: [...months.entries()].map(([month, items]) => ({
+      month,
+      items: items.sort((left, right) => new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime())
+    }))
+  }));
+}
+async function fetchPublicSiteSettings() {
+  return apiFetch("/api/v1/public/site-settings");
+}
+async function fetchPublicCategories() {
+  return apiFetch("/api/v1/public/articles/meta/categories");
+}
+async function fetchPublicBanners(position) {
+  const query = `?position=${encodeURIComponent(position)}`;
+  return apiFetch(`/api/v1/public/banners${query}`);
+}
+async function fetchPublicArticles(params) {
+  var _a, _b, _c, _d, _e;
+  const search = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+    sortBy: (_a = params.sortBy) != null ? _a : "publishedAt",
+    sortOrder: (_b = params.sortOrder) != null ? _b : "desc"
+  });
+  if ((_c = params.keyword) == null ? void 0 : _c.trim()) {
+    search.set("keyword", params.keyword.trim());
+  }
+  if ((_d = params.categorySlug) == null ? void 0 : _d.trim()) {
+    search.set("categorySlug", params.categorySlug.trim());
+  }
+  if ((_e = params.tagSlug) == null ? void 0 : _e.trim()) {
+    search.set("tagSlug", params.tagSlug.trim());
+  }
+  const result = await apiFetch(`/api/v1/public/articles?${search.toString()}`);
+  return {
+    ...result,
+    list: result.list.map(mapArticleSummary)
+  };
+}
+async function fetchAllPublicArticles() {
+  const items = [];
+  let page = 1;
+  let totalPages = 1;
+  while (page <= totalPages) {
+    const result = await apiFetch(
+      `/api/v1/public/articles?page=${page}&pageSize=500&sortBy=publishedAt&sortOrder=desc`
+    );
+    items.push(...result.list.map(mapArticleSummary));
+    totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
+    page += 1;
+  }
+  return items;
+}
+async function fetchPublicArticleDetail(slug) {
+  const result = await apiFetch(`/api/v1/public/articles/${slug}`);
+  return mapArticleDetail(result);
+}
+async function fetchPublicComments(slug) {
+  const result = await apiFetch(
+    `/api/v1/public/articles/${slug}/comments?page=1&pageSize=100`
+  );
+  return result.list.map(mapComment);
+}
+async function fetchPublicStandalonePage(slug) {
+  return apiFetch(`/api/v1/public/site-settings/standalone-pages/${slug}`);
+}
+async function fetchPublicProjects() {
+  return apiFetch("/api/v1/public/projects");
+}
+async function fetchActivityStats() {
+  return apiFetch("/api/v1/public/activity-stats/contributions");
+}
+async function fetchPublicFooterLinks() {
+  return apiFetch("/api/v1/public/site-settings/footer-links");
+}
+
+export { fetchActivityStats as a, fetchPublicProjects as b, blogAuthor as c, fetchPublicArticles as d, fetchPublicBanners as e, fetchPublicSiteSettings as f, formatDate as g, fetchPublicFooterLinks as h, fetchAllPublicArticles as i, filterArticles as j, buildArchiveGroups as k, formatLongDate as l, deriveTags as m, fetchPublicStandalonePage as n, fetchPublicCategories as o, mergeCategories as p, fetchPublicArticleDetail as q, fetchPublicComments as r, sortArticles as s, renderMarkdown as t };
+//# sourceMappingURL=api-9xEAR-2s.mjs.map

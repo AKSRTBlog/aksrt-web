@@ -1,0 +1,1 @@
+import{a as o}from"./BbhoS_WC.js";import{l as s}from"./BIWylcDp.js";import{R as a,s as e}from"./BG7gE4MW.js";import"./DybaoB94.js";const d=a(()=>{if(!s()?.accessToken)return e(o.login)});export{d as default};
