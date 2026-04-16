@@ -7,14 +7,12 @@
     "#internal/nuxt/paths": "./internal/nuxt-paths.mjs"
   },
   "scripts": {
-    "postinstall": "nuxt prepare",
     "clean": "node ./scripts/clean-artifacts.cjs",
     "predev": "npm run clean",
     "prebuild": "npm run clean",
-    "prepreview": "node ./scripts/check-preview-ready.cjs",
     "dev": "nuxt dev --host 0.0.0.0 --port 3000",
     "build": "nuxt build",
-    "preview": "node ./scripts/run-preview.cjs"
+    "preview": "node .output/server/index.mjs"
   },
   "dependencies": {
     "marked": "^15.0.6",
