@@ -7,10 +7,11 @@
     "#internal/nuxt/paths": "./internal/nuxt-paths.mjs"
   },
   "scripts": {
-    "clean": "rm -rf .output",
+    "clean": "rm -rf .output .nuxt dist",
     "dev": "nuxt dev --host 0.0.0.0 --port 3000",
-    "build": "nuxt generate",
-    "preview": "npx serve .output/public -l 3000"
+    "build": "nuxt build",
+    "preview": "nuxt preview --host 0.0.0.0 --port 3000",
+    "start": "node .output/server/index.mjs"
   },
   "dependencies": {
     "marked": "^15.0.6",
