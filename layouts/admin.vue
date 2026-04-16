@@ -210,7 +210,3 @@ useHead({
     </div>
   </div>
 </template>
-
-<style>
-@import '~/assets/css/admin.css';
-</style>
