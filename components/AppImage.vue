@@ -26,15 +26,19 @@ function syncLoadedState() {
   }
 }
 
-watch(displaySrc, async () => {
+watch(displaySrc, () => {
   loaded.value = false;
-  await nextTick();
-  syncLoadedState();
-}, { immediate: true });
-
-onMounted(() => {
-  loaded.value = imageRef.value?.complete ?? false;
 });
+
+if (import.meta.client) {
+  onMounted(() => {
+    nextTick(syncLoadedState);
+    watch(displaySrc, async () => {
+      await nextTick();
+      syncLoadedState();
+    });
+  });
+}
 </script>
 
 <template>
