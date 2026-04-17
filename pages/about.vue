@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import AppImage from '~/components/AppImage.vue';
-import { blogAuthor, fetchActivityStats, fetchPublicProjects, fetchPublicSiteSettings } from '~/composables/api';
+import { blogAuthor, fetchActivityStats, fetchPublicProjects } from '~/composables/api';
 
-const { data: siteSettings } = await useAsyncData('site-settings', fetchPublicSiteSettings);
+const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 
 const [{ data: activity }, { data: projects }] = await Promise.all([
   useAsyncData('about-activity', fetchActivityStats),

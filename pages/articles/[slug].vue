@@ -3,14 +3,13 @@ import {
   blogAuthor,
   fetchAllPublicArticles,
   fetchPublicArticleDetail,
-  fetchPublicSiteSettings,
   formatDate,
   sortArticles,
 } from '~/composables/api';
 
 const route = useRoute();
 const slug = computed(() => String(route.params.slug || ''));
-const { data: siteSettings } = await useAsyncData('site-settings', fetchPublicSiteSettings);
+const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 
 // 核心数据阻塞加载（文章详情）
 const { data: article } = await useAsyncData(() => `article-${slug.value}`, () => fetchPublicArticleDetail(slug.value));

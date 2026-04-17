@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { fetchPublicArticles, fetchPublicBanners, fetchPublicSiteSettings } from '~/composables/api';
 
-const { data: siteSettingsData } = await useAsyncData('site-settings', fetchPublicSiteSettings);
+const { data: siteSettingsData } = await useAsyncData('index-site-settings', fetchPublicSiteSettings);
 const siteSettings = computed(() => siteSettingsData.value || null);
 
 const [{ data: articleData }, { data: banners }] = await Promise.all([

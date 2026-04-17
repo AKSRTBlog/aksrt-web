@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { fetchPublicStandalonePage, fetchPublicSiteSettings } from '~/composables/api';
+import { fetchPublicStandalonePage } from '~/composables/api';
 
 const route = useRoute();
 const slug = computed(() => String(route.params.slug || ''));
-const { data: siteSettings } = await useAsyncData('site-settings', fetchPublicSiteSettings);
+const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 
 const { data: page } = await useAsyncData(() => `standalone-${slug.value}`, () => fetchPublicStandalonePage(slug.value));
 

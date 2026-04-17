@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { fetchAllPublicArticles, fetchPublicCategories, fetchPublicSiteSettings, filterArticles } from '~/composables/api';
+import { fetchAllPublicArticles, fetchPublicCategories, filterArticles } from '~/composables/api';
 
 const route = useRoute();
 const slug = computed(() => String(route.params.slug || ''));
-const { data: siteSettings } = await useAsyncData('site-settings', fetchPublicSiteSettings);
+const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 
 const { data: categories } = await useAsyncData('category-categories', fetchPublicCategories);
 const { data: articles } = useAsyncData('shared-all-articles', fetchAllPublicArticles, { lazy: true });
