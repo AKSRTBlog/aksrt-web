@@ -32,7 +32,9 @@ watch(displaySrc, async () => {
   syncLoadedState();
 }, { immediate: true });
 
-onMounted(syncLoadedState);
+onMounted(() => {
+  loaded.value = imageRef.value?.complete ?? false;
+});
 </script>
 
 <template>
