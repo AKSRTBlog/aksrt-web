@@ -187,7 +187,7 @@ onMounted(async () => {
             <input v-model="publicForm.siteTitle" class="admin-input" placeholder="输入站点标题" />
           </div>
 
-          <div>
+          <div class="lg:col-span-2">
             <label class="admin-label">站点描述</label>
             <input v-model="publicForm.siteDescription" class="admin-input" placeholder="输入站点描述" />
           </div>

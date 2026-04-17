@@ -30,9 +30,6 @@ const navigationItems = computed(() =>
         </div>
         <div class="min-w-0">
           <p class="truncate text-sm font-semibold tracking-[0.18em] text-[var(--blog-ink)]">{{ siteSettings?.siteTitle || 'Blog' }}</p>
-          <p class="mt-1 text-xs text-[var(--blog-subtle)]">
-            {{ (siteSettings?.siteDescription || '').slice(0, 30) }}{{ (siteSettings?.siteDescription || '').length > 30 ? '...' : '' }}
-          </p>
         </div>
       </NuxtLink>
     </div>
