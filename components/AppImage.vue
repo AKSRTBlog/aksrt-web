@@ -20,24 +20,21 @@ const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAA
 const safeSrc = computed(() => typeof props.src === 'string' ? props.src.trim() : '');
 const displaySrc = computed(() => safeSrc.value || transparentPixel);
 
-function syncLoadedState() {
-  if (imageRef.value?.complete) {
-    loaded.value = true;
-  }
-}
-
-watch(displaySrc, () => {
-  loaded.value = false;
-});
-
+// 仅在客户端执行图片加载状态管理，确保 SSR/CSR 渲染一致
 if (import.meta.client) {
-  onMounted(() => {
+  function syncLoadedState() {
+    if (imageRef.value?.complete) {
+      loaded.value = true;
+    }
+  }
+
+  watch(displaySrc, () => {
+    loaded.value = false;
     nextTick(syncLoadedState);
-    watch(displaySrc, async () => {
-      await nextTick();
-      syncLoadedState();
-    });
   });
+
+  // 初始同步
+  onMounted(() => nextTick(syncLoadedState));
 }
 </script>
 
