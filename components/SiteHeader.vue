@@ -40,27 +40,82 @@ const navigationItems = computed(() =>
       </NuxtLink>
 
       <button
-        class="blog-toggle"
+        class="blog-toggle flex h-9 w-9 items-center justify-center text-lg transition-transform active:scale-90"
         type="button"
         :aria-label="mobileOpen ? 'Close menu' : 'Open menu'"
         @click="mobileOpen = !mobileOpen"
       >
-        {{ mobileOpen ? 'x' : '=' }}
+        <Transition name="icon-toggle" mode="out-in">
+          <span v-if="mobileOpen" key="close" class="text-[22px] leading-none">&times;</span>
+          <span v-else key="open" class="flex flex-col gap-[5px]">
+            <span class="block h-[2px] w-4 rounded-full bg-[var(--blog-ink)]" />
+            <span class="block h-[2px] w-4 rounded-full bg-[var(--blog-ink)]" />
+            <span class="block h-[2px] w-4 rounded-full bg-[var(--blog-ink)]" />
+          </span>
+        </Transition>
       </button>
     </div>
 
-    <div v-if="mobileOpen" class="border-t border-[var(--blog-border)] bg-white/95 px-6 py-4">
-      <div class="space-y-2">
-        <NuxtLink
-          v-for="item in navigationItems"
-          :key="item.id"
-          :to="item.href"
-          class="block rounded-2xl px-4 py-3 text-sm font-medium text-[var(--blog-muted)] transition hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
-          @click="mobileOpen = false"
-        >
-          {{ item.label }}
-        </NuxtLink>
+    <Transition name="menu-slide">
+      <div v-show="mobileOpen" class="absolute left-0 right-0 top-full overflow-hidden border-t border-[var(--blog-border)] bg-white/95 backdrop-blur-xl px-6 shadow-lg">
+        <div class="space-y-1 py-4">
+          <TransitionGroup name="menu-item" tag="div" class="space-y-1">
+            <NuxtLink
+              v-for="(item, index) in navigationItems"
+              v-show="mobileOpen"
+              :key="item.id"
+              :to="item.href"
+              :style="{ transitionDelay: `${index * 50}ms` }"
+              class="block rounded-2xl px-4 py-3 text-sm font-medium text-[var(--blog-muted)] transition hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
+              @click="mobileOpen = false"
+            >
+              {{ item.label }}
+            </NuxtLink>
+          </TransitionGroup>
+        </div>
       </div>
-    </div>
+    </Transition>
   </header>
 </template>
+
+<style scoped>
+.icon-toggle-enter-active,
+.icon-toggle-leave-active {
+  transition: all 0.2s ease;
+}
+.icon-toggle-enter-from {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.8);
+}
+.icon-toggle-leave-to {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.8);
+}
+
+.menu-slide-enter-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.menu-slide-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
+}
+.menu-slide-enter-from,
+.menu-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.menu-item-enter-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.menu-item-leave-active {
+  transition: all 0.15s ease-in;
+}
+.menu-item-enter-from {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+.menu-item-leave-to {
+  opacity: 0;
+  transform: translateX(8px);
+}
+</style>
