@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { PublicSiteSettings } from '~/types/admin-settings'
+
 definePageMeta({
   layout: 'admin',
   middleware: 'admin-auth',
@@ -9,10 +11,12 @@ useHead({
 })
 
 const { adminApiFetch, refreshProfile, logout } = useAdminSession()
+const { invalidatePublicData } = usePublicDataInvalidation()
 const router = useRouter()
 
 const loading = ref(true)
 const saving = ref(false)
+const savingAbout = ref(false)
 const changingPassword = ref(false)
 const error = ref('')
 const successMessage = ref('')
@@ -23,28 +27,45 @@ const profileForm = ref({
   displayName: '',
 })
 
+const aboutForm = ref({
+  aboutDisplayName: '',
+  aboutBio: '',
+})
+
 const passwordForm = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
 })
 
+function syncAboutForm(settings: PublicSiteSettings) {
+  aboutForm.value = {
+    aboutDisplayName: settings.aboutDisplayName ?? '',
+    aboutBio: settings.aboutBio ?? '',
+  }
+}
+
 async function loadProfile() {
   loading.value = true
   error.value = ''
 
   try {
-    const result = await adminApiFetch<{
-      username: string
-      email: string
-      displayName: string
-    }>('/api/v1/admin/auth/me')
+    const [result, publicSettings] = await Promise.all([
+      adminApiFetch<{
+        username: string
+        email: string
+        displayName: string
+      }>('/api/v1/admin/auth/me'),
+      adminApiFetch<PublicSiteSettings>('/api/v1/admin/site-settings/public'),
+    ])
 
     profileForm.value = {
       username: result.username,
       email: result.email,
       displayName: result.displayName,
     }
+
+    syncAboutForm(publicSettings)
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
   } finally {
@@ -72,6 +93,33 @@ async function saveProfile() {
     error.value = e instanceof Error ? e.message : '保存失败'
   } finally {
     saving.value = false
+  }
+}
+
+async function saveAboutProfile() {
+  savingAbout.value = true
+  error.value = ''
+  successMessage.value = ''
+
+  try {
+    const result = await adminApiFetch<PublicSiteSettings>('/api/v1/admin/site-settings/public', {
+      method: 'PUT',
+      body: JSON.stringify({
+        aboutDisplayName: aboutForm.value.aboutDisplayName.trim() || null,
+        aboutBio: aboutForm.value.aboutBio.trim() || null,
+      }),
+    })
+
+    syncAboutForm(result)
+    invalidatePublicData({ keys: ['site-settings'] })
+    successMessage.value = 'About 资料已保存'
+    window.setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '保存失败'
+  } finally {
+    savingAbout.value = false
   }
 }
 
@@ -201,6 +249,56 @@ onMounted(() => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
                 {{ saving ? '保存中...' : '保存修改' }}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-card flex h-full flex-col p-6">
+          <div class="mb-6 flex items-center gap-4">
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <svg class="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-6 4h10M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900">About 页面资料</h3>
+              <p class="text-sm text-slate-500">用于 About 页面的姓名与个人介绍文本。</p>
+            </div>
+          </div>
+
+          <div class="flex flex-1 flex-col">
+            <div class="space-y-6">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700">显示名称</label>
+                <input
+                  v-model="aboutForm.aboutDisplayName"
+                  type="text"
+                  class="admin-input w-full"
+                  placeholder="例如：Kate"
+                >
+              </div>
+
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700">个人介绍</label>
+                <textarea
+                  v-model="aboutForm.aboutBio"
+                  class="admin-textarea min-h-28 w-full"
+                  placeholder="用于 About 页面展示"
+                />
+              </div>
+            </div>
+
+            <div class="mt-auto flex gap-3 pt-6">
+              <button
+                class="admin-button-primary"
+                :disabled="savingAbout"
+                @click="saveAboutProfile"
+              >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                {{ savingAbout ? '保存中...' : '保存资料' }}
               </button>
             </div>
           </div>
