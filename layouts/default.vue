@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { fetchPublicSiteSettings } from '~/composables/api';
 
-const { data: siteSettings } = await useAsyncData('site-settings', fetchPublicSiteSettings, {
-  getCachedData(key, nuxtApp) {
-    return nuxtApp.payload.data[key] ?? nuxtApp.static.data[key];
-  },
-});
+const { data: siteSettings } = await useAsyncData('site-settings', fetchPublicSiteSettings);
 
 provide('site-settings', siteSettings);
 

@@ -9,6 +9,10 @@ const [{ data: activity }, { data: projects }] = await Promise.all([
   useAsyncData('about-projects', fetchPublicProjects),
 ]);
 
+const aboutDisplayName = computed(() => siteSettings.value?.aboutDisplayName?.trim() || blogAuthor.name);
+const aboutBio = computed(() => siteSettings.value?.aboutBio?.trim() || siteSettings.value?.siteDescription || blogAuthor.bio);
+const aboutAvatar = computed(() => siteSettings.value?.adminAvatarUrl || blogAuthor.avatar);
+
 const contactLinks = computed(() => {
   const githubUsername = siteSettings.value?.githubUsername;
 
@@ -25,28 +29,21 @@ const contactLinks = computed(() => {
 
 useSeoMeta({
   title: 'About',
-  description: () => siteSettings.value?.siteDescription || blogAuthor.bio,
+  description: () => aboutBio.value,
 });
 </script>
 
 <template>
   <div>
-    <PageHero
-      centered
-      eyebrow="About"
-      title="Profile and current work"
-      description="A quick overview of the author, contact channels, project work, and recent activity."
-    />
-
     <section class="mx-auto max-w-6xl px-6 pb-20">
       <div class="space-y-8">
         <div class="blog-panel p-8">
           <div class="flex flex-col gap-6 md:flex-row md:items-start">
-            <AppImage class="h-24 w-24 rounded-3xl object-cover" :src="blogAuthor.avatar" :alt="blogAuthor.name" loading="eager" />
+            <AppImage class="h-24 w-24 rounded-3xl object-cover" :src="aboutAvatar" :alt="aboutDisplayName" loading="eager" />
             <div>
               <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--blog-subtle)]">About me</p>
-              <h2 class="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">{{ blogAuthor.name }}</h2>
-              <p class="mt-4 max-w-2xl text-base leading-8 text-[var(--blog-muted)]">{{ blogAuthor.bio }}</p>
+              <h2 class="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">{{ aboutDisplayName }}</h2>
+              <p class="mt-4 max-w-2xl text-base leading-8 text-[var(--blog-muted)]">{{ aboutBio }}</p>
             </div>
           </div>
         </div>

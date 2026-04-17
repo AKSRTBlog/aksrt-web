@@ -96,19 +96,11 @@ onMounted(async () => {
 
 useSeoMeta({
   title: 'Links',
-  description: 'Partner sites and a public link exchange form.',
 });
 </script>
 
 <template>
   <div>
-    <PageHero
-      centered
-      eyebrow="Links"
-      title="Partner sites"
-      description="Browse curated partner sites or submit your own site for review."
-    />
-
     <section class="mx-auto max-w-6xl px-6 pb-10">
       <div class="grid gap-4 md:grid-cols-2">
         <a

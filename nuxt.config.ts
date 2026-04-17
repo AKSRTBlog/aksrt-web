@@ -47,6 +47,7 @@ export default defineNuxtConfig({
   },
   routeRules: {
     '/admin/**': { ssr: false },
+    '/**': { prerender: false },
   },
   loadingIndicator: {
     color: '#b15d32',

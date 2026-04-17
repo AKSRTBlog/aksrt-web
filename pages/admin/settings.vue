@@ -162,6 +162,40 @@ onMounted(async () => {
     </div>
 
     <template v-else>
+      <div class="admin-card p-6">
+        <div class="flex flex-col gap-2">
+          <h3 class="text-lg font-semibold text-slate-900">个人信息（About 页面）</h3>
+          <p class="text-sm text-slate-500">
+            显示名称与介绍文本会用于 About 页面个人信息卡片；头像会自动使用当前管理员头像。
+          </p>
+        </div>
+
+        <div class="mt-6 grid gap-6">
+          <div>
+            <label class="admin-label">显示名称</label>
+            <input
+              v-model="publicForm.aboutDisplayName"
+              class="admin-input"
+              placeholder="例如：Kate"
+            >
+          </div>
+
+          <div>
+            <label class="admin-label">个人介绍</label>
+            <textarea
+              v-model="publicForm.aboutBio"
+              class="admin-textarea min-h-28"
+              placeholder="用于 About 页个人信息卡片展示"
+            />
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button class="admin-button-primary" :disabled="saving" @click="savePublicSettings">
+            {{ saving ? '保存中...' : '保存个人信息' }}
+          </button>
+        </div>
+      </div>
       <!-- 标签页导航 -->
       <div class="admin-card p-1">
         <nav class="flex gap-1">

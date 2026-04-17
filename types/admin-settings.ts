@@ -39,6 +39,9 @@ export interface PublicSiteSettings {
   policeFiling: string | null
   showFiling: boolean
   githubUsername: string | null
+  aboutDisplayName: string | null
+  aboutBio: string | null
+  adminAvatarUrl: string | null
 }
 
 export interface StorageConfig {

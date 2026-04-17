@@ -30,6 +30,8 @@ export function useAdminSiteSettings() {
     policeFiling: '',
     showFiling: false,
     githubUsername: '',
+    aboutDisplayName: '',
+    aboutBio: '',
   })
 
   const customCodeForm = ref({
@@ -145,6 +147,8 @@ export function useAdminSiteSettings() {
         policeFiling: pub.policeFiling ?? '',
         showFiling: pub.showFiling,
         githubUsername: pub.githubUsername ?? '',
+        aboutDisplayName: pub.aboutDisplayName ?? '',
+        aboutBio: pub.aboutBio ?? '',
       }
 
       customCodeForm.value = {
@@ -201,6 +205,8 @@ export function useAdminSiteSettings() {
           policeFiling: publicForm.value.policeFiling.trim() || null,
           showFiling: publicForm.value.showFiling,
           githubUsername: publicForm.value.githubUsername.trim() || null,
+          aboutDisplayName: publicForm.value.aboutDisplayName.trim() || null,
+          aboutBio: publicForm.value.aboutBio.trim() || null,
         }),
       })
 

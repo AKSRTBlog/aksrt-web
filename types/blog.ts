@@ -63,6 +63,9 @@ export interface PublicSiteSettingsItem {
   policeFiling: string | null;
   showFiling: boolean;
   githubUsername: string | null;
+  aboutDisplayName: string | null;
+  aboutBio: string | null;
+  adminAvatarUrl: string | null;
 }
 
 export interface PublicArticleCategoryItem {
