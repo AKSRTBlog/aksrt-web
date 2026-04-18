@@ -141,5 +141,18 @@ const displayedLinks = computed(() => {
     </div>
 
     <div v-if="siteSettings?.customFooterCode" v-html="siteSettings.customFooterCode" />
+
+    <div class="border-t border-[var(--blog-border)] bg-white/70 px-6 py-5">
+      <p class="text-center text-xs text-[var(--blog-subtle)]">
+        &copy; {{ new Date().getFullYear() }} {{ siteSettings?.siteTitle || 'Blog' }}.
+        Powered by
+        <a
+          href="https://github.com/AKSRTBlog"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-medium text-[var(--blog-ink)] transition hover:text-[var(--blog-accent)]"
+        >AKSRT</a>
+      </p>
+    </div>
   </footer>
 </template>

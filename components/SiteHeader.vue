@@ -41,9 +41,6 @@ watch(() => useRoute().fullPath, () => {
         </div>
         <div>
           <p class="text-sm font-semibold tracking-[0.16em] text-[var(--blog-ink)]">{{ siteSettings?.siteTitle || 'Blog' }}</p>
-          <p class="text-xs text-[var(--blog-subtle)]">
-            {{ (siteSettings?.siteDescription || '').slice(0, 30) }}{{ (siteSettings?.siteDescription || '').length > 30 ? '...' : '' }}
-          </p>
         </div>
       </NuxtLink>
 
