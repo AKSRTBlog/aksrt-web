@@ -26,7 +26,7 @@ async function loadData() {
     articles.value = articleResult ?? [];
     publicCategories.value = categoryResult ?? [];
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load articles.';
+    error.value = e instanceof Error ? e.message : 'Failed load articles.';
     articles.value = [];
     publicCategories.value = [];
   } finally {
@@ -128,13 +128,13 @@ useSeoMeta({
               <div class="animate-pulse space-y-3">
                 <div class="h-3 w-16 rounded bg-[var(--blog-soft)]" />
                 <div class="flex gap-2">
-                  <div v-for="i in 5" :key="`cat-${i}` class="h-7 w-20 rounded-full bg-[var(--blog-soft)]" />
+                  <div v-for="i in 5" :key="'cat-' + i" class="h-7 w-20 rounded-full bg-[var(--blog-soft)]" />
                 </div>
               </div>
               <div class="animate-pulse space-y-3">
                 <div class="h-3 w-12 rounded bg-[var(--blog-soft)]" />
                 <div class="flex gap-2">
-                  <div v-for="i in 8" :key="`tag-${i}` class="h-7 w-16 rounded-full bg-[var(--blog-soft)]" />
+                  <div v-for="i in 8" :key="'tag-' + i" class="h-7 w-16 rounded-full bg-[var(--blog-soft)]" />
                 </div>
               </div>
             </div>

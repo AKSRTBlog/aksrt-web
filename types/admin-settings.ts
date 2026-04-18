@@ -28,7 +28,6 @@ export interface PublicSiteSettings {
   siteTitle: string
   siteDescription: string
   logoUrl: string | null
-  footerText: string
   commentEnabled: boolean
   seo: SeoMeta
   navigationItems: NavigationItem[]

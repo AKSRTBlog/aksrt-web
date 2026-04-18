@@ -8,22 +8,19 @@ provide('site-settings', siteSettings);
 useHead(() => {
   const settings = siteSettings.value;
 
-  if (!settings) {
-    return {
-      title: 'AKSRT Blog',
-    };
-  }
-
   return {
-    titleTemplate: (titleChunk?: string) => titleChunk ? `${titleChunk} | ${settings.siteTitle}` : settings.siteTitle,
+    titleTemplate: (titleChunk?: string) => {
+      const base = settings?.siteTitle || 'Blog';
+      return titleChunk ? `${titleChunk} | ${base}` : base;
+    },
     meta: [
       {
         name: 'description',
-        content: settings.seo.description || settings.siteDescription,
+        content: settings?.seo.description || settings?.siteDescription || '',
       },
       {
         name: 'keywords',
-        content: settings.seo.keywords,
+        content: settings?.seo.keywords || '',
       },
     ],
   };

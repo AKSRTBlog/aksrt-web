@@ -72,7 +72,6 @@ const displayedLinks = computed(() => {
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--blog-subtle)]">{{ siteSettings?.siteTitle || 'Blog' }}</p>
         <p class="mt-4 max-w-lg text-sm leading-7 text-[var(--blog-muted)]">{{ siteSettings?.siteDescription }}</p>
-        <p v-if="siteSettings?.footerText" class="mt-4 max-w-lg text-sm leading-7 text-[var(--blog-muted)]">{{ siteSettings.footerText }}</p>
       </div>
 
       <div>

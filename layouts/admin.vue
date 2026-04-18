@@ -133,44 +133,74 @@ useHead({
       </aside>
 
       <div v-if="mobileOpen" class="fixed inset-0 z-50 lg:hidden">
-        <div class="absolute inset-0 bg-slate-950/70" @click="closeMobile" />
+        <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" @click="closeMobile" />
         <aside
-          class="admin-sidebar-crisp absolute inset-y-0 left-0 z-50 flex w-80 flex-col overflow-hidden bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 shadow-2xl"
+          class="admin-sidebar-crisp absolute inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 shadow-2xl"
         >
-          <div class="flex items-center justify-between border-b border-white/10 px-4 py-4">
+          <div class="shrink-0 flex items-center justify-between border-b border-white/10 px-4 py-4">
             <p class="text-sm font-semibold text-white">菜单</p>
             <button class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-white" type="button" @click="closeMobile">
               <AdminNavIcon name="close" class="h-4 w-4" />
             </button>
           </div>
 
-          <div class="flex-1 px-3 py-4">
-            <div class="space-y-5">
-              <div v-for="section in adminNavSections" :key="section.title">
-                <p class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
-                  {{ section.title }}
-                </p>
+          <!-- 可滚动区域 -->
+          <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div class="px-3 py-4">
+              <div class="space-y-5">
+                <div v-for="section in adminNavSections" :key="section.title">
+                  <p class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
+                    {{ section.title }}
+                  </p>
 
-                <nav class="space-y-1">
-                  <NuxtLink
-                    v-for="item in section.items"
-                    :key="item.to"
-                    :to="item.to"
-                    class="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition"
-                    :class="
-                      isAdminNavItemActive(route.path, item)
-                        ? 'bg-white/20 !text-white'
-                        : '!text-white/85 hover:bg-white/10 hover:!text-white'
-                    "
-                    @click="closeMobile"
-                  >
-                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white/10">
-                      <AdminNavIcon :name="item.icon" class="h-4 w-4" />
-                    </span>
-                    <span>{{ item.label }}</span>
-                  </NuxtLink>
-                </nav>
+                  <nav class="space-y-1">
+                    <NuxtLink
+                      v-for="item in section.items"
+                      :key="item.to"
+                      :to="item.to"
+                      class="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition"
+                      :class="
+                        isAdminNavItemActive(route.path, item)
+                          ? 'bg-white/20 !text-white'
+                          : '!text-white/85 hover:bg-white/10 hover:!text-white'
+                      "
+                      @click="closeMobile"
+                    >
+                      <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                        <AdminNavIcon :name="item.icon" class="h-4 w-4" />
+                      </span>
+                      <span>{{ item.label }}</span>
+                    </NuxtLink>
+                  </nav>
+                </div>
               </div>
+            </div>
+          </div>
+
+          <!-- 底部固定操作 -->
+          <div class="shrink-0 border-t border-white/15 px-3 py-3">
+            <div class="space-y-1">
+              <NuxtLink
+                class="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium !text-white/85 transition hover:bg-white/10 hover:!text-white"
+                to="/"
+                @click="closeMobile"
+              >
+                <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                  <AdminNavIcon name="home" class="h-4 w-4" />
+                </span>
+                <span>返回前台</span>
+              </NuxtLink>
+
+              <button
+                class="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium !text-white/85 transition hover:bg-white/10 hover:!text-white"
+                type="button"
+                @click="handleLogout"
+              >
+                <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                  <AdminNavIcon name="logout" class="h-4 w-4" />
+                </span>
+                <span>退出登录</span>
+              </button>
             </div>
           </div>
         </aside>
