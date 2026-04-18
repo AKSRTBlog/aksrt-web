@@ -198,11 +198,6 @@ onMounted(async () => {
           </div>
 
           <div class="lg:col-span-2">
-            <label class="admin-label">底部文字</label>
-            <input v-model="publicForm.footerText" class="admin-input" placeholder="Powered by AKSRT Blog" />
-          </div>
-
-          <div class="lg:col-span-2">
             <label class="admin-label">SEO 关键词</label>
             <input v-model="publicForm.seoKeywords" class="admin-input" placeholder="keyword1, keyword2, keyword3" />
           </div>
