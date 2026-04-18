@@ -206,7 +206,7 @@ useHead({
         </aside>
       </div>
 
-      <div class="relative z-0 flex min-w-0 flex-1 flex-col">
+      <div class="relative z-0 min-w-0 flex flex-1 flex-col overflow-hidden">
         <header class="sticky top-0 z-20 border-b border-[var(--admin-border)] bg-white/90 backdrop-blur">
           <div class="flex h-16 items-center justify-between px-4 sm:px-6">
             <div class="flex items-center gap-3">
@@ -233,7 +233,7 @@ useHead({
           </div>
         </header>
 
-        <main class="flex-1 px-4 py-6 sm:px-6">
+        <main class="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6">
           <slot />
         </main>
       </div>
