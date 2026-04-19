@@ -107,7 +107,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="w-full max-w-full space-y-6 overflow-x-hidden">
     <AdminPageHeader title="仪表盘" description="查看文章、评论和媒体资源的最新状态。">
       <template #actions>
         <NuxtLink class="admin-button-primary" :to="adminPaths.articleCreate">新建文章</NuxtLink>
@@ -130,7 +130,7 @@ onMounted(async () => {
     </div>
 
     <template v-else>
-      <section class="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
+      <section class="w-full grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
         <AdminStatCard
           v-for="item in metrics"
           :key="item.label"
@@ -141,8 +141,8 @@ onMounted(async () => {
         />
       </section>
 
-      <section class="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
-        <div class="space-y-6">
+      <section class="w-full grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
+        <div class="w-full space-y-6">
           <div class="admin-card p-4 sm:p-6">
             <div class="mb-4 flex items-center justify-between gap-2">
               <h3 class="text-base font-semibold text-slate-900 sm:text-lg">快捷入口</h3>
@@ -208,7 +208,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="space-y-6">
+        <div class="w-full space-y-6">
           <div class="admin-card p-4 sm:p-6">
             <div class="mb-4 flex items-center justify-between gap-2">
               <h3 class="text-base font-semibold text-slate-900 sm:text-lg">最新文章</h3>
