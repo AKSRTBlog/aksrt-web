@@ -130,7 +130,7 @@ onMounted(async () => {
     </div>
 
     <template v-else>
-      <section class="w-full grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+      <section class="w-full grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <AdminStatCard
           v-for="item in metrics"
           :key="item.label"
@@ -142,59 +142,59 @@ onMounted(async () => {
       </section>
 
       <section class="w-full grid gap-4 sm:gap-6 xl:grid-cols-2">
-        <div class="w-full space-y-4 sm:space-y-6">
-          <div class="admin-card p-4 sm:p-6">
+        <div class="w-full min-w-0 space-y-4 sm:space-y-6">
+          <div class="admin-card min-w-0 overflow-hidden p-4 sm:p-6">
             <div class="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
               <h3 class="text-base font-semibold text-slate-900 sm:text-lg">快捷入口</h3>
               <span class="hidden shrink-0 text-xs font-medium uppercase tracking-[0.18em] text-slate-400 sm:inline">Shortcuts</span>
             </div>
             <div class="grid gap-3">
               <NuxtLink
-                class="flex items-center justify-between gap-3 rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4 transition hover:border-blue-200 hover:bg-blue-50/50"
+                class="flex min-w-0 w-full items-center justify-between gap-3 rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4 transition hover:border-blue-200 hover:bg-blue-50/50"
                 :to="adminPaths.comments"
               >
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                   <p class="text-sm font-semibold text-slate-900">评论管理</p>
-                  <p class="mt-0.5 text-xs text-slate-500">审核、通过或处理最新评论。</p>
+                  <p class="mt-0.5 break-words text-xs text-slate-500">审核、通过或处理最新评论。</p>
                 </div>
                 <svg class="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
               </NuxtLink>
 
               <NuxtLink
-                class="flex items-center justify-between gap-3 rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4 transition hover:border-blue-200 hover:bg-blue-50/50"
+                class="flex min-w-0 w-full items-center justify-between gap-3 rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4 transition hover:border-blue-200 hover:bg-blue-50/50"
                 :to="adminPaths.banners"
               >
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                   <p class="text-sm font-semibold text-slate-900">Banner 管理</p>
-                  <p class="mt-0.5 text-xs text-slate-500">维护首页与侧边栏的展示内容。</p>
+                  <p class="mt-0.5 break-words text-xs text-slate-500">维护首页与侧边栏的展示内容。</p>
                 </div>
                 <svg class="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
               </NuxtLink>
 
               <NuxtLink
-                class="flex items-center justify-between gap-3 rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4 transition hover:border-blue-200 hover:bg-blue-50/50"
+                class="flex min-w-0 w-full items-center justify-between gap-3 rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4 transition hover:border-blue-200 hover:bg-blue-50/50"
                 :to="adminPaths.settings"
               >
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                   <p class="text-sm font-semibold text-slate-900">站点设置</p>
-                  <p class="mt-0.5 text-xs text-slate-500">修改 SEO、SMTP 与存储配置。</p>
+                  <p class="mt-0.5 break-words text-xs text-slate-500">修改 SEO、SMTP 与存储配置。</p>
                 </div>
                 <svg class="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
               </NuxtLink>
             </div>
           </div>
 
-          <div class="admin-card p-4 sm:p-6">
+          <div class="admin-card min-w-0 overflow-hidden p-4 sm:p-6">
             <div class="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
               <h3 class="text-base font-semibold text-slate-900 sm:text-lg">后台概览</h3>
-              <span class="truncate text-xs text-slate-500 sm:text-sm">
+              <span class="max-w-full break-all text-xs text-slate-500 sm:max-w-[60%] sm:text-sm">
                 {{ dashboardState.profile?.displayName || dashboardState.profile?.username || '管理员' }}
               </span>
             </div>
             <div class="space-y-3 sm:space-y-4">
               <div class="rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4">
                 <p class="text-xs text-slate-500">登录账号</p>
-                <p class="mt-1 truncate text-sm font-medium text-slate-900">
+                <p class="mt-1 break-all text-sm font-medium text-slate-900">
                   {{ dashboardState.profile?.email || '未获取到邮箱' }}
                 </p>
               </div>
@@ -208,8 +208,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="w-full space-y-4 sm:space-y-6">
-          <div class="admin-card p-4 sm:p-6">
+        <div class="w-full min-w-0 space-y-4 sm:space-y-6">
+          <div class="admin-card min-w-0 overflow-hidden p-4 sm:p-6">
             <div class="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
               <h3 class="text-base font-semibold text-slate-900 sm:text-lg">最新文章</h3>
               <NuxtLink class="text-sm font-medium text-blue-600" :to="adminPaths.articles">查看全部</NuxtLink>
@@ -221,9 +221,9 @@ onMounted(async () => {
                 :key="article.id"
                 class="flex flex-col items-start gap-2 rounded-[4px] border border-[var(--admin-border)] px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-3"
               >
-                <div class="min-w-0 flex-1">
-                  <p class="truncate text-sm font-semibold text-slate-900">{{ article.title }}</p>
-                  <p class="mt-0.5 truncate text-xs text-slate-500">
+                <div class="min-w-0 w-full flex-1">
+                  <p class="break-words text-sm font-semibold text-slate-900 sm:truncate">{{ article.title }}</p>
+                  <p class="mt-0.5 break-words text-xs text-slate-500 sm:truncate">
                     {{ article.categories?.[0]?.name || '未分类' }} · {{ formatAdminDate(article.createdAt) }}
                   </p>
                 </div>
@@ -239,7 +239,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="admin-card p-4 sm:p-6">
+          <div class="admin-card min-w-0 overflow-hidden p-4 sm:p-6">
             <div class="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
               <h3 class="text-base font-semibold text-slate-900 sm:text-lg">最新评论</h3>
               <NuxtLink class="text-sm font-medium text-blue-600" :to="adminPaths.comments">查看全部</NuxtLink>
@@ -249,10 +249,10 @@ onMounted(async () => {
               <div
                 v-for="comment in recentComments"
                 :key="comment.id"
-                class="rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4"
+                class="min-w-0 w-full rounded-[4px] border border-[var(--admin-border)] px-3 py-3 sm:px-4 sm:py-4"
               >
-                <div class="flex flex-wrap items-start justify-between gap-2">
-                  <p class="min-w-0 truncate text-sm font-semibold text-slate-900">{{ comment.nickname }}</p>
+                <div class="flex min-w-0 flex-wrap items-start justify-between gap-2">
+                  <p class="min-w-0 flex-1 break-all text-sm font-semibold text-slate-900">{{ comment.nickname }}</p>
                   <AdminStatusBadge
                     :tone="
                       comment.status === 'approved'
@@ -265,7 +265,7 @@ onMounted(async () => {
                     {{ comment.status }}
                   </AdminStatusBadge>
                 </div>
-                <p class="mt-2 line-clamp-3 text-sm text-slate-500 sm:line-clamp-3">{{ comment.content }}</p>
+                <p class="mt-2 line-clamp-3 break-words text-sm text-slate-500 sm:line-clamp-3">{{ comment.content }}</p>
                 <p class="mt-1.5 text-xs text-slate-400 sm:mt-2">{{ formatAdminDate(comment.createdAt) }}</p>
               </div>
             </div>
