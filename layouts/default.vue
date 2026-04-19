@@ -7,22 +7,32 @@ provide('site-settings', siteSettings);
 
 useHead(() => {
   const settings = siteSettings.value;
+  const siteTitle = settings?.siteTitle || 'Blog';
+  const seoDesc = settings?.seo?.description || settings?.siteDescription || '';
+  const canonicalUrl = settings?.seo?.canonicalUrl || '';
+  const logoUrl = settings?.logoUrl || '';
+  const defaultOgImage = logoUrl
+    ? logoUrl
+    : '';
 
   return {
     titleTemplate: (titleChunk?: string) => {
-      const base = settings?.siteTitle || 'Blog';
-      return titleChunk ? `${titleChunk} | ${base}` : base;
+      return titleChunk ? `${titleChunk} | ${siteTitle}` : siteTitle;
     },
     meta: [
-      {
-        name: 'description',
-        content: settings?.seo.description || settings?.siteDescription || '',
-      },
-      {
-        name: 'keywords',
-        content: settings?.seo.keywords || '',
-      },
+      // 基本 SEO
+      { name: 'description', content: seoDesc },
+      { name: 'keywords', content: settings?.seo.keywords || '' },
+      // Open Graph - 社交媒体分享（微信、微博、Twitter 等）
+      { property: 'og:title', content: siteTitle },
+      { property: 'og:description', content: seoDesc },
+      { property: 'og:type', content: 'website' },
+      ...(canonicalUrl ? [{ property: 'og:url', content: canonicalUrl }] : []),
+      ...(defaultOgImage ? [{ property: 'og:image', content: defaultOgImage }] : []),
+      { property: 'og:site_name', content: siteTitle },
+      { property: 'og:locale', content: 'zh_CN' },
     ],
+    link: canonicalUrl ? [{ rel: 'canonical', href: canonicalUrl }] : [],
   };
 });
 </script>

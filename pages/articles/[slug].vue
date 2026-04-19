@@ -38,9 +38,17 @@ const relatedArticles = computed(() => {
     .slice(0, 3);
 });
 
+// OG 图片：优先使用文章特色图，回退到站点 Logo
+const ogImage = computed(() => {
+  return article.value?.coverImage || siteSettings.value?.logoUrl || '';
+});
+
 useSeoMeta({
   title: () => article.value?.title || 'Article',
   description: () => article.value?.excerpt || siteSettings.value?.siteDescription || '',
+  ogImage: () => ogImage.value,
+  ogImageUrl: () => ogImage.value,
+  ogType: 'article',
 });
 
 useHead(() => ({
@@ -52,6 +60,7 @@ useHead(() => ({
         },
       ]
     : [],
+  meta: canonicalUrl.value ? [{ property: 'og:url', content: canonicalUrl.value }] : [],
 }));
 </script>
 
