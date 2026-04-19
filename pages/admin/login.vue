@@ -103,7 +103,7 @@ onMounted(async () => {
     </div>
 
     <div class="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center">
-      <section class="w-full rounded-[28px] border border-white/20 bg-white/90 p-6 text-slate-900 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:p-8">
+      <section class="w-full rounded-[6px] border border-slate-200 bg-white p-6 text-slate-900 shadow-[0_30px_80px_rgba(2,6,23,0.45)] sm:p-8">
         <div class="mb-8 space-y-4">
           <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
             <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-semibold text-emerald-700">安</span>
