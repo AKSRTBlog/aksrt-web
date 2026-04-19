@@ -94,77 +94,72 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-950 px-6 py-10 text-white">
-    <div class="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-      <section class="space-y-8">
-        <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
-          <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 text-xs font-semibold text-blue-300">
-            安
-          </span>
-          后台仅面向管理员开放
-        </div>
+  <div class="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-8 sm:px-6">
+    <div class="pointer-events-none absolute inset-0">
+      <div class="absolute -left-24 top-[-6rem] h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
+      <div class="absolute -right-20 top-24 h-80 w-80 rounded-full bg-indigo-500/25 blur-3xl" />
+      <div class="absolute bottom-[-8rem] left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-teal-400/20 blur-3xl" />
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(255,255,255,0.08)_0,rgba(255,255,255,0)_35%),radial-gradient(circle_at_85%_30%,rgba(56,189,248,0.12)_0,rgba(56,189,248,0)_32%)]" />
+    </div>
 
-        <div>
-          <h1 class="max-w-2xl text-5xl font-semibold leading-tight tracking-[-0.05em] text-white md:text-6xl">
-            用更集中的后台入口，管理文章、评论、媒体与站点设置。
-          </h1>
-          <p class="mt-6 max-w-xl text-base leading-8 text-slate-300">
-            登录后即可进入统一后台，内容发布、评论审核、Banner、SMTP 与存储配置都已经接入新的 Rust + PostgreSQL 后端。
-          </p>
-        </div>
-
-        <div class="grid gap-4 md:grid-cols-3">
-          <div class="rounded-[4px] border border-white/10 bg-white/5 p-5">
-            <p class="text-sm font-semibold text-white">统一入口</p>
-            <p class="mt-2 text-sm leading-7 text-slate-300">Nuxt 已接管后台路由，登录后可直接进入各管理模块。</p>
+    <div class="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center">
+      <section class="w-full rounded-[28px] border border-white/20 bg-white/90 p-6 text-slate-900 shadow-[0_30px_80px_rgba(2,6,23,0.45)] backdrop-blur-xl sm:p-8">
+        <div class="mb-8 space-y-4">
+          <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-semibold text-emerald-700">安</span>
+            管理员安全登录
           </div>
-          <div class="rounded-[4px] border border-white/10 bg-white/5 p-5">
-            <p class="text-sm font-semibold text-white">新后端</p>
-            <p class="mt-2 text-sm leading-7 text-slate-300">后台接口已运行在 Rust + PostgreSQL 上，数据流不再依赖旧 Node API。</p>
-          </div>
-          <div class="rounded-[4px] border border-white/10 bg-white/5 p-5">
-            <p class="text-sm font-semibold text-white">渐进迁移</p>
-            <p class="mt-2 text-sm leading-7 text-slate-300">原生 Nuxt 页面会逐步替换旧后台页面，不影响现有功能继续使用。</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="admin-card mx-auto w-full max-w-xl p-8 text-slate-900">
-        <div class="mb-8 flex items-center gap-3">
-          <div class="flex h-12 w-12 items-center justify-center rounded-[4px] bg-blue-600 text-white">
-            登
-          </div>
-          <div>
-            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Admin Login</p>
-            <h2 class="mt-1 text-2xl font-semibold tracking-[-0.03em]">管理员登录</h2>
+          <div class="space-y-2">
+            <h1 class="text-3xl font-semibold tracking-[-0.04em] text-slate-900 sm:text-[2.05rem]">欢迎回来</h1>
+            <p class="text-sm leading-6 text-slate-500">登录后进入后台管理中心</p>
           </div>
         </div>
 
         <form class="space-y-5" @submit.prevent="handleSubmit">
           <label class="block">
             <span class="mb-2 block text-sm font-medium text-slate-700">用户名</span>
-            <input v-model="username" class="admin-input" autocomplete="username" />
+            <input
+              v-model="username"
+              class="admin-input h-11 rounded-xl bg-white"
+              autocomplete="username"
+              placeholder="输入用户名"
+            />
           </label>
 
           <label class="block">
             <span class="mb-2 block text-sm font-medium text-slate-700">登录密码</span>
-            <input v-model="password" class="admin-input" type="password" autocomplete="current-password" />
+            <input
+              v-model="password"
+              class="admin-input h-11 rounded-xl bg-white"
+              type="password"
+              autocomplete="current-password"
+              placeholder="输入密码"
+            />
           </label>
 
-          <label class="flex items-center gap-3 text-sm text-slate-600">
-            <input v-model="remember" type="checkbox" />
-            记住当前设备
-          </label>
+          <div class="flex items-center justify-between gap-3">
+            <label class="flex min-w-0 items-center gap-2.5 text-sm text-slate-600">
+              <input v-model="remember" type="checkbox" class="admin-checkbox" />
+              <span class="truncate">记住当前设备</span>
+            </label>
+            <span v-if="captchaEnabled" class="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">已开启验证码</span>
+          </div>
 
-          <p v-if="errorMessage" class="text-sm text-rose-600">{{ errorMessage }}</p>
+          <p v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+            {{ errorMessage }}
+          </p>
 
-          <button class="admin-button-primary w-full" :disabled="submitting" type="submit">
+          <button
+            class="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 via-cyan-500 to-teal-500 px-4 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(14,116,144,0.35)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="submitting"
+            type="submit"
+          >
             {{ submitting ? '登录中...' : '进入管理后台' }}
           </button>
         </form>
 
-        <div class="mt-6 flex items-center justify-end text-sm text-slate-500">
-          <NuxtLink class="font-medium text-blue-600" to="/">返回博客前台</NuxtLink>
+        <div class="mt-6 border-t border-slate-200 pt-4 text-center text-sm">
+          <NuxtLink class="font-medium text-blue-600 transition hover:text-blue-700" to="/">返回博客前台</NuxtLink>
         </div>
       </section>
     </div>

@@ -178,6 +178,7 @@
 
 #nuxt-admin-root {
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 /* 全局移动端防溢出 */
@@ -187,6 +188,11 @@
 #nuxt-admin-root main > * {
   max-width: 100vw;
   overflow-x: hidden;
+}
+
+#nuxt-admin-root,
+#nuxt-admin-root * {
+  box-sizing: border-box;
 }
 
 /* 卡片容器强制约束 */
@@ -213,6 +219,14 @@
   border-radius: 4px;
   background: var(--admin-card);
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
+}
+
+@media (max-width: 639px) {
+  .admin-card {
+    width: 100%;
+    max-width: 100%;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  }
 }
 
 .admin-page-title {
