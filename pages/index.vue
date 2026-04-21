@@ -32,8 +32,10 @@ onMounted(() => {
 
 // SEO 元数据
 useSeoMeta({
-  title: () => siteSettings.value?.seo?.title || 'Home',
-  description: () => siteSettings.value?.seo?.description || siteSettings.value?.siteDescription || '',
+  title: () => siteSettings.value?.siteTitle || siteSettings.value?.seo?.title || 'Home',
+  description: () => siteSettings.value?.siteDescription || siteSettings.value?.seo?.description || '',
+  ogTitle: () => siteSettings.value?.siteTitle || siteSettings.value?.seo?.title || 'Home',
+  ogDescription: () => siteSettings.value?.siteDescription || siteSettings.value?.seo?.description || '',
 });
 
 useHead(() => ({

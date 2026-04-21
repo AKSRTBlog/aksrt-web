@@ -5,6 +5,8 @@ import { useGeeTestCaptcha } from '~/composables/useGeeTestCaptcha';
 import type { AdminCaptchaResult } from '~/types/admin';
 import type { PublicFooterLinkItem } from '~/types/blog';
 
+const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
+
 // 纯客户端 AJAX 加载友情链接
 const links = ref<PublicFooterLinkItem[]>([]);
 const linksLoading = ref(true);
@@ -112,9 +114,36 @@ onMounted(async () => {
   }
 });
 
-useSeoMeta({
-  title: 'Links',
+const linksCanonicalUrl = computed(() => {
+  const base = siteSettings.value?.seo?.canonicalUrl?.replace(/\/+$/, '') || '';
+  return base ? `${base}/links` : '';
 });
+
+useSeoMeta({
+  title: () => siteSettings.value?.siteTitle || siteSettings.value?.seo?.title || 'Links',
+  description: () => siteSettings.value?.siteDescription || siteSettings.value?.seo?.description || '',
+  ogTitle: () => siteSettings.value?.siteTitle || siteSettings.value?.seo?.title || 'Links',
+  ogDescription: () => siteSettings.value?.siteDescription || siteSettings.value?.seo?.description || '',
+});
+
+useHead(() => ({
+  link: linksCanonicalUrl.value
+    ? [
+        {
+          rel: 'canonical',
+          href: linksCanonicalUrl.value,
+        },
+      ]
+    : [],
+  meta: linksCanonicalUrl.value
+    ? [
+        {
+          property: 'og:url',
+          content: linksCanonicalUrl.value,
+        },
+      ]
+    : [],
+}));
 </script>
 
 <template>

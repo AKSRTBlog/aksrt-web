@@ -8,7 +8,7 @@ provide('site-settings', siteSettings);
 useHead(() => {
   const settings = siteSettings.value;
   const siteTitle = settings?.siteTitle || 'Blog';
-  const seoDesc = settings?.seo?.description || settings?.siteDescription || '';
+  const seoDesc = settings?.siteDescription || settings?.seo?.description || '';
   const canonicalUrl = settings?.seo?.canonicalUrl || '';
   const logoUrl = settings?.logoUrl || '';
   const defaultOgImage = logoUrl
@@ -17,6 +17,9 @@ useHead(() => {
 
   return {
     titleTemplate: (titleChunk?: string) => {
+      if (!titleChunk || titleChunk.trim() === siteTitle.trim()) {
+        return siteTitle;
+      }
       return titleChunk ? `${titleChunk} | ${siteTitle}` : siteTitle;
     },
     meta: [
