@@ -29,6 +29,8 @@ async function loadData() {
   }
 }
 
+usePublicLiveReload(loadData);
+
 onMounted(() => {
   loadData();
 });

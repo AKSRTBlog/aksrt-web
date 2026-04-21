@@ -26,6 +26,8 @@ async function loadArticles() {
   }
 }
 
+usePublicLiveReload(loadArticles);
+
 onMounted(() => {
   loadArticles();
 });

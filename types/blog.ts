@@ -211,3 +211,7 @@ export interface PublicCaptchaConfig {
   enabledOnFriendLink: boolean;
   enabledOnLogin: boolean;
 }
+
+export interface PublicSyncVersionItem {
+  version: string;
+}

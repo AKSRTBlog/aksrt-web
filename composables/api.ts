@@ -20,6 +20,7 @@ import type {
   PublicFooterLinkItem,
   PublicProjectItem,
   PublicSiteSettingsItem,
+  PublicSyncVersionItem,
   PublicStandalonePageDetailItem,
   PublicStandalonePageSummaryItem,
 } from '~/types/blog';
@@ -415,4 +416,8 @@ export async function submitPublicFriendLinkApplication(input: {
 
 export async function fetchCaptchaConfig() {
   return apiFetch<PublicCaptchaConfig>('/api/v1/public/site-settings/captcha');
+}
+
+export async function fetchPublicSyncVersion() {
+  return apiFetch<PublicSyncVersionItem>('/api/v1/public/sync-version');
 }

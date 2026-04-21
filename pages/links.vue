@@ -26,6 +26,8 @@ async function loadLinks() {
   }
 }
 
+usePublicLiveReload(loadLinks);
+
 onMounted(() => {
   loadLinks();
 });
