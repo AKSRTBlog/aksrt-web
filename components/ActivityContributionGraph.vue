@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
             <!-- 月份标签行（每列第一个） -->
             <div
               v-if="getMonthLabel(week.sourceDays)"
-              class="mb-0.5 text-[9.5px] font-normal text-[var(--blog-subtle)] leading-none"
+              class="text-[9.5px] font-normal text-[var(--blog-subtle)] leading-none"
               style="height: 15px;"
             >
               {{ getMonthLabel(week.sourceDays) }}
