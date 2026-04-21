@@ -333,9 +333,9 @@ function formatDate(dateStr: string) {
 
     <MediaPickerDialog
       :open="dialogOpen && mediaPickerOpen"
-      title="閫夋嫨 Banner 鍥剧墖"
-      empty-message="鏆傛棤鍙€夊浘鐗囷紝璇峰厛涓婁紶涓€寮犮€?"
-      search-placeholder="鎼滅储濯掍綋搴撳浘鐗?"
+      title="选择 Banner 图片"
+      empty-message="暂无可选图片，请先上传一张。"
+      search-placeholder="搜索媒体库图片"
       upload-usage="banner"
       @close="mediaPickerOpen = false"
       @select="(asset) => { selectImage(asset); mediaPickerOpen = false }"
