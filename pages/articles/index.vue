@@ -8,6 +8,7 @@ import {
 import type { BlogArticleSummary, PublicArticleCategoryItem } from '~/types/blog';
 
 const route = useRoute();
+const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 
 // --- 纯客户端 AJAX 加载 ---
 const articles = ref<BlogArticleSummary[]>([]);
@@ -88,9 +89,35 @@ function updateQuery(patch: Record<string, string>) {
 }
 
 useSeoMeta({
-  title: 'Articles',
-  description: 'Browse articles by topic, tag, or keyword.',
+  title: () => siteSettings.value?.siteTitle || siteSettings.value?.seo?.title || 'Articles',
+  description: () => siteSettings.value?.siteDescription || siteSettings.value?.seo?.description || '',
+  ogTitle: () => siteSettings.value?.siteTitle || siteSettings.value?.seo?.title || 'Articles',
+  ogDescription: () => siteSettings.value?.siteDescription || siteSettings.value?.seo?.description || '',
 });
+
+const articlesCanonicalUrl = computed(() => {
+  const base = siteSettings.value?.seo?.canonicalUrl?.replace(/\/+$/, '') || '';
+  return base ? `${base}/articles` : '';
+});
+
+useHead(() => ({
+  link: articlesCanonicalUrl.value
+    ? [
+        {
+          rel: 'canonical',
+          href: articlesCanonicalUrl.value,
+        },
+      ]
+    : [],
+  meta: articlesCanonicalUrl.value
+    ? [
+        {
+          property: 'og:url',
+          content: articlesCanonicalUrl.value,
+        },
+      ]
+    : [],
+}));
 </script>
 
 <template>
