@@ -21,7 +21,13 @@ const uncategorizedLabel = 'Uncategorized';
   <NuxtLink :to="`/articles/${article.slug}`" class="group block">
     <article v-if="variant === 'featured'" class="blog-panel overflow-hidden">
       <div class="relative aspect-[16/10] overflow-hidden">
-        <AppImage class="h-full w-full object-cover transition duration-500 group-hover:scale-105" :src="article.coverImage" :alt="article.title" loading="eager" fetchpriority="high" />
+        <AppImage
+          class="h-full w-full object-cover transform-gpu will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
+          :src="article.coverImage"
+          :alt="article.title"
+          loading="eager"
+          fetchpriority="high"
+        />
         <div class="absolute inset-0 bg-gradient-to-t from-[rgba(17,24,39,0.7)] via-transparent to-transparent" />
         <div class="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-[var(--blog-ink)]">
           {{ article.categories?.[0]?.name || uncategorizedLabel }}
@@ -56,7 +62,11 @@ const uncategorizedLabel = 'Uncategorized';
       </div>
       <div class="w-[30%] shrink-0 sm:w-36 md:w-64">
         <div class="h-[88px] overflow-hidden rounded-[3px] sm:h-[104px] md:h-[140px]">
-          <AppImage class="h-full w-full object-cover transition duration-500 group-hover:scale-105" :src="article.coverImage" :alt="article.title" />
+          <AppImage
+            class="h-full w-full object-cover transform-gpu will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
+            :src="article.coverImage"
+            :alt="article.title"
+          />
         </div>
       </div>
     </article>
@@ -72,7 +82,11 @@ const uncategorizedLabel = 'Uncategorized';
 
     <article v-else class="blog-panel overflow-hidden">
       <div class="aspect-[4/3] overflow-hidden">
-        <AppImage class="h-full w-full object-cover transition duration-500 group-hover:scale-105" :src="article.coverImage" :alt="article.title" />
+        <AppImage
+          class="h-full w-full object-cover transform-gpu will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
+          :src="article.coverImage"
+          :alt="article.title"
+        />
       </div>
       <div class="p-6">
         <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-[var(--blog-accent)]">

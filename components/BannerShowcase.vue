@@ -88,7 +88,7 @@ onBeforeUnmount(() => {
       <AppImage
         :src="featuredBanners[0].imageUrl"
         :alt="featuredBanners[0].title"
-        class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        class="h-full w-full object-cover transform-gpu will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
         loading="eager"
         fetchpriority="high"
       />
@@ -124,7 +124,7 @@ onBeforeUnmount(() => {
           <AppImage
             :src="currentBanner.imageUrl"
             :alt="currentBanner.title"
-            class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            class="h-full w-full object-cover transform-gpu will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
             loading="eager"
             fetchpriority="high"
           />
@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
         <AppImage
           :src="featuredBanners[0].imageUrl"
           :alt="featuredBanners[0].title"
-          class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          class="h-full w-full object-cover transform-gpu will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
           loading="eager"
           fetchpriority="high"
         />
@@ -187,7 +187,7 @@ onBeforeUnmount(() => {
           <AppImage
             :src="banner.imageUrl"
             :alt="banner.title"
-            class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            class="h-full w-full object-cover transform-gpu will-change-transform transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
             loading="lazy"
             fetchpriority="low"
           />
