@@ -12,6 +12,7 @@ ENV npm_config_proxy=
 ENV npm_config_https_proxy=
 
 COPY package.json package-lock.json* ./
+COPY scripts ./scripts
 
 # Include optional native deps used by Nuxt toolchain.
 RUN npm config delete proxy || true && \
@@ -19,7 +20,7 @@ RUN npm config delete proxy || true && \
     HTTP_PROXY= HTTPS_PROXY= ALL_PROXY= NO_PROXY= \
     http_proxy= https_proxy= all_proxy= no_proxy= \
     npm_config_proxy= npm_config_https_proxy= npm_config_noproxy= \
-    npm ci --include=optional --no-audit --no-fund --proxy="" --https-proxy=""
+    npm ci --include=optional --no-audit --no-fund
 
 COPY . .
 

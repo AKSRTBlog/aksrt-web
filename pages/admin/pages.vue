@@ -7,7 +7,7 @@ definePageMeta({
 })
 
 useHead({
-  title: '鐙珛椤甸潰',
+  title: '独立页面',
 })
 
 const {
@@ -30,12 +30,12 @@ const {
   removePage,
 } = useAdminStandalonePages()
 
-// 缂栬緫鍣ㄧ姸鎬?
+// 编辑器状态
 const viewMode = ref<'edit' | 'split' | 'preview'>('split')
 const mediaPickerOpen = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
-// 瀵硅瘽妗嗙姸鎬?
+// 对话框状态
 const externalImageDialogOpen = ref(false)
 const externalImageUrl = ref('https://')
 const tableDialogOpen = ref(false)
@@ -44,12 +44,12 @@ const tableColumnCount = ref('3')
 const externalImageDialogError = ref('')
 const tableDialogError = ref('')
 
-// 鍔犺浇鏁版嵁
+// 加载数据
 onMounted(() => {
   loadPages()
 })
 
-// 澶勭悊宸ュ叿鏍忔搷浣?
+// 处理工具栏操作
 function handleToolbarAction(
   action: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'bold' | 'italic' | 'quote' | 'code' | 'list' | 'link' | 'table' | 'image',
 ) {
@@ -98,7 +98,7 @@ function handleToolbarAction(
   textarea.setSelectionRange(next.selectionStart, next.selectionEnd)
 }
 
-// 鎻掑叆澶栭摼鍥剧墖
+// 插入外链图片
 function openExternalImageDialog() {
   externalImageUrl.value = 'https://'
   externalImageDialogError.value = ''
@@ -121,14 +121,14 @@ function confirmExternalImageInsert() {
     return
   }
 
-  const next = insertTextAtSelection(textarea, '![鍥剧墖鎻忚堪](', `](${trimmedUrl})`, '鍥剧墖鎻忚堪')
+  const next = insertTextAtSelection(textarea, '![图片描述](', `](${trimmedUrl})`, '图片描述')
   updateItem(activePage.value.id, item => ({ ...item, content: next.value }))
   textarea.focus()
   textarea.setSelectionRange(next.selectionStart, next.selectionEnd)
   closeExternalImageDialog()
 }
 
-// 鎻掑叆琛ㄦ牸
+// 插入表格
 function closeTableDialog() {
   tableDialogOpen.value = false
   tableDialogError.value = ''
@@ -166,7 +166,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
   if (!textarea || !activePage.value)
     return
 
-  const altText = asset.altText?.trim() || asset.title?.trim() || '鍥剧墖'
+  const altText = asset.altText?.trim() || asset.title?.trim() || '图片'
   const next = insertTextAtSelection(textarea, `\n![${altText}](`, `)\n`, asset.url)
   updateItem(activePage.value.id, item => ({ ...item, content: next.value }))
   textarea.focus()
@@ -177,8 +177,8 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
 
 <template>
   <div class="space-y-6">
-    <!-- 澶栭摼鍥剧墖瀵硅瘽妗?-->
-        <Teleport to="body">
+    <!-- 外链图片对话框 -->
+    <Teleport to="body">
       <div
         v-if="externalImageDialogOpen"
         class="admin-modal-overlay admin-modal-overlay-sheet"
@@ -232,8 +232,8 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
       </div>
     </Teleport>
 
-    <!-- 琛ㄦ牸瀵硅瘽妗?-->
-        <Teleport to="body">
+    <!-- 表格对话框 -->
+    <Teleport to="body">
       <div
         v-if="tableDialogOpen"
         class="admin-modal-overlay admin-modal-overlay-sheet"
@@ -300,8 +300,8 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
     </Teleport>
 
     <AdminPageHeader
-      title="Standalone Pages"
-      description="Manage custom standalone pages. After saving, they are available at /pages/slug and can be linked in navigation manually."
+      title="独立页面"
+      description="管理站点中的自定义独立页面。保存后可通过 /pages/slug 访问，也可以手动加入导航菜单。"
     >
       <template #actions>
         <NuxtLink
@@ -313,24 +313,24 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
-          棰勮椤甸潰
+          预览页面
         </NuxtLink>
         <button class="admin-button-secondary" :disabled="loading" @click="loadPages">
           <svg class="h-4 w-4" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          鍒锋柊
+          刷新
         </button>
         <button class="admin-button-primary" :disabled="saving" @click="savePages">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
-          淇濆瓨鐙珛椤?
+          保存独立页面
         </button>
       </template>
     </AdminPageHeader>
 
-    <!-- 娑堟伅鎻愮ず -->
+    <!-- 消息提示 -->
     <div
       v-if="error"
       class="rounded-[4px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
@@ -344,26 +344,26 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
       {{ successMessage }}
     </div>
 
-    <!-- 鍔犺浇鐘舵€?-->
+    <!-- 加载状态 -->
     <div v-if="loading" class="admin-card p-6 text-center text-sm text-slate-500">
-      姝ｅ湪鍔犺浇鐙珛椤?..
+      正在加载独立页面...
     </div>
 
-    <!-- 鍐呭 -->
+    <!-- 内容 -->
     <template v-if="!loading">
       <section class="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <!-- 渚ц竟鏍忥細椤甸潰鍒楄〃 -->
+        <!-- 侧边栏：页面列表 -->
         <aside class="admin-card overflow-hidden p-0">
           <div class="flex items-center justify-between gap-3 border-b border-[var(--admin-border)] px-5 py-4">
             <div>
-              <h3 class="text-base font-semibold text-slate-900">椤甸潰鍒楄〃</h3>
+              <h3 class="text-base font-semibold text-slate-900">页面列表</h3>
               <p class="text-sm text-slate-500">Supports sorting, enable/disable, and delete actions.</p>
             </div>
             <button class="admin-button-secondary" type="button" @click="addPage">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
-              鏂板缓
+              新建
             </button>
           </div>
 
@@ -377,12 +377,12 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
               @click="activeId = item.id"
             >
               <div class="flex items-start gap-3">
-                <!-- 鎺掑簭鎺у埗 -->
+                <!-- 排序控制 -->
                 <div class="mt-0.5 flex flex-col gap-1">
                   <button
                     :disabled="index === 0"
                     class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-30"
-                    title="涓婄Щ"
+                    title="上移"
                     type="button"
                     @click.stop="moveItem(index, 'up')"
                   >
@@ -393,7 +393,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                   <button
                     :disabled="index === items.length - 1"
                     class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-30"
-                    title="涓嬬Щ"
+                    title="下移"
                     type="button"
                     @click.stop="moveItem(index, 'down')"
                   >
@@ -403,17 +403,17 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                   </button>
                 </div>
 
-                <!-- 椤甸潰淇℃伅 -->
+                <!-- 页面信息 -->
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
                     <span class="truncate font-medium text-slate-900">
-                      {{ item.title.trim() || `鏈懡鍚嶉〉闈?${index + 1}` }}
+                      {{ item.title.trim() || `未命名页面 ${index + 1}` }}
                     </span>
                     <span
                       class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
                       :class="item.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'"
                     >
-                      {{ item.enabled ? '鍚敤' : '鍋滅敤' }}
+                      {{ item.enabled ? '启用' : '禁用' }}
                     </span>
                   </div>
                   <p class="mt-1 truncate text-xs text-slate-500">
@@ -424,10 +424,10 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                   </p>
                 </div>
 
-                <!-- 鍒犻櫎鎸夐挳 -->
+                <!-- 删除按钮 -->
                 <button
                   class="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                  title="鍒犻櫎"
+                  title="删除"
                   type="button"
                   @click.stop="removePage(item.id)"
                 >
@@ -440,9 +440,9 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
           </div>
         </aside>
 
-        <!-- 涓荤紪杈戝尯 -->
+        <!-- 主编辑区 -->
         <div v-if="activePage" class="space-y-6">
-          <!-- 鍩烘湰淇℃伅 -->
+          <!-- 基本信息 -->
           <section class="admin-card p-6">
             <div class="mb-4 rounded-[4px] border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
               <strong>Tip:</strong> Title, slug, and content are required. Summary is optional.
@@ -517,17 +517,17 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
               </div>
             </div>
           </section>
-          <!-- Markdown 缂栬緫鍣?-->
+          <!-- Markdown 编辑器 -->
           <div class="admin-card overflow-hidden p-0">
             <div class="flex items-center justify-between border-b border-[var(--admin-border)] bg-amber-50/50 px-5 py-3">
               <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-slate-900">椤甸潰鍐呭</span>
+                <span class="text-sm font-medium text-slate-900">页面内容</span>
                 <span class="text-rose-500">*</span>
               </div>
-              <span class="text-xs text-slate-500">蹇呭～椤癸紝浣跨敤 Markdown 缂栧啓</span>
+              <span class="text-xs text-slate-500">必填项，使用 Markdown 编写</span>
             </div>
 
-            <!-- 宸ュ叿鏍?-->
+            <!-- 工具栏 -->
             <div class="flex items-center justify-between gap-3 border-b border-[var(--admin-border)] bg-slate-50/90 px-4 py-3">
               <MarkdownToolbar
                 :disabled="saving"
@@ -544,7 +544,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  缂栬緫
+                  编辑
                 </button>
                 <button
                   :class="viewMode === 'split' ? 'admin-button-primary' : 'admin-button-secondary'"
@@ -554,7 +554,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                   </svg>
-                  鍒嗘爮
+                  分栏
                 </button>
                 <button
                   :class="viewMode === 'preview' ? 'admin-button-primary' : 'admin-button-secondary'"
@@ -565,12 +565,12 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
-                  棰勮
+                  预览
                 </button>
               </div>
             </div>
 
-            <!-- 缂栬緫鍣?-->
+            <!-- 编辑器 -->
             <div :class="['grid min-h-[720px]', viewMode === 'split' ? 'lg:grid-cols-2' : 'grid-cols-1']">
               <div
                 v-if="viewMode !== 'preview'"
@@ -581,7 +581,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                   ref="textareaRef"
                   :value="activePage.content"
                   class="admin-editor-textarea"
-                  placeholder="浣跨敤 Markdown 缂栧啓椤甸潰鍐呭..."
+                  placeholder="使用 Markdown 编写页面内容..."
                   @input="updateItem(activePage.id, item => ({ ...item, content: ($event.target as HTMLTextAreaElement).value }))"
                 />
               </div>
@@ -591,7 +591,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
             </div>
           </div>
 
-          <!-- 鎻愮ず淇℃伅 -->
+          <!-- 提示信息 -->
           <section class="admin-card p-5">
             <div class="flex items-start gap-3">
               <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
@@ -609,12 +609,12 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
       </section>
     </template>
 
-    <!-- 濯掍綋閫夋嫨鍣?-->
+    <!-- 媒体选择器 -->
     <MediaPickerDialog
       :open="mediaPickerOpen"
-      title="閫夋嫨鍥剧墖"
-      empty-message="鏆傛棤鍙€夊浘鐗囷紝璇峰厛涓婁紶涓€寮犮€?
-      search-placeholder="鎼滅储濯掍綋搴撳浘鐗?
+      title="选择图片"
+      empty-message="暂无可选图片，请先上传一张。"
+      search-placeholder="搜索媒体库图片"
       upload-usage="article_content"
       @close="mediaPickerOpen = false"
       @select="applyMediaSelection"
