@@ -87,11 +87,11 @@ export function useAdminStandalonePages() {
   async function savePages() {
     // 检查必填字段
     const validItems = items.value.filter(
-      item => item.title.trim() && item.slug.trim() && item.summary.trim() && item.content.trim(),
+      item => item.title.trim() && item.slug.trim() && item.content.trim(),
     )
 
     if (validItems.length === 0) {
-      showMessage('请至少完整填写一个独立页（标题、Slug、摘要、内容）', true)
+      showMessage('Please complete at least one standalone page (title, slug, and content).', true)
       return
     }
 

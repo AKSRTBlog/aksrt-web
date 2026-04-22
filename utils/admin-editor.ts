@@ -182,6 +182,23 @@ export function buildMarkdownTable(rowCount: number, columnCount: number) {
   return [`| ${headerCells.join(' | ')} |`, `| ${separatorCells.join(' | ')} |`, ...body].join('\n');
 }
 
+export function buildExcerptFromMarkdown(markdown: string, maxLength = 150) {
+  const plainText = markdown
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]+`/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1 ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1 ')
+    .replace(/[#>*_[\]\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!plainText) {
+    return '';
+  }
+
+  return plainText.length > maxLength ? plainText.slice(0, maxLength) : plainText;
+}
+
 function toIsoDatetime(value: string | null) {
   if (!value) {
     return null;
@@ -196,6 +213,10 @@ export function buildArticlePayload(
   targetStatus: 'draft' | 'published',
   isEditing: boolean,
 ) {
+  const normalizedContent = form.contentMarkdown.trim();
+  const normalizedExcerpt = form.excerpt.trim();
+  const resolvedExcerpt = normalizedExcerpt || buildExcerptFromMarkdown(normalizedContent, 150);
+
   const publishedAt =
     targetStatus === 'published'
       ? form.status === 'scheduled'
@@ -216,8 +237,8 @@ export function buildArticlePayload(
     slug?: string;
   } = {
     title: form.title.trim(),
-    excerpt: form.excerpt.trim(),
-    content: form.contentMarkdown.trim(),
+    excerpt: resolvedExcerpt,
+    content: normalizedContent,
     coverImageUrl: form.cover?.url ?? null,
     categoryIds: form.categoryIds || [],
     tagIds: form.tagIds,

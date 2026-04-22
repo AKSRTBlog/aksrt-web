@@ -324,11 +324,6 @@ function validateBeforeSave() {
     return false
   }
 
-  if (!form.value.excerpt.trim()) {
-    errorMessage.value = 'Excerpt is required.'
-    return false
-  }
-
   if (!form.value.contentMarkdown.trim()) {
     errorMessage.value = 'Content is required.'
     return false
