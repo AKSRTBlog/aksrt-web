@@ -1,42 +1,137 @@
 <script setup lang="ts">
+type ToolbarAction =
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'h4'
+  | 'h5'
+  | 'h6'
+  | 'bold'
+  | 'italic'
+  | 'quote'
+  | 'code'
+  | 'list'
+  | 'link'
+  | 'table'
+  | 'image'
+
 defineProps<{
   disabled?: boolean
 }>()
 
 const emit = defineEmits<{
-  action: [action: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'bold' | 'italic' | 'quote' | 'code' | 'list' | 'link' | 'table' | 'image']
+  action: [action: ToolbarAction]
   imageUpload: []
   externalImageInsert: []
 }>()
 
-const actions = [
-  { id: 'h1', title: '一级标题', icon: 'H1' },
-  { id: 'h2', title: '二级标题', icon: 'H2' },
-  { id: 'h3', title: '三级标题', icon: 'H3' },
-  { id: 'bold', title: '加粗', icon: 'B' },
-  { id: 'italic', title: '斜体', icon: 'I' },
-  { id: 'quote', title: '引用', icon: '"' },
-  { id: 'code', title: '代码', icon: '<>' },
-  { id: 'list', title: '列表', icon: '•' },
-  { id: 'link', title: '链接', icon: '🔗' },
-  { id: 'table', title: '表格', icon: '⊞' },
+const rootRef = ref<HTMLElement | null>(null)
+const headingMenuOpen = ref(false)
+
+const headingActions = [
+  { id: 'h1', label: 'H1 Heading', scale: 'text-3xl font-bold tracking-tight', size: '32px' },
+  { id: 'h2', label: 'H2 Heading', scale: 'text-2xl font-bold tracking-tight', size: '28px' },
+  { id: 'h3', label: 'H3 Heading', scale: 'text-xl font-semibold', size: '24px' },
+  { id: 'h4', label: 'H4 Heading', scale: 'text-lg font-semibold', size: '20px' },
+  { id: 'h5', label: 'H5 Heading', scale: 'text-base font-medium', size: '16px' },
+  { id: 'h6', label: 'H6 Heading', scale: 'text-sm font-medium uppercase tracking-wide', size: '14px' },
 ] as const
 
-function handleAction(action: typeof actions[number]['id']) {
+const quickActions = [
+  { id: 'bold', title: 'Bold', icon: 'B' },
+  { id: 'italic', title: 'Italic', icon: 'I' },
+  { id: 'quote', title: 'Quote', icon: '"' },
+  { id: 'code', title: 'Code Block', icon: '<>' },
+  { id: 'list', title: 'List', icon: '-' },
+  { id: 'link', title: 'Link', icon: 'Link' },
+  { id: 'table', title: 'Table', icon: 'Table' },
+] as const
+
+function handleToolbarAction(action: ToolbarAction) {
   emit('action', action)
 }
+
+function toggleHeadingMenu() {
+  headingMenuOpen.value = !headingMenuOpen.value
+}
+
+function closeHeadingMenu() {
+  headingMenuOpen.value = false
+}
+
+function selectHeading(action: (typeof headingActions)[number]['id']) {
+  emit('action', action)
+  closeHeadingMenu()
+}
+
+function handleGlobalPointerDown(event: PointerEvent) {
+  if (!headingMenuOpen.value || !rootRef.value) {
+    return
+  }
+
+  const target = event.target as Node | null
+  if (!target || rootRef.value.contains(target)) {
+    return
+  }
+
+  closeHeadingMenu()
+}
+
+onMounted(() => {
+  window.addEventListener('pointerdown', handleGlobalPointerDown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pointerdown', handleGlobalPointerDown)
+})
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-1">
+  <div ref="rootRef" class="flex flex-wrap items-center gap-1">
+    <div class="relative">
+      <button
+        :disabled="disabled"
+        class="admin-toolbar-button"
+        title="Heading Levels"
+        type="button"
+        @click="toggleHeadingMenu"
+      >
+        Heading
+        <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <div
+        v-if="headingMenuOpen"
+        class="absolute left-0 top-[calc(100%+0.4rem)] z-30 w-64 rounded-xl border border-[var(--admin-border)] bg-white p-2 shadow-xl"
+      >
+        <button
+          v-for="heading in headingActions"
+          :key="heading.id"
+          :disabled="disabled"
+          class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          type="button"
+          @click="selectHeading(heading.id)"
+        >
+          <span :class="heading.scale">
+            {{ heading.label }}
+          </span>
+          <span class="text-xs font-medium text-slate-400">
+            {{ heading.size }}
+          </span>
+        </button>
+      </div>
+    </div>
+
     <button
-      v-for="action in actions"
+      v-for="action in quickActions"
       :key="action.id"
       :disabled="disabled"
       :title="action.title"
-      class="flex h-8 min-w-8 items-center justify-center rounded px-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+      class="admin-toolbar-button"
       type="button"
-      @click="handleAction(action.id)"
+      @click="handleToolbarAction(action.id)"
     >
       {{ action.icon }}
     </button>
@@ -45,28 +140,22 @@ function handleAction(action: typeof actions[number]['id']) {
 
     <button
       :disabled="disabled"
-      class="flex h-8 items-center gap-1.5 rounded px-2 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-      title="从媒体库选择图片"
+      class="admin-toolbar-button"
+      title="Insert image from media library"
       type="button"
       @click="emit('imageUpload')"
     >
-      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-      图片
+      Image
     </button>
 
     <button
       :disabled="disabled"
-      class="flex h-8 items-center gap-1.5 rounded px-2 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-      title="插入外链图片"
+      class="admin-toolbar-button"
+      title="Insert external image URL"
       type="button"
       @click="emit('externalImageInsert')"
     >
-      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-      </svg>
-      外链
+      URL
     </button>
   </div>
 </template>

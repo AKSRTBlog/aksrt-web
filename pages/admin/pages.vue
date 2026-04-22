@@ -41,6 +41,8 @@ const externalImageUrl = ref('https://')
 const tableDialogOpen = ref(false)
 const tableRowCount = ref('3')
 const tableColumnCount = ref('3')
+const externalImageDialogError = ref('')
+const tableDialogError = ref('')
 
 // 加载数据
 onMounted(() => {
@@ -58,6 +60,7 @@ function handleToolbarAction(
   if (action === 'table') {
     tableRowCount.value = '3'
     tableColumnCount.value = '3'
+    tableDialogError.value = ''
     tableDialogOpen.value = true
     return
   }
@@ -96,23 +99,41 @@ function handleToolbarAction(
 }
 
 // 插入外链图片
+function openExternalImageDialog() {
+  externalImageUrl.value = 'https://'
+  externalImageDialogError.value = ''
+  externalImageDialogOpen.value = true
+}
+
+function closeExternalImageDialog() {
+  externalImageDialogOpen.value = false
+  externalImageDialogError.value = ''
+}
+
 function confirmExternalImageInsert() {
   const textarea = textareaRef.value
   if (!textarea || !activePage.value)
     return
 
   const trimmedUrl = externalImageUrl.value.trim()
-  if (!trimmedUrl)
+  if (!trimmedUrl || !/^https?:\/\//i.test(trimmedUrl)) {
+    externalImageDialogError.value = 'Please enter a valid image URL starting with http:// or https://'
     return
+  }
 
   const next = insertTextAtSelection(textarea, '![图片描述](', `](${trimmedUrl})`, '图片描述')
   updateItem(activePage.value.id, item => ({ ...item, content: next.value }))
   textarea.focus()
   textarea.setSelectionRange(next.selectionStart, next.selectionEnd)
-  externalImageDialogOpen.value = false
+  closeExternalImageDialog()
 }
 
 // 插入表格
+function closeTableDialog() {
+  tableDialogOpen.value = false
+  tableDialogError.value = ''
+}
+
 function confirmTableInsert() {
   const textarea = textareaRef.value
   if (!textarea || !activePage.value)
@@ -122,19 +143,24 @@ function confirmTableInsert() {
   const columns = Number.parseInt(tableColumnCount.value, 10)
 
   if (!Number.isFinite(rows) || !Number.isFinite(columns) || rows < 1 || columns < 1) {
-    error.value = '请输入有效的表格尺寸'
+    tableDialogError.value = 'Rows and columns must be positive integers.'
     return
   }
 
+  if (rows > 30 || columns > 15) {
+    tableDialogError.value = 'Table is too large. Keep rows <= 30 and columns <= 15.'
+    return
+  }
+
+  tableDialogError.value = ''
   const tableMarkdown = buildMarkdownTable(rows, columns)
   const next = insertTextAtSelection(textarea, '\n', `\n${tableMarkdown}\n`)
   updateItem(activePage.value.id, item => ({ ...item, content: next.value }))
   textarea.focus()
   textarea.setSelectionRange(next.selectionStart, next.selectionEnd)
-  tableDialogOpen.value = false
+  closeTableDialog()
 }
 
-// 应用媒体选择
 function applyMediaSelection(asset: { url: string; altText?: string | null; title?: string | null }) {
   const textarea = textareaRef.value
   if (!textarea || !activePage.value)
@@ -152,39 +178,53 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
 <template>
   <div class="space-y-6">
     <!-- 外链图片对话框 -->
-    <Teleport to="body">
+        <Teleport to="body">
       <div
         v-if="externalImageDialogOpen"
-        class="admin-modal-overlay admin-modal-overlay-center"
+        class="admin-modal-overlay admin-modal-overlay-sheet"
+        @click.self="closeExternalImageDialog"
       >
-        <div class="admin-card w-full max-w-lg overflow-hidden shadow-2xl">
-          <div class="flex items-start justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
+        <div
+          class="admin-card w-full max-h-[90vh] overflow-y-auto rounded-t-2xl border-t border-[var(--admin-border)] bg-white p-0 sm:max-w-lg sm:rounded-[4px] sm:border"
+        >
+          <div class="flex items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">外链图片</p>
-              <h3 class="mt-1 text-xl font-semibold text-slate-900">插入外链图片</h3>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Image URL</p>
+              <h3 class="mt-1 text-lg font-semibold text-slate-900">Insert External Image</h3>
             </div>
-            <button class="admin-button-secondary px-3 py-2" type="button" @click="externalImageDialogOpen = false">
+            <button class="admin-button-secondary px-3 py-2" type="button" @click="closeExternalImageDialog">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
+
           <div class="space-y-4 p-5">
+            <p class="text-sm text-slate-500">Paste a direct image URL to insert it into the markdown content.</p>
+
+            <div
+              v-if="externalImageDialogError"
+              class="rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600"
+            >
+              {{ externalImageDialogError }}
+            </div>
+
             <label class="block">
-              <span class="mb-2 block text-sm font-medium text-slate-700">图片链接</span>
+              <span class="mb-2 block text-sm font-medium text-slate-700">Image URL</span>
               <input
                 v-model="externalImageUrl"
                 class="admin-input"
                 placeholder="https://example.com/image.jpg"
                 @keyup.enter="confirmExternalImageInsert"
-              >
+              />
             </label>
+
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button class="admin-button-secondary" type="button" @click="externalImageDialogOpen = false">
-                取消
+              <button class="admin-button-secondary" type="button" @click="closeExternalImageDialog">
+                Cancel
               </button>
               <button class="admin-button-primary" type="button" @click="confirmExternalImageInsert">
-                插入外链图片
+                Insert Image
               </button>
             </div>
           </div>
@@ -193,50 +233,65 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
     </Teleport>
 
     <!-- 表格对话框 -->
-    <Teleport to="body">
+        <Teleport to="body">
       <div
         v-if="tableDialogOpen"
-        class="admin-modal-overlay admin-modal-overlay-center"
+        class="admin-modal-overlay admin-modal-overlay-sheet"
+        @click.self="closeTableDialog"
       >
-        <div class="admin-card w-full max-w-lg overflow-hidden shadow-2xl">
-          <div class="flex items-start justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
+        <div
+          class="admin-card w-full max-h-[90vh] overflow-y-auto rounded-t-2xl border-t border-[var(--admin-border)] bg-white p-0 sm:max-w-lg sm:rounded-[4px] sm:border"
+        >
+          <div class="flex items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
             <div>
               <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Table</p>
-              <h3 class="mt-1 text-xl font-semibold text-slate-900">插入表格</h3>
+              <h3 class="mt-1 text-lg font-semibold text-slate-900">Insert Table</h3>
             </div>
-            <button class="admin-button-secondary px-3 py-2" type="button" @click="tableDialogOpen = false">
+            <button class="admin-button-secondary px-3 py-2" type="button" @click="closeTableDialog">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
+
           <div class="space-y-4 p-5">
+            <p class="text-sm text-slate-500">Choose row and column counts for the Markdown table.</p>
+
+            <div
+              v-if="tableDialogError"
+              class="rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600"
+            >
+              {{ tableDialogError }}
+            </div>
+
             <div class="grid gap-4 sm:grid-cols-2">
               <label class="block">
-                <span class="mb-2 block text-sm font-medium text-slate-700">表格行数</span>
+                <span class="mb-2 block text-sm font-medium text-slate-700">Rows</span>
                 <input
                   v-model="tableRowCount"
                   class="admin-input"
                   type="number"
                   min="1"
-                >
+                  max="30"
+                />
               </label>
               <label class="block">
-                <span class="mb-2 block text-sm font-medium text-slate-700">表格列数</span>
+                <span class="mb-2 block text-sm font-medium text-slate-700">Columns</span>
                 <input
                   v-model="tableColumnCount"
                   class="admin-input"
                   type="number"
                   min="1"
-                >
+                  max="15"
+                />
               </label>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button class="admin-button-secondary" type="button" @click="tableDialogOpen = false">
-                取消
+              <button class="admin-button-secondary" type="button" @click="closeTableDialog">
+                Cancel
               </button>
               <button class="admin-button-primary" type="button" @click="confirmTableInsert">
-                插入表格
+                Insert Table
               </button>
             </div>
           </div>
@@ -478,7 +533,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                 :disabled="saving"
                 @action="handleToolbarAction"
                 @image-upload="mediaPickerOpen = true"
-                @external-image-insert="externalImageDialogOpen = true"
+                @external-image-insert="openExternalImageDialog"
               />
               <div class="flex gap-2">
                 <button

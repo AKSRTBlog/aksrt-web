@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppImage from '~/components/AppImage.vue';
 import MediaPickerDialog from '~/components/admin/MediaPickerDialog.vue';
+import MarkdownToolbar from '~/components/admin/MarkdownToolbar.vue';
 import { renderMarkdown } from '~/composables/api';
 import { AdminApiError, useAdminSession } from '~/composables/useAdminSession';
 import type {
@@ -40,6 +41,13 @@ const draftKey = computed(() => props.articleId ?? 'new')
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const mediaPickerMode = ref<MediaPickerMode | null>(null)
+const tableDialogOpen = ref(false)
+const tableRowCount = ref('3')
+const tableColumnCount = ref('3')
+const tableDialogError = ref('')
+const externalImageDialogOpen = ref(false)
+const externalImageUrl = ref('https://')
+const externalImageDialogError = ref('')
 
 const form = ref<ArticleEditorForm>(createEmptyArticleForm())
 const options = ref<ArticleEditorOptions>({ categories: [], tags: [] })
@@ -146,7 +154,9 @@ function applyInsertion(
   focusTextareaSelection(next.selectionStart, next.selectionEnd)
 }
 
-function handleToolbarAction(action: string) {
+function handleToolbarAction(
+  action: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'bold' | 'italic' | 'quote' | 'code' | 'list' | 'link' | 'table' | 'image',
+) {
   const textarea = textareaRef.value
 
   if (!textarea) {
@@ -155,10 +165,23 @@ function handleToolbarAction(action: string) {
     return
   }
 
+  if (action === 'table') {
+    handleInsertTable()
+    return
+  }
+
+  if (action === 'image') {
+    openMediaPicker('inline')
+    return
+  }
+
   const actionMap: Record<string, () => ReturnType<typeof insertTextAtSelection>> = {
     h1: () => insertTextAtSelection(textarea, '\n# ', '', 'Heading 1'),
     h2: () => insertTextAtSelection(textarea, '\n## ', '', 'Heading 2'),
     h3: () => insertTextAtSelection(textarea, '\n### ', '', 'Heading 3'),
+    h4: () => insertTextAtSelection(textarea, '\n#### ', '', 'Heading 4'),
+    h5: () => insertTextAtSelection(textarea, '\n##### ', '', 'Heading 5'),
+    h6: () => insertTextAtSelection(textarea, '\n###### ', '', 'Heading 6'),
     bold: () => insertTextAtSelection(textarea, '**', '**', 'bold text'),
     italic: () => insertTextAtSelection(textarea, '*', '*', 'italic text'),
     quote: () => insertTextAtSelection(textarea, '\n> ', '', 'quoted text'),
@@ -179,21 +202,59 @@ function handleToolbarAction(action: string) {
 }
 
 function handleInsertTable() {
-  const rows = Number(window.prompt('Rows', '3') || '3')
-  const columns = Number(window.prompt('Columns', '3') || '3')
-  const tableMarkdown = buildMarkdownTable(rows, columns)
-
-  applyInsertion((textarea) => insertTextAtSelection(textarea, '\n', `\n${tableMarkdown}\n`))
+  tableRowCount.value = '3'
+  tableColumnCount.value = '3'
+  tableDialogError.value = ''
+  tableDialogOpen.value = true
 }
 
-function handleInsertExternalImage() {
-  const url = window.prompt('Image URL', 'https://')
+function closeTableDialog() {
+  tableDialogOpen.value = false
+  tableDialogError.value = ''
+}
 
-  if (!url?.trim()) {
+function confirmTableInsert() {
+  const rows = Number.parseInt(tableRowCount.value, 10)
+  const columns = Number.parseInt(tableColumnCount.value, 10)
+
+  if (!Number.isFinite(rows) || !Number.isFinite(columns) || rows < 1 || columns < 1) {
+    tableDialogError.value = 'Rows and columns must be positive integers.'
     return
   }
 
-  applyInsertion((textarea) => insertTextAtSelection(textarea, `![image](${url.trim()})`, ''))
+  if (rows > 30 || columns > 15) {
+    tableDialogError.value = 'Table is too large. Keep rows <= 30 and columns <= 15.'
+    return
+  }
+
+  tableDialogError.value = ''
+  const tableMarkdown = buildMarkdownTable(rows, columns)
+  applyInsertion((textarea) => insertTextAtSelection(textarea, '\n', `\n${tableMarkdown}\n`))
+  tableDialogOpen.value = false
+}
+
+function handleInsertExternalImage() {
+  externalImageUrl.value = 'https://'
+  externalImageDialogError.value = ''
+  externalImageDialogOpen.value = true
+}
+
+function closeExternalImageDialog() {
+  externalImageDialogOpen.value = false
+  externalImageDialogError.value = ''
+}
+
+function confirmExternalImageInsert() {
+  const trimmedUrl = externalImageUrl.value.trim()
+
+  if (!trimmedUrl || !/^https?:\/\//i.test(trimmedUrl)) {
+    externalImageDialogError.value = 'Please enter a valid image URL starting with http:// or https://'
+    return
+  }
+
+  externalImageDialogError.value = ''
+  applyInsertion((textarea) => insertTextAtSelection(textarea, `![image](${trimmedUrl})`, ''))
+  closeExternalImageDialog()
 }
 
 function openMediaPicker(mode: MediaPickerMode) {
@@ -465,24 +526,12 @@ onMounted(async () => {
 
           <div class="admin-card overflow-hidden">
             <div class="flex flex-wrap items-center gap-2 border-b border-[var(--admin-border)] bg-slate-50/90 px-4 py-3">
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('h1')">H1</button>
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('h2')">H2</button>
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('h3')">H3</button>
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('bold')">Bold</button>
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('italic')">Italic</button>
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('quote')">Quote</button>
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('code')">Code</button>
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('list')">List</button>
-              <button class="admin-toolbar-button" type="button" @click="handleToolbarAction('link')">Link</button>
-              <button class="admin-toolbar-button" type="button" @click="handleInsertTable">Table</button>
-              <button class="admin-toolbar-button" type="button" @click="handleInsertExternalImage">Image URL</button>
-              <button
-                class="admin-toolbar-button"
-                type="button"
-                @click="openMediaPicker('inline')"
-              >
-                Media Image
-              </button>
+              <MarkdownToolbar
+                :disabled="Boolean(actionState)"
+                @action="handleToolbarAction"
+                @image-upload="openMediaPicker('inline')"
+                @external-image-insert="handleInsertExternalImage"
+              />
 
               <div class="ml-auto flex flex-wrap gap-2">
                 <button class="admin-button-secondary" :class="{ 'admin-button-primary': viewMode === 'edit' }" type="button" @click="viewMode = 'edit'">
@@ -631,5 +680,124 @@ onMounted(async () => {
       @close="closeMediaPicker"
       @select="applyMediaSelection"
     />
+
+    <Teleport to="body">
+      <div
+        v-if="externalImageDialogOpen"
+        class="admin-modal-overlay admin-modal-overlay-sheet"
+        @click.self="closeExternalImageDialog"
+      >
+        <div
+          class="admin-card w-full max-h-[90vh] overflow-y-auto rounded-t-2xl border-t border-[var(--admin-border)] bg-white p-0 sm:max-w-lg sm:rounded-[4px] sm:border"
+        >
+          <div class="flex items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Image URL</p>
+              <h3 class="mt-1 text-lg font-semibold text-slate-900">Insert External Image</h3>
+            </div>
+            <button class="admin-button-secondary px-3 py-2" type="button" @click="closeExternalImageDialog">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-4 p-5">
+            <p class="text-sm text-slate-500">Paste a direct image URL to insert it into the markdown content.</p>
+
+            <div
+              v-if="externalImageDialogError"
+              class="rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600"
+            >
+              {{ externalImageDialogError }}
+            </div>
+
+            <label class="block">
+              <span class="mb-2 block text-sm font-medium text-slate-700">Image URL</span>
+              <input
+                v-model="externalImageUrl"
+                class="admin-input"
+                placeholder="https://example.com/image.jpg"
+                @keyup.enter="confirmExternalImageInsert"
+              />
+            </label>
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button class="admin-button-secondary" type="button" @click="closeExternalImageDialog">
+                Cancel
+              </button>
+              <button class="admin-button-primary" type="button" @click="confirmExternalImageInsert">
+                Insert Image
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="tableDialogOpen"
+        class="admin-modal-overlay admin-modal-overlay-sheet"
+        @click.self="closeTableDialog"
+      >
+        <div
+          class="admin-card w-full max-h-[90vh] overflow-y-auto rounded-t-2xl border-t border-[var(--admin-border)] bg-white p-0 sm:max-w-lg sm:rounded-[4px] sm:border"
+        >
+          <div class="flex items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Table</p>
+              <h3 class="mt-1 text-lg font-semibold text-slate-900">Insert Table</h3>
+            </div>
+            <button class="admin-button-secondary px-3 py-2" type="button" @click="closeTableDialog">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-4 p-5">
+            <p class="text-sm text-slate-500">Choose row and column counts for the Markdown table.</p>
+
+            <div v-if="tableDialogError" class="rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+              {{ tableDialogError }}
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="block">
+                <span class="mb-2 block text-sm font-medium text-slate-700">Rows</span>
+                <input
+                  v-model="tableRowCount"
+                  class="admin-input"
+                  type="number"
+                  min="1"
+                  max="30"
+                />
+              </label>
+
+              <label class="block">
+                <span class="mb-2 block text-sm font-medium text-slate-700">Columns</span>
+                <input
+                  v-model="tableColumnCount"
+                  class="admin-input"
+                  type="number"
+                  min="1"
+                  max="15"
+                />
+              </label>
+            </div>
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button class="admin-button-secondary" type="button" @click="closeTableDialog">
+                Cancel
+              </button>
+              <button class="admin-button-primary" type="button" @click="confirmTableInsert">
+                Insert Table
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
