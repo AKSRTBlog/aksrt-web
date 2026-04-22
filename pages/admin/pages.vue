@@ -155,7 +155,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
     <Teleport to="body">
       <div
         v-if="externalImageDialogOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+        class="admin-modal-overlay admin-modal-overlay-center"
       >
         <div class="admin-card w-full max-w-lg overflow-hidden shadow-2xl">
           <div class="flex items-start justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
@@ -196,7 +196,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
     <Teleport to="body">
       <div
         v-if="tableDialogOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+        class="admin-modal-overlay admin-modal-overlay-center"
       >
         <div class="admin-card w-full max-w-lg overflow-hidden shadow-2xl">
           <div class="flex items-start justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">

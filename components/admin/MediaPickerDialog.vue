@@ -194,10 +194,10 @@ async function copySelectedUrl() {
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 sm:items-center sm:px-4 sm:py-6"
+      class="admin-modal-overlay admin-modal-overlay-adaptive"
       @click.self="emit('close')"
     >
-      <div class="admin-card flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden rounded-none shadow-2xl sm:h-[min(88vh,860px)] sm:rounded-3xl">
+      <div class="admin-card flex h-[100dvh] max-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden rounded-none shadow-2xl sm:h-[min(88vh,860px)] sm:max-h-[min(88vh,860px)] sm:rounded-3xl">
         <div class="flex items-center justify-between border-b border-[var(--admin-border)] px-4 py-3 sm:px-6 sm:py-4">
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
@@ -400,7 +400,7 @@ async function copySelectedUrl() {
                     </p>
                   </div>
                 </div>
-                <div class="mt-3 grid grid-cols-2 gap-2">
+                <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button class="admin-button-secondary min-h-10" type="button" @click="copySelectedUrl">
                     {{ copied ? '已复制' : '复制链接' }}
                   </button>

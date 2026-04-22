@@ -722,7 +722,7 @@ onMounted(() => {
     <Teleport to="body">
       <div
         v-if="contactDialogOpen"
-        class="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-6 lg:left-[244px]"
+        class="admin-modal-overlay admin-modal-overlay-sheet"
         @click.self="closeContactDialog"
       >
         <div class="admin-card w-full max-w-xl rounded-none p-4 sm:rounded-[4px] sm:p-6">

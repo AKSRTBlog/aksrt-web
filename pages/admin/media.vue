@@ -437,7 +437,7 @@ function closeDetailsModal() {
     <Teleport to="body">
       <div
         v-if="detailsOpen && selectedAsset"
-        class="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/70 px-0 py-0 sm:items-center sm:px-4 sm:py-6"
+        class="admin-modal-overlay admin-modal-overlay-adaptive"
         @click.self="closeDetailsModal"
       >
         <div class="admin-card flex h-[100dvh] max-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden rounded-none shadow-2xl sm:h-[min(90vh,900px)] sm:max-h-[min(90vh,900px)] sm:rounded-[4px]">

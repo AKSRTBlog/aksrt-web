@@ -197,7 +197,7 @@ function formatDate(dateStr: string) {
     <Teleport to="body">
       <div
         v-if="dialogOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+        class="admin-modal-overlay admin-modal-overlay-center"
       >
         <div class="admin-card w-full max-w-2xl overflow-hidden shadow-2xl">
           <!-- Header -->
