@@ -15,6 +15,8 @@ type ContactDialogForm = {
   url: string
 }
 
+type PasswordStrengthLevel = 'weak' | 'medium' | 'strong'
+
 const { adminApiFetch, refreshProfile, logout } = useAdminSession()
 const { invalidatePublicData } = usePublicDataInvalidation()
 const router = useRouter()
@@ -52,6 +54,83 @@ const passwordForm = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
+})
+
+function getPasswordStrength(password: string): PasswordStrengthLevel {
+  if (!password) {
+    return 'weak'
+  }
+
+  let score = 0
+  if (password.length >= 8) {
+    score += 1
+  }
+  if (password.length >= 12) {
+    score += 1
+  }
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) {
+    score += 1
+  }
+  if (/\d/.test(password)) {
+    score += 1
+  }
+  if (/[^A-Za-z0-9]/.test(password)) {
+    score += 1
+  }
+
+  if (score >= 5) {
+    return 'strong'
+  }
+  if (score >= 3) {
+    return 'medium'
+  }
+  return 'weak'
+}
+
+const passwordStrength = computed(() => {
+  const level = getPasswordStrength(passwordForm.value.newPassword)
+  if (level === 'strong') {
+    return {
+      level,
+      label: '强',
+      barWidth: '100%',
+      barClass: 'bg-emerald-500',
+      textClass: 'text-emerald-600',
+    }
+  }
+  if (level === 'medium') {
+    return {
+      level,
+      label: '中',
+      barWidth: '66%',
+      barClass: 'bg-amber-500',
+      textClass: 'text-amber-600',
+    }
+  }
+  return {
+    level,
+    label: '弱',
+    barWidth: passwordForm.value.newPassword ? '33%' : '0%',
+    barClass: 'bg-rose-500',
+    textClass: 'text-rose-600',
+  }
+})
+
+const canSubmitPasswordChange = computed(() => {
+  const { currentPassword, newPassword, confirmPassword } = passwordForm.value
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return false
+  }
+  if (newPassword !== confirmPassword) {
+    return false
+  }
+  if (newPassword === currentPassword) {
+    return false
+  }
+  if (newPassword.length < 8) {
+    return false
+  }
+  return passwordStrength.value.level !== 'weak'
 })
 
 function createContactId() {
@@ -339,6 +418,20 @@ async function saveAboutProfile() {
 }
 
 async function changePassword() {
+  if (
+    !passwordForm.value.currentPassword
+    || !passwordForm.value.newPassword
+    || !passwordForm.value.confirmPassword
+  ) {
+    error.value = '请完整填写当前密码、新密码和确认密码'
+    return
+  }
+
+  if (passwordForm.value.newPassword === passwordForm.value.currentPassword) {
+    error.value = '新密码不能与当前密码相同'
+    return
+  }
+
   if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
     error.value = '两次输入的新密码不一致'
     return
@@ -346,6 +439,11 @@ async function changePassword() {
 
   if (passwordForm.value.newPassword.length < 8) {
     error.value = '新密码长度至少为 8 位'
+    return
+  }
+
+  if (passwordStrength.value.level === 'weak') {
+    error.value = '新密码强度过弱，请至少提升到中等强度'
     return
   }
 
@@ -406,9 +504,9 @@ onMounted(() => {
       <div class="grid gap-6 xl:grid-cols-2">
         <section class="admin-card flex h-full flex-col p-6">
           <h3 class="text-lg font-semibold text-slate-900">账户信息</h3>
-          <p class="mt-1 text-sm text-slate-500">修改后台登录用户名、邮箱和显示名称。</p>
+          <p class="mt-1 text-sm text-slate-500">修改后台登录用户名、邮箱、显示名称与密码。</p>
 
-          <div class="mt-6 flex flex-1 flex-col">
+          <div class="mt-6 space-y-6">
             <div class="space-y-6">
               <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">用户名</label>
@@ -426,10 +524,72 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="mt-auto flex gap-3 pt-6">
+            <div class="flex gap-3">
               <button class="admin-button-primary" :disabled="saving" @click="saveProfile">
                 {{ saving ? '保存中...' : '保存修改' }}
               </button>
+            </div>
+
+            <div class="border-t border-[var(--admin-border)] pt-6">
+              <h4 class="text-base font-semibold text-slate-900">修改密码</h4>
+              <p class="mt-1 text-sm text-slate-500">新密码不能与当前密码相同，建议使用更高强度密码。</p>
+
+              <div class="mt-4 space-y-5">
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-slate-700">当前密码</label>
+                  <input
+                    v-model="passwordForm.currentPassword"
+                    type="password"
+                    class="admin-input w-full"
+                    placeholder="输入当前密码"
+                  >
+                </div>
+
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-slate-700">新密码</label>
+                  <input
+                    v-model="passwordForm.newPassword"
+                    type="password"
+                    class="admin-input w-full"
+                    placeholder="输入新密码（至少 8 位）"
+                  >
+                </div>
+
+                <div v-if="passwordForm.newPassword" class="rounded-[4px] border border-[var(--admin-border)] bg-slate-50 px-3 py-3">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-500">密码强度</span>
+                    <span class="font-medium" :class="passwordStrength.textClass">{{ passwordStrength.label }}</span>
+                  </div>
+                  <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      class="h-full rounded-full transition-all duration-200"
+                      :class="passwordStrength.barClass"
+                      :style="{ width: passwordStrength.barWidth }"
+                    />
+                  </div>
+                  <p class="mt-2 text-xs text-slate-500">建议包含大小写字母、数字与符号，长度 12 位以上更安全。</p>
+                </div>
+
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-slate-700">确认新密码</label>
+                  <input
+                    v-model="passwordForm.confirmPassword"
+                    type="password"
+                    class="admin-input w-full"
+                    placeholder="再次输入新密码"
+                  >
+                </div>
+
+                <div class="flex gap-3">
+                  <button
+                    class="admin-button-secondary"
+                    :disabled="changingPassword || !canSubmitPasswordChange"
+                    @click="changePassword"
+                  >
+                    {{ changingPassword ? '修改中...' : '修改密码' }}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -512,54 +672,6 @@ onMounted(() => {
           </div>
         </section>
 
-        <section class="admin-card flex h-full flex-col p-6">
-          <h3 class="text-lg font-semibold text-slate-900">修改密码</h3>
-          <p class="mt-1 text-sm text-slate-500">定期更新密码有助于提升账号安全。</p>
-
-          <div class="mt-6 flex flex-1 flex-col">
-            <div class="space-y-6">
-              <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">当前密码</label>
-                <input
-                  v-model="passwordForm.currentPassword"
-                  type="password"
-                  class="admin-input w-full"
-                  placeholder="输入当前密码"
-                >
-              </div>
-
-              <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">新密码</label>
-                <input
-                  v-model="passwordForm.newPassword"
-                  type="password"
-                  class="admin-input w-full"
-                  placeholder="输入新密码（至少 8 位）"
-                >
-              </div>
-
-              <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">确认新密码</label>
-                <input
-                  v-model="passwordForm.confirmPassword"
-                  type="password"
-                  class="admin-input w-full"
-                  placeholder="再次输入新密码"
-                >
-              </div>
-            </div>
-
-            <div class="mt-auto flex gap-3 pt-6">
-              <button
-                class="admin-button-secondary"
-                :disabled="changingPassword || !passwordForm.currentPassword || !passwordForm.newPassword"
-                @click="changePassword"
-              >
-                {{ changingPassword ? '修改中...' : '修改密码' }}
-              </button>
-            </div>
-          </div>
-        </section>
       </div>
     </template>
 
