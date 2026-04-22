@@ -29,10 +29,14 @@ const {
   makeLinkItem,
   loadAll,
   saveItems,
+  moveItemTo,
   moveItem,
   removeItem,
   handleReview,
 } = useAdminFriendLinks()
+
+const dragSourceIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 // 加载数据
 onMounted(() => {
@@ -50,6 +54,39 @@ function applicationStatusLabel(status: string) {
 
 function applicationStatusTone(status: string) {
   return status === 'approved' ? 'success' : status === 'rejected' ? 'danger' : 'warning'
+}
+
+function handleDragStart(index: number, event: DragEvent) {
+  dragSourceIndex.value = index
+  dragOverIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(index))
+  }
+}
+
+function handleDragOver(index: number, event: DragEvent) {
+  event.preventDefault()
+  dragOverIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function handleDrop(index: number, event: DragEvent) {
+  event.preventDefault()
+  const sourceIndex = dragSourceIndex.value
+  if (sourceIndex === null) {
+    return
+  }
+  moveItemTo(sourceIndex, index)
+  dragSourceIndex.value = null
+  dragOverIndex.value = null
+}
+
+function handleDragEnd() {
+  dragSourceIndex.value = null
+  dragOverIndex.value = null
 }
 </script>
 
@@ -112,10 +149,21 @@ function applicationStatusTone(status: string) {
         <div
           v-for="(item, index) in items"
           :key="item.id ?? index"
-          class="flex gap-4 px-5 py-5 hover:bg-slate-50/50"
+          draggable="true"
+          class="flex gap-4 px-5 py-5 transition hover:bg-slate-50/50"
+          :class="{ 'opacity-70': dragSourceIndex === index, 'bg-blue-50/60 ring-1 ring-blue-200': dragOverIndex === index && dragSourceIndex !== index }"
+          @dragstart="handleDragStart(index, $event)"
+          @dragover="handleDragOver(index, $event)"
+          @drop="handleDrop(index, $event)"
+          @dragend="handleDragEnd"
         >
           <!-- 排序控制 -->
           <div class="flex flex-col gap-1 pt-1">
+            <span class="inline-flex cursor-grab items-center justify-center rounded p-1 text-slate-400" title="拖拽排序">
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01" />
+              </svg>
+            </span>
             <button
               :disabled="index === 0"
               class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-30"

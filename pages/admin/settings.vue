@@ -203,11 +203,6 @@ onMounted(async () => {
           </div>
 
           <div class="lg:col-span-2">
-            <label class="admin-label">GitHub 用户名</label>
-            <input v-model="publicForm.githubUsername" class="admin-input" placeholder="your-github-username" />
-          </div>
-
-          <div class="lg:col-span-2">
             <label class="admin-checkbox-label">
               <input v-model="publicForm.commentEnabled" type="checkbox" class="admin-checkbox" />
               <span>启用评论功能</span>

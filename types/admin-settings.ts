@@ -24,6 +24,12 @@ export interface FooterLinkItem {
   enabled: boolean
 }
 
+export interface AboutContactItem {
+  id: string
+  name: string
+  url: string
+}
+
 export interface PublicSiteSettings {
   siteTitle: string
   siteDescription: string
@@ -40,6 +46,7 @@ export interface PublicSiteSettings {
   githubUsername: string | null
   aboutDisplayName: string | null
   aboutBio: string | null
+  aboutContacts: AboutContactItem[]
   adminAvatarUrl: string | null
 }
 

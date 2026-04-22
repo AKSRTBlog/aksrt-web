@@ -8,14 +8,12 @@ export function useAdminFriendLinks() {
   const { adminApiFetch } = useAdminSession()
   const { invalidatePublicData } = usePublicDataInvalidation()
 
-  // 状态
   const items = ref<FooterLinkItem[]>([])
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
   const successMessage = ref('')
 
-  // 申请相关状态
   const applications = ref<AdminFriendLinkApplicationItem[]>([])
   const applicationsLoading = ref(false)
   const applicationKeyword = ref('')
@@ -24,7 +22,6 @@ export function useAdminFriendLinks() {
   const reviewNote = ref('')
   const busyApplicationId = ref<string | null>(null)
 
-  // 计算属性
   const filteredApplications = computed(() => {
     const keyword = applicationKeyword.value.trim().toLowerCase()
 
@@ -62,7 +59,6 @@ export function useAdminFriendLinks() {
     rejected: applications.value.filter(item => item.status === 'rejected').length,
   }))
 
-  // 反馈
   function showMessage(msg: string, isError = false) {
     if (isError) {
       error.value = msg
@@ -81,7 +77,6 @@ export function useAdminFriendLinks() {
     }
   }
 
-  // 创建空白友链
   function makeLinkItem(): FooterLinkItem {
     return {
       id: typeof crypto !== 'undefined' && crypto.randomUUID
@@ -96,13 +91,21 @@ export function useAdminFriendLinks() {
     }
   }
 
-  // 加载正式友链
+  function normalizeItemsOrder(list: FooterLinkItem[]) {
+    return [...list]
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map((item, index) => ({
+        ...item,
+        sortOrder: index,
+      }))
+  }
+
   async function loadItems() {
     loading.value = true
 
     try {
       const result = await adminApiFetch<FooterLinkItem[]>('/api/v1/admin/site-settings/footer-links')
-      items.value = result.length > 0 ? result : [makeLinkItem()]
+      items.value = result.length > 0 ? normalizeItemsOrder(result) : [makeLinkItem()]
       showMessage('')
     }
     catch (e) {
@@ -113,7 +116,6 @@ export function useAdminFriendLinks() {
     }
   }
 
-  // 加载申请
   async function loadApplications() {
     applicationsLoading.value = true
 
@@ -121,10 +123,7 @@ export function useAdminFriendLinks() {
       const result = await adminApiFetch<AdminFriendLinkApplicationItem[]>('/api/v1/admin/friend-link-applications')
       applications.value = result
 
-      if (selectedApplicationId.value && result.some(item => item.id === selectedApplicationId.value)) {
-        // keep current selection
-      }
-      else {
+      if (!selectedApplicationId.value || !result.some(item => item.id === selectedApplicationId.value)) {
         selectedApplicationId.value = result[0]?.id ?? null
       }
 
@@ -138,7 +137,6 @@ export function useAdminFriendLinks() {
     }
   }
 
-  // 保存正式友链
   async function saveItems() {
     saving.value = true
 
@@ -160,7 +158,7 @@ export function useAdminFriendLinks() {
         body: JSON.stringify({ items: payload }),
       })
 
-      items.value = result.length > 0 ? result : [makeLinkItem()]
+      items.value = result.length > 0 ? normalizeItemsOrder(result) : [makeLinkItem()]
       invalidatePublicData()
       showMessage('友情链接已保存')
     }
@@ -172,27 +170,45 @@ export function useAdminFriendLinks() {
     }
   }
 
-  // 移动友链
-  function moveItem(index: number, direction: 'up' | 'down') {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1
-    if (targetIndex < 0 || targetIndex >= items.value.length)
+  function moveItemTo(sourceIndex: number, targetIndex: number) {
+    if (
+      sourceIndex < 0
+      || targetIndex < 0
+      || sourceIndex >= items.value.length
+      || targetIndex >= items.value.length
+      || sourceIndex === targetIndex
+    ) {
       return
+    }
 
     const next = [...items.value]
-    ;[next[index], next[targetIndex]] = [next[index], next[targetIndex]]
-    items.value = next
+    const [moved] = next.splice(sourceIndex, 1)
+    if (!moved) {
+      return
+    }
+
+    next.splice(targetIndex, 0, moved)
+    items.value = next.map((item, index) => ({
+      ...item,
+      sortOrder: index,
+    }))
   }
 
-  // 删除友链
+  function moveItem(index: number, direction: 'up' | 'down') {
+    moveItemTo(index, direction === 'up' ? index - 1 : index + 1)
+  }
+
   function removeItem(index: number) {
     let next = items.value.filter((_, i) => i !== index)
     if (next.length === 0) {
       next = [makeLinkItem()]
     }
-    items.value = next
+    items.value = next.map((item, idx) => ({
+      ...item,
+      sortOrder: idx,
+    }))
   }
 
-  // 审核申请
   async function handleReview(status: AdminFriendLinkApplicationItem['status']) {
     if (!selectedApplication.value) {
       return
@@ -238,20 +254,17 @@ export function useAdminFriendLinks() {
     }
   }
 
-  // 加载所有
   async function loadAll() {
     await Promise.all([loadItems(), loadApplications()])
   }
 
   return {
-    // 正式友链
     items,
     loading,
     saving,
     error,
     successMessage,
 
-    // 申请
     applications,
     applicationsLoading,
     applicationKeyword,
@@ -263,13 +276,12 @@ export function useAdminFriendLinks() {
     selectedApplication,
     counts,
 
-    // 工具函数
     makeLinkItem,
 
-    // 方法
     loadItems,
     loadApplications,
     saveItems,
+    moveItemTo,
     moveItem,
     removeItem,
     handleReview,

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { MediaAssetItem, MediaUsage } from '~/types/admin'
 import {
   formatMediaDate,
@@ -194,11 +194,11 @@ async function copySelectedUrl() {
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6"
+      class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 sm:items-center sm:px-4 sm:py-6"
       @click.self="emit('close')"
     >
-      <div class="admin-card flex h-[min(88vh,860px)] w-full max-w-6xl flex-col overflow-hidden shadow-2xl">
-        <div class="flex items-center justify-between border-b border-[var(--admin-border)] px-6 py-4">
+      <div class="admin-card flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden rounded-none shadow-2xl sm:h-[min(88vh,860px)] sm:rounded-3xl">
+        <div class="flex items-center justify-between border-b border-[var(--admin-border)] px-4 py-3 sm:px-6 sm:py-4">
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
               Media Library
@@ -208,7 +208,7 @@ async function copySelectedUrl() {
             </h3>
           </div>
           <button
-            class="admin-button-secondary px-3 py-2"
+            class="admin-button-secondary min-h-10 px-3 py-2"
             type="button"
             @click="emit('close')"
           >
@@ -218,23 +218,23 @@ async function copySelectedUrl() {
           </button>
         </div>
 
-        <div class="flex items-center gap-2 border-b border-[var(--admin-border)] bg-slate-50 px-4 py-3">
+        <div class="flex flex-wrap items-center gap-2 border-b border-[var(--admin-border)] bg-slate-50 px-3 py-3 sm:px-4">
           <button
-            :class="activeTab === 'library' ? 'admin-button-primary' : 'admin-button-secondary'"
+            :class="activeTab === 'library' ? 'admin-button-primary min-h-10' : 'admin-button-secondary min-h-10'"
             type="button"
             @click="activeTab = 'library'"
           >
             媒体库
           </button>
           <button
-            :class="activeTab === 'upload' ? 'admin-button-primary' : 'admin-button-secondary'"
+            :class="activeTab === 'upload' ? 'admin-button-primary min-h-10' : 'admin-button-secondary min-h-10'"
             type="button"
             @click="activeTab = 'upload'"
           >
             上传文件
           </button>
-          <div class="ml-auto text-sm text-slate-500">
-            {{ selectedAsset ? '已选择 1 个媒体项' : '请选择一项媒体资源' }}
+          <div class="hidden text-sm text-slate-500 sm:ml-auto sm:block">
+            {{ selectedAsset ? '已选择 1 个媒体项' : '请选择一个媒体资源' }}
           </div>
         </div>
 
@@ -242,23 +242,23 @@ async function copySelectedUrl() {
           {{ error }}
         </div>
 
-        <div v-if="activeTab === 'upload'" class="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div class="flex min-h-0 flex-col">
-            <div class="border-b border-[var(--admin-border)] px-5 py-4">
+        <div v-if="activeTab === 'upload'" class="grid min-h-0 flex-1 gap-0 overflow-hidden lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div class="flex min-h-0 flex-col overflow-y-auto">
+            <div class="border-b border-[var(--admin-border)] px-4 py-4 sm:px-5">
               <p class="text-sm text-slate-600">
-                拖拽图片到这里，或从电脑中一次选择多张上传。上传完成后会自动回到媒体库并选中新文件。
+                拖拽图片到这里，或从本地一次选择多张上传。上传完成后会自动回到媒体库并选中新文件。
               </p>
             </div>
 
             <div
-              class="flex min-h-0 flex-1 items-center justify-center p-6"
+              class="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-6"
               @dragenter.prevent="isDragging = true"
               @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
               @drop="handleDrop"
             >
               <div
-                class="flex w-full max-w-2xl flex-col items-center justify-center rounded-[2rem] border-2 border-dashed px-8 py-16 text-center transition"
+                class="flex w-full max-w-2xl flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-10 text-center transition sm:rounded-[2rem] sm:px-8 sm:py-16"
                 :class="isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50/80'"
               >
                 <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm">
@@ -270,7 +270,7 @@ async function copySelectedUrl() {
                   {{ uploading ? '正在上传媒体...' : '拖拽文件到此处上传' }}
                 </h4>
                 <p class="mt-2 max-w-lg text-sm leading-7 text-slate-500">
-                  支持 JPG、PNG、GIF、WebP、SVG。建议上传清晰、压缩过的图片，媒体用途将按当前弹窗场景自动标记。
+                  支持 JPG、PNG、GIF、WebP、SVG。建议上传清晰并压缩过的图片，媒体用途会按当前场景自动标记。
                 </p>
                 <input
                   ref="fileInput"
@@ -281,7 +281,7 @@ async function copySelectedUrl() {
                   @change="handleFileChange"
                 >
                 <button
-                  class="admin-button-primary mt-6"
+                  class="admin-button-primary mt-6 w-full sm:w-auto"
                   :disabled="uploading"
                   type="button"
                   @click="fileInput?.click()"
@@ -292,7 +292,7 @@ async function copySelectedUrl() {
             </div>
           </div>
 
-          <aside class="border-l border-[var(--admin-border)] bg-slate-50/60 p-5">
+          <aside class="hidden border-l border-[var(--admin-border)] bg-slate-50/60 p-5 lg:block">
             <div class="space-y-4">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
@@ -303,7 +303,7 @@ async function copySelectedUrl() {
                 </h4>
               </div>
               <ul class="space-y-3 text-sm leading-7 text-slate-600">
-                <li>建议一次上传同一批内容会使用到的图片，后续筛选会更清晰。</li>
+                <li>建议一次上传同一批会使用到的图片，后续筛选更清晰。</li>
                 <li>Banner 和封面图尽量保持横向比例，便于前台复用。</li>
                 <li>上传完成后会自动回到媒体库，你可以立即查看详情并插入。</li>
               </ul>
@@ -311,9 +311,9 @@ async function copySelectedUrl() {
           </aside>
         </div>
 
-        <div v-else class="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div v-else class="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[minmax(0,1fr)_320px]">
           <div class="flex min-h-0 flex-col">
-            <div class="flex flex-col gap-3 border-b border-[var(--admin-border)] px-4 py-4 sm:flex-row">
+            <div class="flex flex-col gap-3 border-b border-[var(--admin-border)] px-3 py-3 sm:flex-row sm:px-4 sm:py-4">
               <div class="flex-1">
                 <input
                   v-model="keyword"
@@ -322,17 +322,17 @@ async function copySelectedUrl() {
                   @keyup.enter="handleSearch"
                 >
               </div>
-              <div class="flex gap-2">
-                <button class="admin-button-secondary" type="button" @click="handleSearch">
+              <div class="flex flex-wrap gap-2">
+                <button class="admin-button-secondary min-h-10" type="button" @click="handleSearch">
                   搜索
                 </button>
-                <button class="admin-button-secondary" type="button" @click="refreshLibrary({ preserveSelection: true })">
+                <button class="admin-button-secondary min-h-10" type="button" @click="refreshLibrary({ preserveSelection: true })">
                   刷新
                 </button>
               </div>
             </div>
 
-            <div class="min-h-0 flex-1 overflow-y-auto bg-slate-50/50 p-4">
+            <div class="min-h-0 flex-1 overflow-y-auto bg-slate-50/50 p-3 sm:p-4">
               <div v-if="loading" class="flex h-full min-h-60 items-center justify-center text-sm text-slate-500">
                 正在加载媒体库...
               </div>
@@ -346,7 +346,7 @@ async function copySelectedUrl() {
                 </p>
               </div>
 
-              <div v-else class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+              <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
                 <button
                   v-for="asset in items"
                   :key="asset.id"
@@ -380,34 +380,83 @@ async function copySelectedUrl() {
                   </div>
                 </button>
               </div>
+
+              <div v-if="selectedAsset" class="mt-3 rounded-2xl border border-[var(--admin-border)] bg-white p-3 lg:hidden">
+                <div class="flex items-start gap-3">
+                  <img
+                    :src="selectedAsset.url"
+                    :alt="selectedAsset.originalFilename"
+                    class="h-16 w-16 shrink-0 rounded-xl object-cover"
+                  >
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-semibold text-slate-900">
+                      {{ selectedAsset.title || selectedAsset.originalFilename }}
+                    </p>
+                    <p class="mt-1 truncate text-xs text-slate-500">
+                      {{ formatMediaSize(selectedAsset.size) }} | {{ selectedDimensions || '...' }}
+                    </p>
+                    <p class="mt-1 truncate text-xs text-slate-500">
+                      {{ getMediaUsageLabel(selectedAsset.usage) }}
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                  <button class="admin-button-secondary min-h-10" type="button" @click="copySelectedUrl">
+                    {{ copied ? '已复制' : '复制链接' }}
+                  </button>
+                  <a
+                    class="admin-button-secondary min-h-10 text-center"
+                    :href="selectedAsset.url"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    打开原图
+                  </a>
+                </div>
+              </div>
             </div>
 
-            <div class="flex items-center justify-between border-t border-[var(--admin-border)] px-5 py-3">
-              <div class="text-sm text-slate-500">
-                {{ currentRangeLabel }}
-              </div>
-              <div class="flex gap-2">
-                <button
-                  class="admin-button-secondary"
-                  :disabled="page <= 1"
-                  type="button"
-                  @click="handlePageChange('prev')"
-                >
-                  上一页
-                </button>
-                <button
-                  class="admin-button-secondary"
-                  :disabled="page >= totalPages"
-                  type="button"
-                  @click="handlePageChange('next')"
-                >
-                  下一页
-                </button>
+            <div class="border-t border-[var(--admin-border)] px-3 py-3 sm:px-5">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="text-sm text-slate-500">
+                  {{ currentRangeLabel }}
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    class="admin-button-secondary min-h-10"
+                    :disabled="page <= 1"
+                    type="button"
+                    @click="handlePageChange('prev')"
+                  >
+                    上一页
+                  </button>
+                  <button
+                    class="admin-button-secondary min-h-10"
+                    :disabled="page >= totalPages"
+                    type="button"
+                    @click="handlePageChange('next')"
+                  >
+                    下一页
+                  </button>
+                </div>
+                <div class="flex w-full gap-2 lg:hidden">
+                  <button
+                    class="admin-button-primary min-h-10 flex-1"
+                    :disabled="!selectedAsset"
+                    type="button"
+                    @click="handleInsert"
+                  >
+                    插入所选媒体
+                  </button>
+                  <button class="admin-button-secondary min-h-10 flex-1" type="button" @click="emit('close')">
+                    取消
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <aside class="flex min-h-0 flex-col border-l border-[var(--admin-border)] bg-white">
+          <aside class="hidden min-h-0 flex-col border-l border-[var(--admin-border)] bg-white lg:flex">
             <div class="border-b border-[var(--admin-border)] px-5 py-4">
               <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                 Attachment Details
@@ -525,3 +574,4 @@ async function copySelectedUrl() {
     </div>
   </Teleport>
 </template>
+

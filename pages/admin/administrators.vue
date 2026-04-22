@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PublicSiteSettings } from '~/types/admin-settings'
+import type { AboutContactItem, PublicSiteSettings } from '~/types/admin-settings'
 
 definePageMeta({
   layout: 'admin',
@@ -9,6 +9,11 @@ definePageMeta({
 useHead({
   title: '管理员设置',
 })
+
+type ContactDialogForm = {
+  name: string
+  url: string
+}
 
 const { adminApiFetch, refreshProfile, logout } = useAdminSession()
 const { invalidatePublicData } = usePublicDataInvalidation()
@@ -30,6 +35,16 @@ const profileForm = ref({
 const aboutForm = ref({
   aboutDisplayName: '',
   aboutBio: '',
+  githubUsername: '',
+  aboutContacts: [] as AboutContactItem[],
+})
+
+const contactDialogOpen = ref(false)
+const contactDialogError = ref('')
+const editingContactIndex = ref<number | null>(null)
+const contactDialogForm = ref<ContactDialogForm>({
+  name: '',
+  url: '',
 })
 
 const passwordForm = ref({
@@ -38,11 +53,120 @@ const passwordForm = ref({
   confirmPassword: '',
 })
 
+function createContactId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `contact-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function normalizeContactItem(item: Partial<AboutContactItem>) {
+  return {
+    id: (item.id ?? '').trim() || createContactId(),
+    name: (item.name ?? '').trim(),
+    url: (item.url ?? '').trim(),
+  }
+}
+
+function isValidContactUrl(url: string) {
+  const value = url.trim().toLowerCase()
+  return value.startsWith('http://')
+    || value.startsWith('https://')
+    || value.startsWith('mailto:')
+    || value.startsWith('tel:')
+}
+
 function syncAboutForm(settings: PublicSiteSettings) {
   aboutForm.value = {
     aboutDisplayName: settings.aboutDisplayName ?? '',
     aboutBio: settings.aboutBio ?? '',
+    githubUsername: settings.githubUsername ?? '',
+    aboutContacts: (settings.aboutContacts ?? []).map(normalizeContactItem),
   }
+}
+
+function openCreateContactDialog() {
+  editingContactIndex.value = null
+  contactDialogError.value = ''
+  contactDialogForm.value = {
+    name: '',
+    url: '',
+  }
+  contactDialogOpen.value = true
+}
+
+function openEditContactDialog(index: number) {
+  const item = aboutForm.value.aboutContacts[index]
+  if (!item) {
+    return
+  }
+
+  editingContactIndex.value = index
+  contactDialogError.value = ''
+  contactDialogForm.value = {
+    name: item.name,
+    url: item.url,
+  }
+  contactDialogOpen.value = true
+}
+
+function closeContactDialog() {
+  contactDialogOpen.value = false
+  contactDialogError.value = ''
+  editingContactIndex.value = null
+}
+
+function saveContactDialog() {
+  contactDialogError.value = ''
+
+  const name = contactDialogForm.value.name.trim()
+  const url = contactDialogForm.value.url.trim()
+
+  if (!name) {
+    contactDialogError.value = '联系方式名称不能为空'
+    return
+  }
+  if (!url) {
+    contactDialogError.value = '联系方式链接不能为空'
+    return
+  }
+  if (!isValidContactUrl(url)) {
+    contactDialogError.value = '链接需以 http://、https://、mailto: 或 tel: 开头'
+    return
+  }
+
+  const nextContact: AboutContactItem = {
+    id:
+      editingContactIndex.value !== null
+        ? aboutForm.value.aboutContacts[editingContactIndex.value]?.id ?? createContactId()
+        : createContactId(),
+    name,
+    url,
+  }
+
+  if (editingContactIndex.value !== null) {
+    aboutForm.value.aboutContacts.splice(editingContactIndex.value, 1, nextContact)
+  } else {
+    aboutForm.value.aboutContacts.push(nextContact)
+  }
+
+  closeContactDialog()
+}
+
+function removeContact(index: number) {
+  aboutForm.value.aboutContacts.splice(index, 1)
+}
+
+function moveContact(index: number, direction: 'up' | 'down') {
+  const target = direction === 'up' ? index - 1 : index + 1
+  if (target < 0 || target >= aboutForm.value.aboutContacts.length) {
+    return
+  }
+  const [item] = aboutForm.value.aboutContacts.splice(index, 1)
+  if (!item) {
+    return
+  }
+  aboutForm.value.aboutContacts.splice(target, 0, item)
 }
 
 async function loadProfile() {
@@ -102,17 +226,29 @@ async function saveAboutProfile() {
   successMessage.value = ''
 
   try {
+    const payloadContacts = aboutForm.value.aboutContacts
+      .map(normalizeContactItem)
+      .filter(item => item.name && item.url)
+
+    for (const item of payloadContacts) {
+      if (!isValidContactUrl(item.url)) {
+        throw new Error(`联系方式链接不合法: ${item.name}`)
+      }
+    }
+
     const result = await adminApiFetch<PublicSiteSettings>('/api/v1/admin/site-settings/public', {
       method: 'PUT',
       body: JSON.stringify({
         aboutDisplayName: aboutForm.value.aboutDisplayName.trim() || null,
         aboutBio: aboutForm.value.aboutBio.trim() || null,
+        githubUsername: aboutForm.value.githubUsername.trim() || null,
+        aboutContacts: payloadContacts,
       }),
     })
 
     syncAboutForm(result)
     invalidatePublicData({ keys: ['site-settings'] })
-    successMessage.value = 'About 资料已保存'
+    successMessage.value = '关于页资料已保存'
     window.setTimeout(() => {
       successMessage.value = ''
     }, 3000)
@@ -147,7 +283,7 @@ async function changePassword() {
       }),
     })
 
-    successMessage.value = '密码修改成功，3 秒后将自动退出登录...'
+    successMessage.value = '密码修改成功，3 秒后将自动退出登录'
     passwordForm.value = {
       currentPassword: '',
       newPassword: '',
@@ -172,10 +308,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <AdminPageHeader
-      title="管理员设置"
-      description="管理登录账户信息和安全设置。"
-    />
+    <AdminPageHeader title="管理员设置" description="管理账号信息、关于页资料与安全设置。" />
 
     <div v-if="error" class="rounded-[4px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
       {{ error }}
@@ -191,63 +324,29 @@ onMounted(() => {
     <template v-else>
       <div class="grid gap-6 xl:grid-cols-2">
         <section class="admin-card flex h-full flex-col p-6">
-          <div class="mb-6 flex items-center gap-4">
-            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-              <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">账户信息</h3>
-              <p class="text-sm text-slate-500">修改您的登录邮箱、用户名和显示名称。</p>
-            </div>
-          </div>
+          <h3 class="text-lg font-semibold text-slate-900">账户信息</h3>
+          <p class="mt-1 text-sm text-slate-500">修改后台登录用户名、邮箱和显示名称。</p>
 
-          <div class="flex flex-1 flex-col">
+          <div class="mt-6 flex flex-1 flex-col">
             <div class="space-y-6">
               <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">用户名</label>
-                <input
-                  v-model="profileForm.username"
-                  type="text"
-                  class="admin-input w-full"
-                  placeholder="输入用户名"
-                >
-                <p class="mt-1 text-xs text-slate-500">用于登录后台管理系统</p>
+                <input v-model="profileForm.username" type="text" class="admin-input w-full" placeholder="输入用户名">
               </div>
 
               <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">邮箱地址</label>
-                <input
-                  v-model="profileForm.email"
-                  type="email"
-                  class="admin-input w-full"
-                  placeholder="输入邮箱地址"
-                >
-                <p class="mt-1 text-xs text-slate-500">用于接收系统通知和密码重置</p>
+                <label class="mb-2 block text-sm font-medium text-slate-700">邮箱</label>
+                <input v-model="profileForm.email" type="email" class="admin-input w-full" placeholder="输入邮箱地址">
               </div>
 
               <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">显示名称</label>
-                <input
-                  v-model="profileForm.displayName"
-                  type="text"
-                  class="admin-input w-full"
-                  placeholder="输入显示名称"
-                >
-                <p class="mt-1 text-xs text-slate-500">显示在后台界面中的名称</p>
+                <input v-model="profileForm.displayName" type="text" class="admin-input w-full" placeholder="输入显示名称">
               </div>
             </div>
 
             <div class="mt-auto flex gap-3 pt-6">
-              <button
-                class="admin-button-primary"
-                :disabled="saving"
-                @click="saveProfile"
-              >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
+              <button class="admin-button-primary" :disabled="saving" @click="saveProfile">
                 {{ saving ? '保存中...' : '保存修改' }}
               </button>
             </div>
@@ -255,19 +354,10 @@ onMounted(() => {
         </section>
 
         <section class="admin-card flex h-full flex-col p-6">
-          <div class="mb-6 flex items-center gap-4">
-            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-              <svg class="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-6 4h10M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">About 页面资料</h3>
-              <p class="text-sm text-slate-500">用于 About 页面的姓名与个人介绍文本。</p>
-            </div>
-          </div>
+          <h3 class="text-lg font-semibold text-slate-900">About 页面资料</h3>
+          <p class="mt-1 text-sm text-slate-500">配置关于页名称、简介、Github 用户名与联系方式。</p>
 
-          <div class="flex flex-1 flex-col">
+          <div class="mt-6 flex flex-1 flex-col">
             <div class="space-y-6">
               <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">显示名称</label>
@@ -287,17 +377,57 @@ onMounted(() => {
                   placeholder="用于 About 页面展示"
                 />
               </div>
+
+              <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700">Github 用户名</label>
+                <input
+                  v-model="aboutForm.githubUsername"
+                  type="text"
+                  class="admin-input w-full"
+                  placeholder="例如：Lexo0522"
+                >
+              </div>
+
+              <div class="rounded-[4px] border border-[var(--admin-border)] p-4">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-semibold text-slate-900">联系方式</p>
+                    <p class="mt-1 text-xs text-slate-500">支持多个联系方式，名称和链接可自由配置。</p>
+                  </div>
+                  <button class="admin-button-secondary" type="button" @click="openCreateContactDialog">
+                    新增联系方式
+                  </button>
+                </div>
+
+                <div v-if="aboutForm.aboutContacts.length === 0" class="mt-4 rounded-[4px] bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  暂无联系方式，点击“新增联系方式”开始配置。
+                </div>
+
+                <div v-else class="mt-4 space-y-2">
+                  <div
+                    v-for="(item, index) in aboutForm.aboutContacts"
+                    :key="item.id"
+                    class="rounded-[4px] border border-[var(--admin-border)] px-3 py-3"
+                  >
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                      <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-medium text-slate-900">{{ item.name }}</p>
+                        <p class="mt-1 truncate text-xs text-slate-500">{{ item.url }}</p>
+                      </div>
+                      <div class="flex gap-2">
+                        <button class="admin-button-secondary !px-2 !py-1.5 text-xs" type="button" :disabled="index === 0" @click="moveContact(index, 'up')">上移</button>
+                        <button class="admin-button-secondary !px-2 !py-1.5 text-xs" type="button" :disabled="index === aboutForm.aboutContacts.length - 1" @click="moveContact(index, 'down')">下移</button>
+                        <button class="admin-button-secondary !px-2 !py-1.5 text-xs" type="button" @click="openEditContactDialog(index)">编辑</button>
+                        <button class="admin-button-danger !px-2 !py-1.5 text-xs" type="button" @click="removeContact(index)">删除</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="mt-auto flex gap-3 pt-6">
-              <button
-                class="admin-button-primary"
-                :disabled="savingAbout"
-                @click="saveAboutProfile"
-              >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
+              <button class="admin-button-primary" :disabled="savingAbout" @click="saveAboutProfile">
                 {{ savingAbout ? '保存中...' : '保存资料' }}
               </button>
             </div>
@@ -305,19 +435,10 @@ onMounted(() => {
         </section>
 
         <section class="admin-card flex h-full flex-col p-6">
-          <div class="mb-6 flex items-center gap-4">
-            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
-              <svg class="h-8 w-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">修改密码</h3>
-              <p class="text-sm text-slate-500">定期更新密码可以提升账户安全性。</p>
-            </div>
-          </div>
+          <h3 class="text-lg font-semibold text-slate-900">修改密码</h3>
+          <p class="mt-1 text-sm text-slate-500">定期更新密码有助于提升账号安全。</p>
 
-          <div class="flex flex-1 flex-col">
+          <div class="mt-6 flex flex-1 flex-col">
             <div class="space-y-6">
               <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">当前密码</label>
@@ -356,9 +477,6 @@ onMounted(() => {
                 :disabled="changingPassword || !passwordForm.currentPassword || !passwordForm.newPassword"
                 @click="changePassword"
               >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
                 {{ changingPassword ? '修改中...' : '修改密码' }}
               </button>
             </div>
@@ -366,5 +484,46 @@ onMounted(() => {
         </section>
       </div>
     </template>
+
+    <div
+      v-if="contactDialogOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+      @click.self="closeContactDialog"
+    >
+      <div class="admin-card w-full max-w-xl p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h4 class="text-base font-semibold text-slate-900">
+            {{ editingContactIndex === null ? '新增联系方式' : '编辑联系方式' }}
+          </h4>
+          <button class="admin-button-secondary !px-3 !py-1.5 text-xs" type="button" @click="closeContactDialog">
+            关闭
+          </button>
+        </div>
+
+        <div class="mt-5 space-y-4">
+          <div>
+            <label class="mb-2 block text-sm font-medium text-slate-700">名称</label>
+            <input v-model="contactDialogForm.name" class="admin-input" placeholder="例如：GitHub、邮箱、公众号">
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-slate-700">链接地址</label>
+            <input
+              v-model="contactDialogForm.url"
+              class="admin-input"
+              placeholder="例如：https://github.com/yourname 或 mailto:you@example.com"
+            >
+          </div>
+        </div>
+
+        <div v-if="contactDialogError" class="mt-4 rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          {{ contactDialogError }}
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button class="admin-button-secondary" type="button" @click="closeContactDialog">取消</button>
+          <button class="admin-button-primary" type="button" @click="saveContactDialog">确认</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

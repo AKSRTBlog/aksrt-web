@@ -31,6 +31,12 @@ export interface PublicFooterLinkItem {
   enabled: boolean;
 }
 
+export interface AboutContactItem {
+  id: string;
+  name: string;
+  url: string;
+}
+
 export interface PublicStandalonePageSummaryItem {
   id: string;
   title: string;
@@ -64,6 +70,7 @@ export interface PublicSiteSettingsItem {
   githubUsername: string | null;
   aboutDisplayName: string | null;
   aboutBio: string | null;
+  aboutContacts: AboutContactItem[];
   adminAvatarUrl: string | null;
 }
 

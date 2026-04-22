@@ -39,18 +39,42 @@ const aboutDisplayName = computed(() => siteSettings.value?.aboutDisplayName?.tr
 const aboutBio = computed(() => siteSettings.value?.aboutBio?.trim() || siteSettings.value?.siteDescription || blogAuthor.bio);
 const aboutAvatar = computed(() => siteSettings.value?.adminAvatarUrl || blogAuthor.avatar);
 
-const contactLinks = computed(() => {
-  const githubUsername = siteSettings.value?.githubUsername;
+function toContactValue(url: string) {
+  if (url.startsWith('mailto:')) {
+    return url.slice('mailto:'.length);
+  }
+  if (url.startsWith('tel:')) {
+    return url.slice('tel:'.length);
+  }
+  return url.replace(/^https?:\/\//, '');
+}
 
-  return [
-    { label: 'Email', value: 'kate522@88.com', href: 'mailto:kate522@88.com' },
-    {
+const contactLinks = computed(() => {
+  const contacts = siteSettings.value?.aboutContacts ?? [];
+
+  if (contacts.length > 0) {
+    return contacts
+      .map((item) => ({
+        id: item.id,
+        label: item.name,
+        value: toContactValue(item.url),
+        href: item.url,
+      }))
+      .filter((item) => item.label.trim() && item.href.trim());
+  }
+
+  const githubUsername = siteSettings.value?.githubUsername?.trim();
+  if (githubUsername) {
+    const href = `https://github.com/${githubUsername}`;
+    return [{
+      id: 'fallback-github',
       label: 'GitHub',
-      value: githubUsername ? `github.com/${githubUsername}` : 'github.com/Lexo0522',
-      href: githubUsername ? `https://github.com/${githubUsername}` : 'https://github.com/Lexo0522',
-    },
-    { label: 'QQ', value: '850024520', href: 'https://wpa.qq.com/msgrd?v=3&uin=850024520&site=qq&menu=yes' },
-  ];
+      value: `github.com/${githubUsername}`,
+      href,
+    }];
+  }
+
+  return [];
 });
 
 useSeoMeta({
@@ -81,7 +105,7 @@ useSeoMeta({
           <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <a
               v-for="item in contactLinks"
-              :key="item.label"
+              :key="item.id"
               :href="item.href"
               :target="item.href.startsWith('http') ? '_blank' : undefined"
               :rel="item.href.startsWith('http') ? 'noopener noreferrer' : undefined"
