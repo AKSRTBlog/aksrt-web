@@ -1,5 +1,10 @@
 import type { StandalonePageItem } from '~/types/admin'
-import { sanitizeArticleSlug, insertTextAtSelection, buildMarkdownTable } from '~/utils/admin-editor'
+import {
+  sanitizeArticleSlug,
+  insertTextAtSelection,
+  buildMarkdownTable,
+  buildExcerptFromMarkdown,
+} from '~/utils/admin-editor'
 
 export interface UpdateStandalonePageInput {
   id?: string
@@ -98,15 +103,21 @@ export function useAdminStandalonePages() {
     saving.value = true
 
     try {
-      const payload: UpdateStandalonePageInput[] = validItems.map((item, index) => ({
-        id: item.id,
-        title: item.title.trim(),
-        slug: sanitizeArticleSlug(item.slug.trim()),
-        summary: item.summary.trim(),
-        content: item.content.trim(),
-        sortOrder: index,
-        enabled: item.enabled,
-      }))
+      const payload: UpdateStandalonePageInput[] = validItems.map((item, index) => {
+        const normalizedContent = item.content.trim()
+        const normalizedSummary = item.summary.trim()
+        const resolvedSummary = normalizedSummary || buildExcerptFromMarkdown(normalizedContent, 150)
+
+        return {
+          id: item.id,
+          title: item.title.trim(),
+          slug: sanitizeArticleSlug(item.slug.trim()),
+          summary: resolvedSummary,
+          content: normalizedContent,
+          sortOrder: index,
+          enabled: item.enabled,
+        }
+      })
 
       const result = await adminApiFetch<StandalonePageItem[]>('/api/v1/admin/site-settings/standalone-pages', {
         method: 'PUT',
