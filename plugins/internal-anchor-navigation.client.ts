@@ -7,6 +7,21 @@ function hasLikelyFileExtension(pathname: string) {
   return /\.[a-z0-9]{1,8}$/i.test(segment)
 }
 
+function isSpaRoutablePath(pathname: string) {
+  return (
+    pathname === '/' ||
+    pathname === '/about' ||
+    pathname === '/archive' ||
+    pathname === '/search' ||
+    pathname === '/links' ||
+    pathname.startsWith('/articles/') ||
+    pathname.startsWith('/pages/') ||
+    pathname.startsWith('/tags/') ||
+    pathname.startsWith('/categories/') ||
+    pathname.startsWith('/admin/')
+  )
+}
+
 function shouldSkipSpaNavigation(anchor: HTMLAnchorElement, url: URL) {
   const target = anchor.getAttribute('target')
   if (target && target.toLowerCase() !== '_self') {
@@ -37,9 +52,12 @@ function shouldSkipSpaNavigation(anchor: HTMLAnchorElement, url: URL) {
   if (
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/storage/') ||
-    url.pathname.startsWith('/uploads/') ||
-    hasLikelyFileExtension(url.pathname)
+    url.pathname.startsWith('/uploads/')
   ) {
+    return true
+  }
+
+  if (hasLikelyFileExtension(url.pathname) && !isSpaRoutablePath(url.pathname)) {
     return true
   }
 
