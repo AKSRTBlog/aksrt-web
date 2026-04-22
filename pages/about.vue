@@ -52,29 +52,14 @@ function toContactValue(url: string) {
 const contactLinks = computed(() => {
   const contacts = siteSettings.value?.aboutContacts ?? [];
 
-  if (contacts.length > 0) {
-    return contacts
-      .map((item) => ({
-        id: item.id,
-        label: item.name,
-        value: toContactValue(item.url),
-        href: item.url,
-      }))
-      .filter((item) => item.label.trim() && item.href.trim());
-  }
-
-  const githubUsername = siteSettings.value?.githubUsername?.trim();
-  if (githubUsername) {
-    const href = `https://github.com/${githubUsername}`;
-    return [{
-      id: 'fallback-github',
-      label: 'GitHub',
-      value: `github.com/${githubUsername}`,
-      href,
-    }];
-  }
-
-  return [];
+  return contacts
+    .map((item) => ({
+      id: item.id,
+      label: item.name,
+      value: toContactValue(item.url),
+      href: item.url,
+    }))
+    .filter((item) => item.label.trim() && item.href.trim());
 });
 
 useSeoMeta({

@@ -35,13 +35,14 @@ const profileForm = ref({
 const aboutForm = ref({
   aboutDisplayName: '',
   aboutBio: '',
-  githubUsername: '',
   aboutContacts: [] as AboutContactItem[],
 })
 
 const contactDialogOpen = ref(false)
 const contactDialogError = ref('')
 const editingContactIndex = ref<number | null>(null)
+const draggingContactIndex = ref<number | null>(null)
+const dragOverContactIndex = ref<number | null>(null)
 const contactDialogForm = ref<ContactDialogForm>({
   name: '',
   url: '',
@@ -76,12 +77,30 @@ function isValidContactUrl(url: string) {
     || value.startsWith('tel:')
 }
 
+function normalizeUrlForCompare(url: string) {
+  return url.trim().replace(/\/+$/, '').toLowerCase()
+}
+
 function syncAboutForm(settings: PublicSiteSettings) {
+  const contacts = (settings.aboutContacts ?? []).map(normalizeContactItem)
+  const githubUsername = settings.githubUsername?.trim()
+
+  if (githubUsername) {
+    const githubUrl = `https://github.com/${githubUsername}`
+    const githubAlreadyExists = contacts.some(item => normalizeUrlForCompare(item.url) === normalizeUrlForCompare(githubUrl))
+    if (!githubAlreadyExists) {
+      contacts.push({
+        id: createContactId(),
+        name: 'GitHub',
+        url: githubUrl,
+      })
+    }
+  }
+
   aboutForm.value = {
     aboutDisplayName: settings.aboutDisplayName ?? '',
     aboutBio: settings.aboutBio ?? '',
-    githubUsername: settings.githubUsername ?? '',
-    aboutContacts: (settings.aboutContacts ?? []).map(normalizeContactItem),
+    aboutContacts: contacts,
   }
 }
 
@@ -170,6 +189,38 @@ function moveContact(index: number, direction: 'up' | 'down') {
   aboutForm.value.aboutContacts.splice(target, 0, item)
 }
 
+function resetContactDragState() {
+  draggingContactIndex.value = null
+  dragOverContactIndex.value = null
+}
+
+function onContactDragStart(index: number) {
+  draggingContactIndex.value = index
+  dragOverContactIndex.value = index
+}
+
+function onContactDragOver(index: number) {
+  if (draggingContactIndex.value === null || draggingContactIndex.value === index) {
+    return
+  }
+  dragOverContactIndex.value = index
+}
+
+function onContactDrop(index: number) {
+  const sourceIndex = draggingContactIndex.value
+  resetContactDragState()
+  if (sourceIndex === null || sourceIndex === index) {
+    return
+  }
+
+  const [item] = aboutForm.value.aboutContacts.splice(sourceIndex, 1)
+  if (!item) {
+    return
+  }
+
+  aboutForm.value.aboutContacts.splice(index, 0, item)
+}
+
 async function loadProfile() {
   loading.value = true
   error.value = ''
@@ -246,7 +297,7 @@ async function saveAboutProfile() {
       body: JSON.stringify({
         aboutDisplayName: aboutForm.value.aboutDisplayName.trim() || null,
         aboutBio: aboutForm.value.aboutBio.trim() || null,
-        githubUsername: aboutForm.value.githubUsername.trim() || null,
+        githubUsername: null,
         aboutContacts: payloadContacts,
       }),
     })
@@ -364,7 +415,7 @@ onMounted(() => {
 
         <section class="admin-card flex h-full flex-col p-6">
           <h3 class="text-lg font-semibold text-slate-900">About 页面资料</h3>
-          <p class="mt-1 text-sm text-slate-500">配置关于页名称、简介、Github 用户名与联系方式。</p>
+          <p class="mt-1 text-sm text-slate-500">配置关于页名称、简介和联系方式（包含 GitHub）。</p>
 
           <div class="mt-6 flex flex-1 flex-col">
             <div class="space-y-6">
@@ -387,21 +438,11 @@ onMounted(() => {
                 />
               </div>
 
-              <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">Github 用户名</label>
-                <input
-                  v-model="aboutForm.githubUsername"
-                  type="text"
-                  class="admin-input w-full"
-                  placeholder="例如：lexo0522"
-                >
-              </div>
-
               <div class="rounded-[4px] border border-[var(--admin-border)] p-4">
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <p class="text-sm font-semibold text-slate-900">联系方式</p>
-                    <p class="mt-1 text-xs text-slate-500">支持多个联系方式，名称和链接可自由配置。</p>
+                    <p class="mt-1 text-xs text-slate-500">支持多个联系方式（含 GitHub），可拖拽或用上下按钮自定义顺序。</p>
                   </div>
                   <button class="admin-button-secondary" type="button" @click="openCreateContactDialog">
                     新增联系方式
@@ -416,10 +457,17 @@ onMounted(() => {
                   <div
                     v-for="(item, index) in aboutForm.aboutContacts"
                     :key="item.id"
-                    class="rounded-[4px] border border-[var(--admin-border)] px-3 py-3"
+                    class="rounded-[4px] border border-[var(--admin-border)] px-3 py-3 transition"
+                    :class="dragOverContactIndex === index ? 'border-blue-300 bg-blue-50/40' : ''"
+                    draggable="true"
+                    @dragstart="onContactDragStart(index)"
+                    @dragover.prevent="onContactDragOver(index)"
+                    @drop.prevent="onContactDrop(index)"
+                    @dragend="resetContactDragState"
                   >
                     <div class="flex flex-wrap items-start justify-between gap-2">
                       <div class="min-w-0 flex-1">
+                        <p class="mb-1 text-xs text-slate-400">拖拽排序</p>
                         <p class="truncate text-sm font-medium text-slate-900">{{ item.name }}</p>
                         <p class="mt-1 truncate text-xs text-slate-500">{{ item.url }}</p>
                       </div>
@@ -497,7 +545,7 @@ onMounted(() => {
     <Teleport to="body">
       <div
         v-if="contactDialogOpen"
-        class="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-6"
+        class="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-6 lg:left-[244px]"
         @click.self="closeContactDialog"
       >
         <div class="admin-card w-full max-w-xl rounded-none p-4 sm:rounded-[4px] sm:p-6">
