@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { AboutContactItem, PublicSiteSettings } from '~/types/admin-settings'
 
 definePageMeta({
@@ -146,7 +146,8 @@ function saveContactDialog() {
 
   if (editingContactIndex.value !== null) {
     aboutForm.value.aboutContacts.splice(editingContactIndex.value, 1, nextContact)
-  } else {
+  }
+  else {
     aboutForm.value.aboutContacts.push(nextContact)
   }
 
@@ -190,9 +191,11 @@ async function loadProfile() {
     }
 
     syncAboutForm(publicSettings)
-  } catch (e) {
+  }
+  catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -213,9 +216,11 @@ async function saveProfile() {
     window.setTimeout(() => {
       successMessage.value = ''
     }, 3000)
-  } catch (e) {
+  }
+  catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败'
-  } finally {
+  }
+  finally {
     saving.value = false
   }
 }
@@ -248,13 +253,15 @@ async function saveAboutProfile() {
 
     syncAboutForm(result)
     invalidatePublicData({ keys: ['site-settings'] })
-    successMessage.value = '关于页资料已保存'
+    successMessage.value = 'About 页面资料已保存'
     window.setTimeout(() => {
       successMessage.value = ''
     }, 3000)
-  } catch (e) {
+  }
+  catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败'
-  } finally {
+  }
+  finally {
     savingAbout.value = false
   }
 }
@@ -294,9 +301,11 @@ async function changePassword() {
       logout()
       void router.push('/admin/login')
     }, 3000)
-  } catch (e) {
+  }
+  catch (e) {
     error.value = e instanceof Error ? e.message : '密码修改失败'
-  } finally {
+  }
+  finally {
     changingPassword.value = false
   }
 }
@@ -370,7 +379,7 @@ onMounted(() => {
               </div>
 
               <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">个人介绍</label>
+                <label class="mb-2 block text-sm font-medium text-slate-700">个人简介</label>
                 <textarea
                   v-model="aboutForm.aboutBio"
                   class="admin-textarea min-h-28 w-full"
@@ -384,7 +393,7 @@ onMounted(() => {
                   v-model="aboutForm.githubUsername"
                   type="text"
                   class="admin-input w-full"
-                  placeholder="例如：Lexo0522"
+                  placeholder="例如：lexo0522"
                 >
               </div>
 
@@ -485,45 +494,47 @@ onMounted(() => {
       </div>
     </template>
 
-    <div
-      v-if="contactDialogOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
-      @click.self="closeContactDialog"
-    >
-      <div class="admin-card w-full max-w-xl p-6">
-        <div class="flex items-center justify-between gap-3">
-          <h4 class="text-base font-semibold text-slate-900">
-            {{ editingContactIndex === null ? '新增联系方式' : '编辑联系方式' }}
-          </h4>
-          <button class="admin-button-secondary !px-3 !py-1.5 text-xs" type="button" @click="closeContactDialog">
-            关闭
-          </button>
-        </div>
-
-        <div class="mt-5 space-y-4">
-          <div>
-            <label class="mb-2 block text-sm font-medium text-slate-700">名称</label>
-            <input v-model="contactDialogForm.name" class="admin-input" placeholder="例如：GitHub、邮箱、公众号">
+    <Teleport to="body">
+      <div
+        v-if="contactDialogOpen"
+        class="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-6"
+        @click.self="closeContactDialog"
+      >
+        <div class="admin-card w-full max-w-xl rounded-none p-4 sm:rounded-[4px] sm:p-6">
+          <div class="flex items-center justify-between gap-3">
+            <h4 class="text-base font-semibold text-slate-900">
+              {{ editingContactIndex === null ? '新增联系方式' : '编辑联系方式' }}
+            </h4>
+            <button class="admin-button-secondary !px-3 !py-1.5 text-xs" type="button" @click="closeContactDialog">
+              关闭
+            </button>
           </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-slate-700">链接地址</label>
-            <input
-              v-model="contactDialogForm.url"
-              class="admin-input"
-              placeholder="例如：https://github.com/yourname 或 mailto:you@example.com"
-            >
+
+          <div class="mt-5 space-y-4">
+            <div>
+              <label class="mb-2 block text-sm font-medium text-slate-700">名称</label>
+              <input v-model="contactDialogForm.name" class="admin-input w-full" placeholder="例如：GitHub、邮箱、公众号">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-slate-700">链接地址</label>
+              <input
+                v-model="contactDialogForm.url"
+                class="admin-input w-full"
+                placeholder="例如：https://github.com/yourname 或 mailto:you@example.com"
+              >
+            </div>
           </div>
-        </div>
 
-        <div v-if="contactDialogError" class="mt-4 rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-          {{ contactDialogError }}
-        </div>
+          <div v-if="contactDialogError" class="mt-4 rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            {{ contactDialogError }}
+          </div>
 
-        <div class="mt-6 flex justify-end gap-3">
-          <button class="admin-button-secondary" type="button" @click="closeContactDialog">取消</button>
-          <button class="admin-button-primary" type="button" @click="saveContactDialog">确认</button>
+          <div class="mt-6 flex justify-end gap-3">
+            <button class="admin-button-secondary" type="button" @click="closeContactDialog">取消</button>
+            <button class="admin-button-primary" type="button" @click="saveContactDialog">确认</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
