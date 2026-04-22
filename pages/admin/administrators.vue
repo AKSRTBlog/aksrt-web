@@ -70,11 +70,32 @@ function normalizeContactItem(item: Partial<AboutContactItem>) {
 }
 
 function isValidContactUrl(url: string) {
-  const value = url.trim().toLowerCase()
-  return value.startsWith('http://')
-    || value.startsWith('https://')
-    || value.startsWith('mailto:')
-    || value.startsWith('tel:')
+  const value = url.trim()
+  if (!value) {
+    return false
+  }
+
+  const lower = value.toLowerCase()
+  if (
+    lower.startsWith('javascript:')
+    || lower.startsWith('data:')
+    || lower.startsWith('vbscript:')
+    || lower.startsWith('file:')
+  ) {
+    return false
+  }
+
+  if (
+    lower.startsWith('http://')
+    || lower.startsWith('https://')
+    || lower.startsWith('mailto:')
+    || lower.startsWith('tel:')
+  ) {
+    return true
+  }
+
+  // Allow custom URL schemes like tencent://, weixin://, tg://, etc.
+  return /^[a-z][a-z0-9+.-]*:/.test(lower)
 }
 
 function normalizeUrlForCompare(url: string) {
@@ -150,7 +171,7 @@ function saveContactDialog() {
     return
   }
   if (!isValidContactUrl(url)) {
-    contactDialogError.value = '链接需以 http://、https://、mailto: 或 tel: 开头'
+    contactDialogError.value = '链接需带协议前缀，例如 https://、mailto:、tel:、tencent://'
     return
   }
 
