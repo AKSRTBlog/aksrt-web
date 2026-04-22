@@ -12,6 +12,7 @@ useHead({
 
 type ContactDialogForm = {
   name: string
+  displayText: string
   url: string
 }
 
@@ -47,6 +48,7 @@ const draggingContactIndex = ref<number | null>(null)
 const dragOverContactIndex = ref<number | null>(null)
 const contactDialogForm = ref<ContactDialogForm>({
   name: '',
+  displayText: '',
   url: '',
 })
 
@@ -140,11 +142,40 @@ function createContactId() {
   return `contact-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+function deriveContactDisplayText(url: string) {
+  const value = url.trim()
+  if (!value) {
+    return ''
+  }
+
+  const lower = value.toLowerCase()
+  if (lower.startsWith('mailto:')) {
+    return value.slice('mailto:'.length)
+  }
+  if (lower.startsWith('tel:')) {
+    return value.slice('tel:'.length)
+  }
+  if (value.includes('://')) {
+    const text = value.slice(value.indexOf('://') + 3)
+    return text || value
+  }
+
+  const colonIndex = value.indexOf(':')
+  if (colonIndex > 0 && colonIndex < value.length - 1) {
+    return value.slice(colonIndex + 1)
+  }
+
+  return value.replace(/^https?:\/\//i, '')
+}
+
 function normalizeContactItem(item: Partial<AboutContactItem>) {
+  const url = (item.url ?? '').trim()
+  const displayText = (item.displayText ?? '').trim()
   return {
     id: (item.id ?? '').trim() || createContactId(),
     name: (item.name ?? '').trim(),
-    url: (item.url ?? '').trim(),
+    displayText: displayText || deriveContactDisplayText(url),
+    url,
   }
 }
 
@@ -192,6 +223,7 @@ function syncAboutForm(settings: PublicSiteSettings) {
       contacts.push({
         id: createContactId(),
         name: 'GitHub',
+        displayText: `github.com/${githubUsername}`,
         url: githubUrl,
       })
     }
@@ -209,6 +241,7 @@ function openCreateContactDialog() {
   contactDialogError.value = ''
   contactDialogForm.value = {
     name: '',
+    displayText: '',
     url: '',
   }
   contactDialogOpen.value = true
@@ -224,6 +257,7 @@ function openEditContactDialog(index: number) {
   contactDialogError.value = ''
   contactDialogForm.value = {
     name: item.name,
+    displayText: item.displayText,
     url: item.url,
   }
   contactDialogOpen.value = true
@@ -239,6 +273,7 @@ function saveContactDialog() {
   contactDialogError.value = ''
 
   const name = contactDialogForm.value.name.trim()
+  const displayText = contactDialogForm.value.displayText.trim()
   const url = contactDialogForm.value.url.trim()
 
   if (!name) {
@@ -247,6 +282,10 @@ function saveContactDialog() {
   }
   if (!url) {
     contactDialogError.value = '联系方式链接不能为空'
+    return
+  }
+  if (!displayText) {
+    contactDialogError.value = '联系方式显示文本不能为空'
     return
   }
   if (!isValidContactUrl(url)) {
@@ -260,6 +299,7 @@ function saveContactDialog() {
         ? aboutForm.value.aboutContacts[editingContactIndex.value]?.id ?? createContactId()
         : createContactId(),
     name,
+    displayText,
     url,
   }
 
@@ -384,9 +424,12 @@ async function saveAboutProfile() {
   try {
     const payloadContacts = aboutForm.value.aboutContacts
       .map(normalizeContactItem)
-      .filter(item => item.name && item.url)
+      .filter(item => item.name && item.displayText && item.url)
 
     for (const item of payloadContacts) {
+      if (!item.displayText.trim()) {
+        throw new Error(`联系方式显示文本不能为空: ${item.name}`)
+      }
       if (!isValidContactUrl(item.url)) {
         throw new Error(`联系方式链接不合法: ${item.name}`)
       }
@@ -650,7 +693,8 @@ onMounted(() => {
                       <div class="min-w-0 flex-1">
                         <p class="mb-1 text-xs text-slate-400">拖拽排序</p>
                         <p class="truncate text-sm font-medium text-slate-900">{{ item.name }}</p>
-                        <p class="mt-1 truncate text-xs text-slate-500">{{ item.url }}</p>
+                        <p class="mt-1 truncate text-xs text-slate-700">{{ item.displayText }}</p>
+                        <p class="mt-1 truncate text-[11px] text-slate-400">{{ item.url }}</p>
                       </div>
                       <div class="flex gap-2">
                         <button class="admin-button-secondary !px-2 !py-1.5 text-xs" type="button" :disabled="index === 0" @click="moveContact(index, 'up')">上移</button>
@@ -695,6 +739,10 @@ onMounted(() => {
             <div>
               <label class="mb-2 block text-sm font-medium text-slate-700">名称</label>
               <input v-model="contactDialogForm.name" class="admin-input w-full" placeholder="例如：GitHub、邮箱、公众号">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-slate-700">显示文本</label>
+              <input v-model="contactDialogForm.displayText" class="admin-input w-full" placeholder="例如：github.com/kate522、850024520">
             </div>
             <div>
               <label class="mb-2 block text-sm font-medium text-slate-700">链接地址</label>

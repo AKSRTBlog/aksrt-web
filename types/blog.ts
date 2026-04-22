@@ -34,6 +34,7 @@ export interface PublicFooterLinkItem {
 export interface AboutContactItem {
   id: string;
   name: string;
+  displayText: string;
   url: string;
 }
 

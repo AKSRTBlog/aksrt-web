@@ -27,6 +27,7 @@ export interface FooterLinkItem {
 export interface AboutContactItem {
   id: string
   name: string
+  displayText: string
   url: string
 }
 

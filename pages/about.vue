@@ -56,7 +56,7 @@ const contactLinks = computed(() => {
     .map((item) => ({
       id: item.id,
       label: item.name,
-      value: toContactValue(item.url),
+      value: item.displayText?.trim() || toContactValue(item.url),
       href: item.url,
     }))
     .filter((item) => item.label.trim() && item.href.trim());
