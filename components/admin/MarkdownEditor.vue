@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { MediaAssetItem, MediaUsage } from '~/types/admin';
 import { renderMarkdown } from '~/composables/api';
 import { buildMarkdownTable, type EditorViewMode, insertTextAtSelection } from '~/utils/admin-editor';
@@ -32,10 +32,10 @@ const props = withDefaults(
   }>(),
   {
     disabled: false,
-    placeholder: 'Write markdown content here...',
-    previewPlaceholder: '## Start Editing\n\nLive preview appears here.',
+    placeholder: '在这里编写 Markdown 内容...',
+    previewPlaceholder: '## 开始编写\n\n这里会实时显示预览效果。',
     uploadUsage: 'article_content',
-    mediaPickerTitle: 'Choose Inline Image',
+    mediaPickerTitle: '选择正文图片',
     toolbarClass: 'bg-slate-50/90',
   },
 );
@@ -115,7 +115,7 @@ function confirmExternalImageInsert() {
 
   const trimmedUrl = externalImageUrl.value.trim();
   if (!trimmedUrl || !/^https?:\/\//i.test(trimmedUrl)) {
-    externalImageDialogError.value = 'Please enter a valid image URL starting with http:// or https://';
+    externalImageDialogError.value = '请输入以 http:// 或 https:// 开头的有效图片地址。';
     return;
   }
 
@@ -143,12 +143,12 @@ function confirmTableInsert() {
   const columns = Number.parseInt(tableColumnCount.value, 10);
 
   if (!Number.isFinite(rows) || !Number.isFinite(columns) || rows < 1 || columns < 1) {
-    tableDialogError.value = 'Rows and columns must be positive integers.';
+    tableDialogError.value = '行数和列数必须是大于 0 的整数。';
     return;
   }
 
   if (rows > 30 || columns > 15) {
-    tableDialogError.value = 'Table is too large. Keep rows <= 30 and columns <= 15.';
+    tableDialogError.value = '表格过大，请保持行数不超过 30、列数不超过 15。';
     return;
   }
 
@@ -185,20 +185,20 @@ function handleToolbarAction(action: ToolbarAction) {
   }
 
   const actionMap: Record<ToolbarAction, () => ReturnType<typeof insertTextAtSelection>> = {
-    h1: () => insertTextAtSelection(textarea, '\n# ', '', 'Heading 1'),
-    h2: () => insertTextAtSelection(textarea, '\n## ', '', 'Heading 2'),
-    h3: () => insertTextAtSelection(textarea, '\n### ', '', 'Heading 3'),
-    h4: () => insertTextAtSelection(textarea, '\n#### ', '', 'Heading 4'),
-    h5: () => insertTextAtSelection(textarea, '\n##### ', '', 'Heading 5'),
-    h6: () => insertTextAtSelection(textarea, '\n###### ', '', 'Heading 6'),
-    bold: () => insertTextAtSelection(textarea, '**', '**', 'bold text'),
-    italic: () => insertTextAtSelection(textarea, '*', '*', 'italic text'),
-    quote: () => insertTextAtSelection(textarea, '\n> ', '', 'quoted text'),
-    inlineCode: () => insertTextAtSelection(textarea, '`', '`', 'inline code'),
+    h1: () => insertTextAtSelection(textarea, '\n# ', '', '一级标题'),
+    h2: () => insertTextAtSelection(textarea, '\n## ', '', '二级标题'),
+    h3: () => insertTextAtSelection(textarea, '\n### ', '', '三级标题'),
+    h4: () => insertTextAtSelection(textarea, '\n#### ', '', '四级标题'),
+    h5: () => insertTextAtSelection(textarea, '\n##### ', '', '五级标题'),
+    h6: () => insertTextAtSelection(textarea, '\n###### ', '', '六级标题'),
+    bold: () => insertTextAtSelection(textarea, '**', '**', '加粗文本'),
+    italic: () => insertTextAtSelection(textarea, '*', '*', '斜体文本'),
+    quote: () => insertTextAtSelection(textarea, '\n> ', '', '引用内容'),
+    inlineCode: () => insertTextAtSelection(textarea, '`', '`', '行内代码'),
     codeBlock: () => insertTextAtSelection(textarea, '\n```ts\n', '\n```\n', 'console.log("hello");'),
-    unorderedList: () => insertTextAtSelection(textarea, '\n- ', '', 'list item'),
-    orderedList: () => insertTextAtSelection(textarea, '\n1. ', '', 'list item'),
-    link: () => insertTextAtSelection(textarea, '[', '](https://example.com)', 'link text'),
+    unorderedList: () => insertTextAtSelection(textarea, '\n- ', '', '列表项'),
+    orderedList: () => insertTextAtSelection(textarea, '\n1. ', '', '列表项'),
+    link: () => insertTextAtSelection(textarea, '[', '](https://example.com)', '链接文本'),
     table: () => insertTextAtSelection(textarea, '', ''),
   };
 
@@ -209,9 +209,9 @@ function handleToolbarAction(action: ToolbarAction) {
 </script>
 
 <template>
-  <div class="admin-card overflow-hidden">
+  <div class="overflow-hidden">
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-border)] px-4 py-3" :class="toolbarClass">
-      <MarkdownToolbar
+      <AdminMarkdownToolbar
         :disabled="disabled"
         @action="handleToolbarAction"
         @image-upload="mediaPickerOpen = true"
@@ -231,11 +231,18 @@ function handleToolbarAction(action: ToolbarAction) {
       </div>
     </div>
 
-    <div class="grid min-h-[720px]" :class="viewMode === 'split' ? 'lg:grid-cols-2' : 'grid-cols-1'">
-      <div v-if="viewMode !== 'preview'" :class="viewMode === 'split' ? 'border-r border-[var(--admin-border)]' : ''">
+    <div
+      class="grid min-h-[560px] lg:min-h-[720px]"
+      :class="viewMode === 'split' ? 'lg:grid-cols-2' : 'grid-cols-1'"
+    >
+      <div
+        v-if="viewMode !== 'preview'"
+        class="min-h-[560px] lg:min-h-[720px]"
+        :class="viewMode === 'split' ? 'border-r border-[var(--admin-border)]' : ''"
+      >
         <textarea
           ref="textareaRef"
-          class="admin-editor-textarea h-full"
+          class="admin-editor-textarea min-h-[560px] h-full lg:min-h-[720px]"
           :value="modelValue"
           :placeholder="placeholder"
           :disabled="disabled"
@@ -243,16 +250,19 @@ function handleToolbarAction(action: ToolbarAction) {
         />
       </div>
 
-      <div v-if="viewMode !== 'edit'" :class="viewMode === 'preview' ? '' : 'bg-white'">
+      <div
+        v-if="viewMode !== 'edit'"
+        class="min-h-[560px] lg:min-h-[720px] bg-white"
+      >
         <article class="article-content admin-markdown-preview mx-auto max-w-none px-6 py-6" v-html="previewHtml" />
       </div>
     </div>
 
-    <MediaPickerDialog
+    <AdminMediaPickerDialog
       :open="mediaPickerOpen"
       :title="mediaPickerTitle"
-      empty-message="No images are available yet. Upload one from this dialog to use it in the editor."
-      search-placeholder="Search media library images"
+      empty-message="当前还没有可用图片，可以在这里上传后插入到编辑器中。"
+      search-placeholder="搜索媒体库图片"
       :upload-usage="uploadUsage"
       @close="mediaPickerOpen = false"
       @select="applyMediaSelection"
@@ -269,8 +279,8 @@ function handleToolbarAction(action: ToolbarAction) {
         >
           <div class="flex items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Image URL</p>
-              <h3 class="mt-1 text-lg font-semibold text-slate-900">Insert External Image</h3>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">图片地址</p>
+              <h3 class="mt-1 text-lg font-semibold text-slate-900">插入外链图片</h3>
             </div>
             <button class="admin-button-secondary px-3 py-2" type="button" @click="closeExternalImageDialog">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,7 +290,7 @@ function handleToolbarAction(action: ToolbarAction) {
           </div>
 
           <div class="space-y-4 p-5">
-            <p class="text-sm text-slate-500">Paste a direct image URL to insert it into the markdown content.</p>
+            <p class="text-sm text-slate-500">粘贴图片的直链地址，即可将它插入 Markdown 正文中。</p>
 
             <div
               v-if="externalImageDialogError"
@@ -290,7 +300,7 @@ function handleToolbarAction(action: ToolbarAction) {
             </div>
 
             <label class="block">
-              <span class="mb-2 block text-sm font-medium text-slate-700">Image URL</span>
+              <span class="mb-2 block text-sm font-medium text-slate-700">图片地址</span>
               <input
                 v-model="externalImageUrl"
                 class="admin-input"
@@ -301,10 +311,10 @@ function handleToolbarAction(action: ToolbarAction) {
 
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button class="admin-button-secondary" type="button" @click="closeExternalImageDialog">
-                Cancel
+                取消
               </button>
               <button class="admin-button-primary" type="button" @click="confirmExternalImageInsert">
-                Insert Image
+                插入图片
               </button>
             </div>
           </div>
@@ -323,8 +333,8 @@ function handleToolbarAction(action: ToolbarAction) {
         >
           <div class="flex items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Table</p>
-              <h3 class="mt-1 text-lg font-semibold text-slate-900">Insert Table</h3>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">表格</p>
+              <h3 class="mt-1 text-lg font-semibold text-slate-900">插入表格</h3>
             </div>
             <button class="admin-button-secondary px-3 py-2" type="button" @click="closeTableDialog">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,7 +344,7 @@ function handleToolbarAction(action: ToolbarAction) {
           </div>
 
           <div class="space-y-4 p-5">
-            <p class="text-sm text-slate-500">Choose row and column counts for the Markdown table.</p>
+            <p class="text-sm text-slate-500">设置 Markdown 表格的行数和列数。</p>
 
             <div
               v-if="tableDialogError"
@@ -345,7 +355,7 @@ function handleToolbarAction(action: ToolbarAction) {
 
             <div class="grid gap-4 sm:grid-cols-2">
               <label class="block">
-                <span class="mb-2 block text-sm font-medium text-slate-700">Rows</span>
+                <span class="mb-2 block text-sm font-medium text-slate-700">行数</span>
                 <input
                   v-model="tableRowCount"
                   class="admin-input"
@@ -356,7 +366,7 @@ function handleToolbarAction(action: ToolbarAction) {
               </label>
 
               <label class="block">
-                <span class="mb-2 block text-sm font-medium text-slate-700">Columns</span>
+                <span class="mb-2 block text-sm font-medium text-slate-700">列数</span>
                 <input
                   v-model="tableColumnCount"
                   class="admin-input"
@@ -369,10 +379,10 @@ function handleToolbarAction(action: ToolbarAction) {
 
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button class="admin-button-secondary" type="button" @click="closeTableDialog">
-                Cancel
+                取消
               </button>
               <button class="admin-button-primary" type="button" @click="confirmTableInsert">
-                Insert Table
+                插入表格
               </button>
             </div>
           </div>

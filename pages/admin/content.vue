@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { adminText } from '~/utils/admin'
+
 definePageMeta({
   layout: 'admin',
   middleware: 'admin-auth',
@@ -420,13 +422,13 @@ function handleTagNameChange() {
                           v-if="item.isEnabled"
                           class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700"
                         >
-                          已启用
+                          {{ adminText.statusEnabled }}
                         </span>
                         <span
                           v-else
                           class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
                         >
-                          已禁用
+                          {{ adminText.statusDisabled }}
                         </span>
                       </div>
                       <p class="mt-1 text-sm text-slate-500">{{ item.description }}</p>

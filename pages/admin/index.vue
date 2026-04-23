@@ -7,7 +7,16 @@ import type {
   PaginatedResponse,
 } from '~/types/admin';
 import { AdminApiError, useAdminSession } from '~/composables/useAdminSession';
-import { adminPaths, formatAdminDate, formatAdminNumber } from '~/utils/admin';
+import {
+  adminPaths,
+  adminText,
+  formatAdminDate,
+  formatAdminNumber,
+  getAdminArticleStatusLabel,
+  getAdminArticleStatusTone,
+  getAdminReviewStatusLabel,
+  getAdminReviewStatusTone,
+} from '~/utils/admin';
 
 definePageMeta({
   layout: 'admin',
@@ -15,7 +24,7 @@ definePageMeta({
 });
 
 useHead({
-  title: 'Admin Dashboard',
+  title: '后台仪表盘',
 });
 
 const { adminApiFetch, logout, hydrateSession } = useAdminSession();
@@ -56,10 +65,10 @@ const metrics = computed(() => {
   const activeMedia = dashboardState.media.filter((item) => item.status === 'active').length;
 
   return [
-    { marker: '文', label: '文章总数', value: formatAdminNumber(dashboardState.articles.length), change: `${publishedArticles} 已发布` },
-    { marker: '发', label: '已发布文章', value: formatAdminNumber(publishedArticles), change: `${draftArticles} 草稿` },
+    { marker: '文', label: '文章总数', value: formatAdminNumber(dashboardState.articles.length), change: ${publishedArticles}  },
+    { marker: '发', label: '已发布文章', value: formatAdminNumber(publishedArticles), change: ${draftArticles}  },
     { marker: '评', label: '待审核评论', value: formatAdminNumber(pendingComments), change: '需要处理' },
-    { marker: '媒', label: '媒体资源', value: formatAdminNumber(activeMedia), change: `${dashboardState.media.length} 总计` },
+    { marker: '媒', label: '媒体资源', value: formatAdminNumber(activeMedia), change: ${dashboardState.media.length} 总计 },
   ];
 });
 
@@ -108,7 +117,7 @@ onMounted(async () => {
 
 <template>
   <div class="w-full max-w-full space-y-4 overflow-x-hidden sm:space-y-6">
-    <AdminPageHeader title="仪表盘" description="查看文章、评论和媒体资源的最新状态。">
+    <AdminPageHeader title="后台仪表盘" description="查看文章、评论和媒体资源的最新状态。">
       <template #actions>
         <NuxtLink class="admin-button-primary w-full justify-center sm:w-auto" :to="adminPaths.articleCreate">新建文章</NuxtLink>
         <NuxtLink class="admin-button-secondary w-full justify-center sm:w-auto" :to="adminPaths.media">上传媒体</NuxtLink>
@@ -224,17 +233,17 @@ onMounted(async () => {
                 <div class="min-w-0 w-full flex-1">
                   <p class="break-words text-sm font-semibold text-slate-900 sm:truncate">{{ article.title }}</p>
                   <p class="mt-0.5 break-words text-xs text-slate-500 sm:truncate">
-                    {{ article.categories?.[0]?.name || '未分类' }} · {{ formatAdminDate(article.createdAt) }}
+                    {{ article.categories?.[0]?.name || adminText.uncategorized }} 路 {{ formatAdminDate(article.createdAt) }}
                   </p>
                 </div>
-                <AdminStatusBadge class="self-start sm:self-auto" :tone="article.status === 'published' ? 'success' : 'warning'">
-                  {{ article.status === 'published' ? '已发布' : '草稿' }}
+                <AdminStatusBadge class="self-start sm:self-auto" :tone="getAdminArticleStatusTone(article.status)">
+                  {{ getAdminArticleStatusLabel(article.status) }}
                 </AdminStatusBadge>
               </div>
             </div>
 
             <div v-else class="rounded-[4px] border border-dashed border-[var(--admin-border)] bg-slate-50 px-4 py-5">
-              <p class="text-sm font-semibold text-slate-900">暂无文章</p>
+              <p class="text-sm font-semibold text-slate-900">{{ adminText.noArticles }}</p>
               <p class="mt-1 text-sm text-slate-500">先创建第一篇文章后，这里会显示最近更新。</p>
             </div>
           </div>
@@ -253,16 +262,8 @@ onMounted(async () => {
               >
                 <div class="flex min-w-0 flex-wrap items-start justify-between gap-2">
                   <p class="min-w-0 flex-1 break-all text-sm font-semibold text-slate-900">{{ comment.nickname }}</p>
-                  <AdminStatusBadge
-                    :tone="
-                      comment.status === 'approved'
-                        ? 'success'
-                        : comment.status === 'pending'
-                          ? 'warning'
-                          : 'danger'
-                    "
-                  >
-                    {{ comment.status }}
+                  <AdminStatusBadge :tone="getAdminReviewStatusTone(comment.status)">
+                    {{ getAdminReviewStatusLabel(comment.status) }}
                   </AdminStatusBadge>
                 </div>
                 <p class="mt-2 line-clamp-3 break-words text-sm text-slate-500 sm:line-clamp-3">{{ comment.content }}</p>
@@ -271,7 +272,7 @@ onMounted(async () => {
             </div>
 
             <div v-else class="rounded-[4px] border border-dashed border-[var(--admin-border)] bg-slate-50 px-4 py-5">
-              <p class="text-sm font-semibold text-slate-900">暂无评论</p>
+              <p class="text-sm font-semibold text-slate-900">{{ adminText.noComments }}</p>
               <p class="mt-1 text-sm text-slate-500">有新评论后，这里会显示最近留言。</p>
             </div>
           </div>

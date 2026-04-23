@@ -1,4 +1,5 @@
 import type { MediaAssetItem, MediaUsage } from '~/types/admin';
+import { adminText } from '~/utils/admin';
 
 export type MediaSortField = 'createdAt' | 'filename' | 'size';
 export type MediaSortOrder = 'asc' | 'desc';
@@ -16,7 +17,7 @@ export const mediaUsageOptions: Array<{ value: MediaUsage | ''; label: string }>
 ];
 
 export const mediaStatusOptions: Array<{ value: MediaStatusFilter; label: string }> = [
-  { value: '', label: '全部状态' },
+  { value: '', label: adminText.allStatuses },
   { value: 'active', label: '正常' },
   { value: 'deleted', label: '已删除' },
 ];

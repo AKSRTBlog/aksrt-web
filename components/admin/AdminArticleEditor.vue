@@ -19,7 +19,7 @@ import {
   saveDraftSnapshot,
   sanitizeArticleSlug,
 } from '~/utils/admin-editor';
-import { adminPaths, formatAdminDate } from '~/utils/admin';
+import { adminPaths, adminText, formatAdminDate, getAdminArticleStatusLabel } from '~/utils/admin';
 
 const props = defineProps<{
   articleId?: string
@@ -47,6 +47,7 @@ const actionState = ref<
 const wordCount = computed(() => countWords(form.value.contentMarkdown));
 const readingTime = computed(() => estimateReadingTime(form.value.contentMarkdown));
 const resolvedSlug = computed(() => (isEditing.value ? form.value.slug : ''));
+const statusDisplay = computed(() => getAdminArticleStatusLabel(form.value.status));
 
 const selectedCategories = computed(() =>
   options.value.categories.filter((item) => form.value.categoryIds.includes(item.id)),
@@ -99,7 +100,7 @@ async function loadEditor() {
       return;
     }
 
-    errorMessage.value = error instanceof Error ? error.message : 'Failed to load article editor.';
+    errorMessage.value = error instanceof Error ? error.message : '加载文章编辑器失败。';
   } finally {
     loading.value = false;
   }
@@ -115,23 +116,23 @@ function applyCoverSelection(asset: MediaAssetItem) {
       mimeType: asset.mimeType,
     },
   });
-  successMessage.value = 'Cover selected.';
+  successMessage.value = '封面已选择。';
   coverPickerOpen.value = false;
 }
 
 function validateBeforeSave() {
   if (!form.value.title.trim()) {
-    errorMessage.value = 'Title is required.';
+    errorMessage.value = '标题不能为空。';
     return false;
   }
 
   if (!form.value.contentMarkdown.trim()) {
-    errorMessage.value = 'Content is required.';
+    errorMessage.value = '正文内容不能为空。';
     return false;
   }
 
   if (!form.value.categoryIds.length) {
-    errorMessage.value = 'Select at least one category.';
+    errorMessage.value = '请至少选择一个分类。';
     return false;
   }
 
@@ -164,14 +165,14 @@ async function saveArticle(targetStatus: 'draft' | 'published') {
     form.value = mapArticleToEditorForm(saved);
     persistedUpdatedAt.value = saved.updatedAt;
     invalidatePublicData();
-    successMessage.value = targetStatus === 'draft' ? 'Draft saved.' : 'Article published.';
+    successMessage.value = targetStatus === 'draft' ? '草稿已保存。' : '文章已发布。';
 
     if (!isEditing.value) {
       await navigateTo(adminPaths.articleEdit(saved.id));
       return;
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Article save failed.';
+    errorMessage.value = error instanceof Error ? error.message : '文章保存失败。';
   } finally {
     actionState.value = null;
   }
@@ -179,7 +180,7 @@ async function saveArticle(targetStatus: 'draft' | 'published') {
 
 function saveLocalDraft() {
   saveDraftSnapshot(draftKey.value, form.value);
-  successMessage.value = 'Local draft saved.';
+  successMessage.value = '本地草稿已保存。';
 }
 
 function toggleCategory(categoryId: string) {
@@ -231,29 +232,29 @@ onMounted(async () => {
 <template>
   <div class="space-y-6">
     <AdminPageHeader
-      :title="isEditing ? 'Edit Article' : 'New Article'"
+      :title="isEditing ? '编辑文章' : '新建文章'"
       :description="
         isEditing
-          ? 'Update title, excerpt, markdown content, and publishing settings.'
-          : 'Create a new article draft or publish it directly.'
+          ? '修改标题、摘要、Markdown 正文和发布设置。'
+          : '创建一篇新文章草稿，或直接发布。'
       "
     >
       <template #actions>
-        <NuxtLink class="admin-button-secondary" :to="adminPaths.articles">Back to Articles</NuxtLink>
+        <NuxtLink class="admin-button-secondary" :to="adminPaths.articles">返回文章列表</NuxtLink>
         <button class="admin-button-secondary" type="button" @click="saveLocalDraft">
-          Save Local Draft
+          保存本地草稿
         </button>
         <button class="admin-button-secondary" type="button" :disabled="Boolean(actionState)" @click="saveArticle('draft')">
-          {{ actionState === 'save-draft' ? 'Saving...' : 'Save Draft' }}
+          {{ actionState === 'save-draft' ? '保存中...' : '保存草稿' }}
         </button>
         <button class="admin-button-primary" type="button" :disabled="Boolean(actionState)" @click="saveArticle('published')">
-          {{ actionState === 'publish' ? 'Publishing...' : (isEditing ? 'Update & Publish' : 'Publish') }}
+          {{ actionState === 'publish' ? '发布中...' : (isEditing ? '更新并发布' : '立即发布') }}
         </button>
       </template>
     </AdminPageHeader>
 
     <div v-if="recoveredDraft" class="rounded-[4px] border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-      Local draft restored for this article.
+      已为当前文章恢复本地草稿。
     </div>
 
     <div v-if="errorMessage" class="rounded-[4px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
@@ -268,7 +269,7 @@ onMounted(async () => {
       v-if="loading"
       class="rounded-[4px] border border-dashed border-[var(--admin-border)] bg-white/80 px-5 py-10 text-sm text-slate-500"
     >
-      Loading editor...
+      正在加载编辑器...
     </div>
 
     <template v-else>
@@ -277,63 +278,73 @@ onMounted(async () => {
           <div class="admin-card p-5">
             <div class="grid gap-4 lg:grid-cols-2">
               <label class="block lg:col-span-2">
-                <span class="mb-2 block text-sm font-medium text-slate-700">Title</span>
-                <input class="admin-input" :value="form.title" placeholder="Article title" @input="handleTitleInput" />
+                <span class="mb-2 block text-sm font-medium text-slate-700">标题</span>
+                <input class="admin-input" :value="form.title" placeholder="请输入文章标题" @input="handleTitleInput" />
               </label>
 
               <label class="block lg:col-span-2">
-                <span class="mb-2 block text-sm font-medium text-slate-700">Excerpt</span>
+                <span class="mb-2 block text-sm font-medium text-slate-700">摘要</span>
                 <textarea
                   class="admin-textarea min-h-28"
                   :value="form.excerpt"
-                  placeholder="Article excerpt"
+                  placeholder="请输入文章摘要"
                   @input="handleExcerptInput"
                 />
               </label>
 
               <label class="block">
                 <span class="mb-2 block text-sm font-medium text-slate-700">
-                  Slug{{ isEditing ? '' : ' (auto generated on publish)' }}
+                  别名{{ isEditing ? '' : '（发布时自动生成）' }}
                 </span>
                 <input
                   class="admin-input"
                   :value="resolvedSlug"
                   :disabled="!isEditing"
-                  :placeholder="isEditing ? 'Article slug' : 'Generated automatically'"
+                  :placeholder="isEditing ? '请输入文章别名' : '发布时自动生成'"
                   @input="handleSlugInput"
                 />
               </label>
 
               <div class="rounded-[4px] border border-[var(--admin-border)] bg-slate-50 px-4 py-3">
-                <p class="text-sm font-medium text-slate-900">Writing Stats</p>
+                <p class="text-sm font-medium text-slate-900">写作统计</p>
                 <div class="mt-2 space-y-1 text-sm text-slate-500">
-                  <p>Words: {{ wordCount }}</p>
-                  <p>Reading Time: {{ readingTime }} min</p>
-                  <p>Status: {{ form.status }}</p>
+                  <p>字数：{{ wordCount }}</p>
+                  <p>阅读时长：{{ readingTime }} 分钟</p>
+                  <p>状态：{{ statusDisplay }}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <MarkdownEditor
-            v-model="form.contentMarkdown"
-            :disabled="Boolean(actionState)"
-            placeholder="Write markdown content here..."
-            preview-placeholder="## Start Editing\n\nLive preview appears here."
-            upload-usage="article_content"
-            media-picker-title="Choose Inline Image"
-          />
+          <section class="admin-card overflow-hidden p-0">
+            <div class="flex items-center justify-between border-b border-[var(--admin-border)] bg-amber-50/50 px-5 py-3">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-slate-900">文章内容</span>
+                <span class="text-rose-500">*</span>
+              </div>
+              <span class="text-xs text-slate-500">使用 Markdown 编写文章正文。</span>
+            </div>
+
+            <AdminMarkdownEditor
+              v-model="form.contentMarkdown"
+              :disabled="Boolean(actionState)"
+              placeholder="在这里编写 Markdown 内容..."
+              preview-placeholder="## 开始编写\n\n这里会实时显示预览效果。"
+              upload-usage="article_content"
+              media-picker-title="选择正文图片"
+            />
+          </section>
         </div>
 
         <aside class="space-y-6">
           <div class="admin-card p-5">
             <div class="flex items-center justify-between gap-3">
               <div>
-                <p class="text-sm font-semibold text-slate-900">Cover Image</p>
-                <p class="mt-1 text-sm text-slate-500">Choose from the media library or upload a new cover image.</p>
+                <p class="text-sm font-semibold text-slate-900">封面图片</p>
+                <p class="mt-1 text-sm text-slate-500">从媒体库中选择，或上传新的封面图片。</p>
               </div>
               <button class="admin-button-secondary" type="button" @click="coverPickerOpen = true">
-                Choose Cover
+                选择封面
               </button>
             </div>
 
@@ -341,23 +352,23 @@ onMounted(async () => {
               <AppImage class="aspect-[16/10] w-full object-cover" :src="form.cover.url" :alt="form.cover.fileName" loading="eager" />
             </div>
             <button v-else class="admin-upload-dropzone mt-4" type="button" @click="coverPickerOpen = true">
-              Open Media Library
+              打开媒体库
             </button>
 
             <div v-if="form.cover" class="mt-4 space-y-2 text-xs text-slate-500">
-              <p>File: {{ form.cover.fileName }}</p>
-              <p class="break-all">URL: {{ form.cover.url }}</p>
+              <p>文件：{{ form.cover.fileName }}</p>
+              <p class="break-all">地址：{{ form.cover.url }}</p>
               <button class="admin-button-danger mt-2" type="button" @click="updateForm({ cover: null })">
-                Remove Cover
+                移除封面
               </button>
             </div>
           </div>
 
           <div class="admin-card p-5">
-            <h3 class="text-sm font-semibold text-slate-900">Publishing</h3>
+            <h3 class="text-sm font-semibold text-slate-900">发布设置</h3>
             <div class="mt-4 space-y-5">
               <div>
-                <span class="mb-2 block text-sm font-medium text-slate-700">Categories</span>
+                <span class="mb-2 block text-sm font-medium text-slate-700">分类</span>
                 <div class="flex flex-wrap gap-2">
                   <button
                     v-for="category in options.categories"
@@ -372,7 +383,7 @@ onMounted(async () => {
               </div>
 
               <div>
-                <span class="mb-2 block text-sm font-medium text-slate-700">Tags</span>
+                <span class="mb-2 block text-sm font-medium text-slate-700">标签</span>
                 <div class="flex flex-wrap gap-2">
                   <button
                     v-for="tag in options.tags"
@@ -387,17 +398,17 @@ onMounted(async () => {
               </div>
 
               <label class="block">
-                <span class="mb-2 block text-sm font-medium text-slate-700">Status</span>
+                <span class="mb-2 block text-sm font-medium text-slate-700">状态</span>
                 <select class="admin-select" :value="form.status" @change="handleStatusInput">
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                  <option value="scheduled">Scheduled</option>
+                  <option value="draft">草稿</option>
+                  <option value="published">已发布</option>
+                  <option value="scheduled">定时发布</option>
                 </select>
               </label>
 
               <label class="block">
                 <span class="mb-2 block text-sm font-medium text-slate-700">
-                  {{ form.status === 'scheduled' ? 'Scheduled At' : 'Published At' }}
+                  {{ form.status === 'scheduled' ? '定时发布时间' : '发布时间' }}
                 </span>
                 <input
                   class="admin-input"
@@ -409,8 +420,8 @@ onMounted(async () => {
 
               <label class="flex items-center justify-between gap-4 rounded-[4px] border border-[var(--admin-border)] px-4 py-3">
                 <div>
-                  <p class="text-sm font-medium text-slate-900">Allow Comments</p>
-                  <p class="mt-1 text-xs text-slate-500">Disable this if the article should not accept new comments.</p>
+                  <p class="text-sm font-medium text-slate-900">允许评论</p>
+                  <p class="mt-1 text-xs text-slate-500">如果这篇文章不希望继续接收评论，可以关闭。</p>
                 </div>
                 <button :class="form.allowComments ? 'admin-switch admin-switch-on' : 'admin-switch'" type="button" @click="updateForm({ allowComments: !form.allowComments })">
                   <span class="admin-switch-thumb" />
@@ -418,12 +429,13 @@ onMounted(async () => {
               </label>
 
               <div class="rounded-[4px] bg-slate-50 p-4">
-                <div class="text-sm font-medium text-slate-900">Article Summary</div>
+                <div class="text-sm font-medium text-slate-900">文章概览</div>
                 <div class="mt-3 space-y-2 text-sm text-slate-500">
-                  <p>Categories: {{ selectedCategories.length ? selectedCategories.map((item) => item.name).join(' / ') : 'None' }}</p>
-                  <p>Tags: {{ selectedTags.length ? selectedTags.map((item) => item.name).join(' / ') : 'None' }}</p>
-                  <p>Slug: {{ resolvedSlug }}</p>
-                  <p v-if="persistedUpdatedAt">Updated: {{ formatAdminDate(persistedUpdatedAt) }}</p>
+                  <p>分类：{{ selectedCategories.length ? selectedCategories.map((item) => item.name).join(' / ') : adminText.unselected }}</p>
+                  <p>标签：{{ selectedTags.length ? selectedTags.map((item) => item.name).join(' / ') : adminText.unselected }}</p>
+                  <p>状态：{{ statusDisplay }}</p>
+                  <p>别名：{{ resolvedSlug || adminText.notSet }}</p>
+                  <p v-if="persistedUpdatedAt">更新时间：{{ formatAdminDate(persistedUpdatedAt) }}</p>
                 </div>
               </div>
             </div>
@@ -434,9 +446,9 @@ onMounted(async () => {
 
     <MediaPickerDialog
       :open="coverPickerOpen"
-      title="Choose Cover Image"
-      empty-message="No images are available yet. Upload one from this dialog to use it in the article."
-      search-placeholder="Search media library images"
+      title="选择封面图片"
+      empty-message="当前还没有可用图片，可以在这里上传后用作文章封面。"
+      search-placeholder="搜索媒体库图片"
       upload-usage="article_cover"
       @close="coverPickerOpen = false"
       @select="applyCoverSelection"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ArticleEditorOptions, ArticleSummaryItem, PaginatedResponse } from '~/types/admin';
 import { AdminApiError, useAdminSession } from '~/composables/useAdminSession';
-import { adminPaths, formatAdminDate } from '~/utils/admin';
+import { adminPaths, adminText, formatAdminDate, getAdminArticleStatusLabel, getAdminArticleStatusTone } from '~/utils/admin';
 
 definePageMeta({
   layout: 'admin',
@@ -9,7 +9,7 @@ definePageMeta({
 });
 
 useHead({
-  title: 'Admin Articles',
+  title: '文章管理',
 });
 
 const PAGE_SIZE = 6;
@@ -80,7 +80,7 @@ async function loadArticles() {
 }
 
 async function handleDelete(article: ArticleSummaryItem) {
-  if (!window.confirm(`确定删除文章《${article.title}》吗？`)) {
+  if (!window.confirm(确定删除文章《》吗？)) {
     return;
   }
 
@@ -137,13 +137,13 @@ onMounted(async () => {
 
         <div class="flex flex-wrap gap-2">
           <select v-model="status" class="admin-select w-auto min-w-36" @change="page = 1">
-            <option value="all">全部状态</option>
+            <option value="all">{{ adminText.allStatuses }}</option>
             <option value="published">已发布</option>
             <option value="draft">草稿</option>
           </select>
 
           <select v-model="categoryId" class="admin-select w-auto min-w-40" @change="page = 1">
-            <option value="all">全部分类</option>
+            <option value="all">{{ adminText.allCategories }}</option>
             <option v-for="item in options.categories" :key="item.id" :value="item.id">
               {{ item.name }}
             </option>
@@ -183,7 +183,6 @@ onMounted(async () => {
             <tr v-else-if="items.length === 0">
               <td class="px-5 py-10 text-sm text-slate-400" colspan="6">
                 当前筛选条件下还没有文章。
-              </td>
             </tr>
 
             <template v-else>
@@ -204,7 +203,7 @@ onMounted(async () => {
                       v-else
                       class="flex h-14 w-14 items-center justify-center rounded-[4px] bg-slate-100 text-xs text-slate-400"
                     >
-                      无封面
+                      {{ adminText.noCover }}
                     </div>
 
                     <div class="min-w-0">
@@ -218,18 +217,18 @@ onMounted(async () => {
                   {{
                     article.categories && article.categories.length > 0
                       ? article.categories.map((cat) => cat.name).join(', ')
-                      : '未分类'
+                      : adminText.uncategorized
                   }}
                 </td>
 
                 <td class="px-5 py-4">
-                  <AdminStatusBadge :tone="article.status === 'published' ? 'success' : 'warning'">
-                    {{ article.status === 'published' ? '已发布' : '草稿' }}
+                  <AdminStatusBadge :tone="getAdminArticleStatusTone(article.status)">
+                    {{ getAdminArticleStatusLabel(article.status) }}
                   </AdminStatusBadge>
                 </td>
 
                 <td class="px-5 py-4 text-sm text-slate-600">
-                  {{ article.publishedAt ? formatAdminDate(article.publishedAt) : '未发布' }}
+                  {{ article.publishedAt ? formatAdminDate(article.publishedAt) : adminText.unpublished }}
                 </td>
 
                 <td class="px-5 py-4 text-sm text-slate-600">{{ formatAdminDate(article.updatedAt) }}</td>
@@ -266,7 +265,7 @@ onMounted(async () => {
         :page="Math.min(page, totalPages)"
         :total="total"
         :total-pages="totalPages"
-        label="篇文章"
+        label="文章分页"
         @update:page="page = $event"
       />
     </div>

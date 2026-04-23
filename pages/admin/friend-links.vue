@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FooterLinkItem } from '~/types/admin'
+import { adminText, getAdminReviewStatusLabel, getAdminReviewStatusTone } from '~/utils/admin'
 
 definePageMeta({
   layout: 'admin',
@@ -46,14 +47,6 @@ onMounted(() => {
 // 更新友链字段
 function updateItem(index: number, updater: (item: FooterLinkItem) => FooterLinkItem) {
   items.value = items.value.map((item, i) => (i === index ? updater(item) : item))
-}
-
-function applicationStatusLabel(status: string) {
-  return status === 'approved' ? '已通过' : status === 'rejected' ? '已驳回' : '待审核'
-}
-
-function applicationStatusTone(status: string) {
-  return status === 'approved' ? 'success' : status === 'rejected' ? 'danger' : 'warning'
 }
 
 function handleDragStart(index: number, event: DragEvent) {
@@ -269,19 +262,19 @@ function handleDragEnd() {
             :class="applicationFilter === 'pending' ? 'admin-button-primary' : 'admin-button-secondary'"
             @click="applicationFilter = 'pending'"
           >
-            待审核 {{ counts.pending }}
+            {{ adminText.reviewPending }} {{ counts.pending }}
           </button>
           <button
             :class="applicationFilter === 'approved' ? 'admin-button-primary' : 'admin-button-secondary'"
             @click="applicationFilter = 'approved'"
           >
-            已通过 {{ counts.approved }}
+            {{ adminText.reviewApproved }} {{ counts.approved }}
           </button>
           <button
             :class="applicationFilter === 'rejected' ? 'admin-button-primary' : 'admin-button-secondary'"
             @click="applicationFilter = 'rejected'"
           >
-            已驳回 {{ counts.rejected }}
+            {{ adminText.reviewRejected }} {{ counts.rejected }}
           </button>
         </div>
       </div>
@@ -346,8 +339,8 @@ function handleDragEnd() {
                   </div>
                 </td>
                 <td class="px-5 py-4">
-                  <AdminStatusBadge :tone="applicationStatusTone(item.status) as any">
-                    {{ applicationStatusLabel(item.status) }}
+                  <AdminStatusBadge :tone="getAdminReviewStatusTone(item.status)">
+                    {{ getAdminReviewStatusLabel(item.status) }}
                   </AdminStatusBadge>
                 </td>
                 <td class="px-5 py-4 text-sm text-slate-500">
@@ -387,8 +380,8 @@ function handleDragEnd() {
                 </a>
               </div>
             </div>
-            <AdminStatusBadge :tone="applicationStatusTone(selectedApplication.status) as any">
-              {{ applicationStatusLabel(selectedApplication.status) }}
+            <AdminStatusBadge :tone="getAdminReviewStatusTone(selectedApplication.status)">
+              {{ getAdminReviewStatusLabel(selectedApplication.status) }}
             </AdminStatusBadge>
           </div>
 
@@ -439,7 +432,7 @@ function handleDragEnd() {
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              设为待审核
+              设为{{ adminText.reviewPending }}
             </button>
             <button
               class="admin-button-danger"

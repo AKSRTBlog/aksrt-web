@@ -233,11 +233,11 @@ onMounted(() => {
               <span class="text-xs text-slate-500">必填项，使用 Markdown 编写</span>
             </div>
 
-            <MarkdownEditor
+            <AdminMarkdownEditor
               :model-value="activePage.content"
               :disabled="saving"
               placeholder="使用 Markdown 编写页面内容..."
-              preview-placeholder="## Start Editing\n\nLive preview appears here."
+              preview-placeholder="## 开始编写\n\n这里会实时显示预览效果。"
               upload-usage="article_content"
               media-picker-title="选择页面内图片"
               @update:model-value="updateItem(activePage.id, item => ({ ...item, content: $event }))"

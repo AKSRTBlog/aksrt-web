@@ -565,7 +565,9 @@
 }
 
 .admin-editor-textarea {
+  display: block;
   width: 100%;
+  min-height: 560px;
   resize: none;
   border: 0;
   background:

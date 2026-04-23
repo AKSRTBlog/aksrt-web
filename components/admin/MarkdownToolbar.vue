@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 type ToolbarAction =
   | 'h1'
   | 'h2'
@@ -30,24 +30,24 @@ const rootRef = ref<HTMLElement | null>(null)
 const headingMenuOpen = ref(false)
 
 const headingActions = [
-  { id: 'h1', label: 'H1 Heading', scale: 'text-3xl font-bold tracking-tight', size: '32px' },
-  { id: 'h2', label: 'H2 Heading', scale: 'text-2xl font-bold tracking-tight', size: '28px' },
-  { id: 'h3', label: 'H3 Heading', scale: 'text-xl font-semibold', size: '24px' },
-  { id: 'h4', label: 'H4 Heading', scale: 'text-lg font-semibold', size: '20px' },
-  { id: 'h5', label: 'H5 Heading', scale: 'text-base font-medium', size: '16px' },
-  { id: 'h6', label: 'H6 Heading', scale: 'text-sm font-medium uppercase tracking-wide', size: '14px' },
+  { id: 'h1', label: '一级标题', scale: 'text-3xl font-bold tracking-tight', size: '32px' },
+  { id: 'h2', label: '二级标题', scale: 'text-2xl font-bold tracking-tight', size: '28px' },
+  { id: 'h3', label: '三级标题', scale: 'text-xl font-semibold', size: '24px' },
+  { id: 'h4', label: '四级标题', scale: 'text-lg font-semibold', size: '20px' },
+  { id: 'h5', label: '五级标题', scale: 'text-base font-medium', size: '16px' },
+  { id: 'h6', label: '六级标题', scale: 'text-sm font-medium uppercase tracking-wide', size: '14px' },
 ] as const
 
 const quickActions = [
-  { id: 'bold', title: 'Bold', icon: 'B' },
-  { id: 'italic', title: 'Italic', icon: 'I' },
-  { id: 'quote', title: 'Quote', icon: '"' },
-  { id: 'inlineCode', title: 'Inline Code', icon: '`' },
-  { id: 'codeBlock', title: 'Code Block', icon: '</>' },
-  { id: 'unorderedList', title: 'Unordered List', icon: '• List' },
-  { id: 'orderedList', title: 'Ordered List', icon: '1. List' },
-  { id: 'link', title: 'Link', icon: 'Link' },
-  { id: 'table', title: 'Table', icon: 'Table' },
+  { id: 'bold', title: '加粗', icon: 'B' },
+  { id: 'italic', title: '斜体', icon: 'I' },
+  { id: 'quote', title: '引用', icon: '"' },
+  { id: 'inlineCode', title: '行内代码', icon: '`' },
+  { id: 'codeBlock', title: '代码块', icon: '</>' },
+  { id: 'unorderedList', title: '无序列表', icon: '• 列表' },
+  { id: 'orderedList', title: '有序列表', icon: '1. 列表' },
+  { id: 'link', title: '链接', icon: '链接' },
+  { id: 'table', title: '表格', icon: '表格' },
 ] as const
 
 function handleToolbarAction(action: ToolbarAction) {
@@ -95,11 +95,11 @@ onBeforeUnmount(() => {
       <button
         :disabled="disabled"
         class="admin-toolbar-button"
-        title="Heading Levels"
+        title="标题层级"
         type="button"
         @click="toggleHeadingMenu"
       >
-        Heading
+        标题
         <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
@@ -144,21 +144,21 @@ onBeforeUnmount(() => {
     <button
       :disabled="disabled"
       class="admin-toolbar-button"
-      title="Insert image from media library"
+      title="从媒体库插入图片"
       type="button"
       @click="emit('imageUpload')"
     >
-      Image
+      图片
     </button>
 
     <button
       :disabled="disabled"
       class="admin-toolbar-button"
-      title="Insert external image URL"
+      title="插入外链图片"
       type="button"
       @click="emit('externalImageInsert')"
     >
-      URL
+      外链
     </button>
   </div>
 </template>

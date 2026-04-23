@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { adminText, getAdminReviewStatusLabel, getAdminReviewStatusTone } from '~/utils/admin'
+
 definePageMeta({
   layout: 'admin',
   middleware: 'admin-auth',
@@ -115,21 +117,21 @@ async function handleDelete(comment: typeof selectedComment.value) {
             :class="{ 'admin-button-primary': status === 'pending' }"
             @click="handleStatusChange('pending')"
           >
-            待审核
+            {{ adminText.reviewPending }}
           </button>
           <button
             class="admin-button-secondary"
             :class="{ 'admin-button-primary': status === 'approved' }"
             @click="handleStatusChange('approved')"
           >
-            已通过
+            {{ adminText.reviewApproved }}
           </button>
           <button
             class="admin-button-secondary"
             :class="{ 'admin-button-primary': status === 'rejected' }"
             @click="handleStatusChange('rejected')"
           >
-            已驳回
+            {{ adminText.reviewRejected }}
           </button>
         </div>
       </div>
@@ -147,7 +149,7 @@ async function handleDelete(comment: typeof selectedComment.value) {
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-border)] px-5 py-4">
           <div>
             <p class="text-sm font-semibold text-slate-900">当前页 {{ items.length }} 条</p>
-            <p class="text-xs text-slate-500">{{ pendingCount }} 条待审核</p>
+            <p class="text-xs text-slate-500">{{ pendingCount }} 条{{ adminText.reviewPending }}</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button
@@ -234,10 +236,8 @@ async function handleDelete(comment: typeof selectedComment.value) {
                   </button>
                 </td>
                 <td class="px-5 py-4">
-                  <AdminStatusBadge
-                    :tone="comment.status === 'approved' ? 'success' : comment.status === 'pending' ? 'warning' : 'danger'"
-                  >
-                    {{ comment.status === 'approved' ? '已通过' : comment.status === 'pending' ? '待审核' : '已驳回' }}
+                  <AdminStatusBadge :tone="getAdminReviewStatusTone(comment.status)">
+                    {{ getAdminReviewStatusLabel(comment.status) }}
                   </AdminStatusBadge>
                 </td>
                 <td class="px-5 py-4 text-sm text-slate-500">
@@ -274,10 +274,8 @@ async function handleDelete(comment: typeof selectedComment.value) {
               <p class="text-lg font-semibold text-slate-900">{{ selectedComment.nickname }}</p>
               <p class="mt-1 text-sm text-slate-500">来自 {{ selectedComment.article.title }}</p>
             </div>
-            <AdminStatusBadge
-              :tone="selectedComment.status === 'approved' ? 'success' : selectedComment.status === 'pending' ? 'warning' : 'danger'"
-            >
-              {{ selectedComment.status === 'approved' ? '已通过' : selectedComment.status === 'pending' ? '待审核' : '已驳回' }}
+            <AdminStatusBadge :tone="getAdminReviewStatusTone(selectedComment.status)">
+              {{ getAdminReviewStatusLabel(selectedComment.status) }}
             </AdminStatusBadge>
           </div>
 
@@ -312,7 +310,7 @@ async function handleDelete(comment: typeof selectedComment.value) {
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              设为待审核
+              设为{{ adminText.reviewPending }}
             </button>
             <button
               class="admin-button-danger"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MediaPickerDialog from '~/components/admin/MediaPickerDialog.vue'
+import { adminText, getAdminBannerStatusLabel, getAdminBannerStatusTone } from '~/utils/admin'
 
 definePageMeta({
   layout: 'admin',
@@ -101,13 +102,13 @@ function formatDate(dateStr: string) {
             :class="status === 'enabled' ? 'admin-button-primary' : 'admin-button-secondary'"
             @click="status = 'enabled'"
           >
-            已启用 {{ stats.active }}
+            {{ adminText.statusEnabled }} {{ stats.active }}
           </button>
           <button
             :class="status === 'disabled' ? 'admin-button-primary' : 'admin-button-secondary'"
             @click="status = 'disabled'"
           >
-            已禁用 {{ stats.disabled }}
+            {{ adminText.statusDisabled }} {{ stats.disabled }}
           </button>
         </div>
       </div>
@@ -150,15 +151,15 @@ function formatDate(dateStr: string) {
               <h4 class="font-medium text-slate-900">{{ item.title }}</h4>
               <span
                 class="rounded-full px-2 py-0.5 text-xs font-medium"
-                :class="item.status === 'enabled' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'"
+                :class="getAdminBannerStatusTone(item.status) === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'"
               >
-                {{ item.status === 'enabled' ? '已启用' : '已禁用' }}
+                {{ getAdminBannerStatusLabel(item.status) }}
               </span>
             </div>
             <p class="mt-1 text-sm text-slate-500">
               位置: {{ positionLabels[item.position] || item.position }}
               <span class="mx-2">|</span>
-              {{ item.linkUrl ? '链接: ' + item.linkUrl : '无链接' }}
+              {{ item.linkUrl ? '链接: ' + item.linkUrl : adminText.noLink }}
             </p>
             <p v-if="item.description" class="mt-1 text-sm text-slate-400 truncate">
               {{ item.description }}
