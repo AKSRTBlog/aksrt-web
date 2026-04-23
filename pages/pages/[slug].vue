@@ -53,7 +53,7 @@ useHead(() => ({
         </div>
 
         <div class="border-t border-[var(--blog-border)]">
-          <MarkdownContent :content="page.content" />
+          <MarkdownContent :content="page.content" :copy-code-blocks="true" />
         </div>
       </div>
     </section>

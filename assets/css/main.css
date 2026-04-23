@@ -323,12 +323,13 @@ img {
 }
 
 .article-content pre {
+  position: relative;
   overflow-x: auto;
   margin: 0 0 1.4rem 0;
   border: 1px solid rgba(25, 29, 36, 0.08);
   border-radius: 0.75rem;
   background: #f8fafc;
-  padding: 1rem 1.1rem;
+  padding: 3rem 1.1rem 1rem;
 }
 
 .article-content pre code {
@@ -337,6 +338,29 @@ img {
   padding: 0;
   color: #1e293b;
   font-size: 0.9rem;
+}
+
+.article-content .markdown-copy-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  border: 1px solid rgba(25, 29, 36, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.28rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #475569;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.article-content .markdown-copy-button:hover {
+  border-color: rgba(177, 93, 50, 0.2);
+  background: #fff7ed;
+  color: var(--blog-accent);
 }
 
 ::-webkit-scrollbar {

@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import AppImage from '~/components/AppImage.vue';
 import MediaPickerDialog from '~/components/admin/MediaPickerDialog.vue';
-import MarkdownToolbar from '~/components/admin/MarkdownToolbar.vue';
-import { renderMarkdown } from '~/composables/api';
 import { AdminApiError, useAdminSession } from '~/composables/useAdminSession';
 import type {
   ArticleDetailItem,
@@ -11,14 +9,11 @@ import type {
 } from '~/types/admin';
 import {
   type ArticleEditorForm,
-  type EditorViewMode,
   buildArticlePayload,
-  buildMarkdownTable,
   clearDraftSnapshot,
   countWords,
   createEmptyArticleForm,
   estimateReadingTime,
-  insertTextAtSelection,
   loadDraftSnapshot,
   mapArticleToEditorForm,
   saveDraftSnapshot,
@@ -26,66 +21,54 @@ import {
 } from '~/utils/admin-editor';
 import { adminPaths, formatAdminDate } from '~/utils/admin';
 
-type MediaPickerMode = 'cover' | 'inline'
-
 const props = defineProps<{
   articleId?: string
-}>()
+}>();
 
 const { adminApiFetch, logout, hydrateSession } = useAdminSession();
-const { invalidatePublicData } = usePublicDataInvalidation()
+const { invalidatePublicData } = usePublicDataInvalidation();
 
-const isEditing = computed(() => Boolean(props.articleId))
-const draftKey = computed(() => props.articleId ?? 'new')
+const isEditing = computed(() => Boolean(props.articleId));
+const draftKey = computed(() => props.articleId ?? 'new');
 
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
-const mediaPickerMode = ref<MediaPickerMode | null>(null)
-const tableDialogOpen = ref(false)
-const tableRowCount = ref('3')
-const tableColumnCount = ref('3')
-const tableDialogError = ref('')
-const externalImageDialogOpen = ref(false)
-const externalImageUrl = ref('https://')
-const externalImageDialogError = ref('')
+const coverPickerOpen = ref(false);
 
-const form = ref<ArticleEditorForm>(createEmptyArticleForm())
-const options = ref<ArticleEditorOptions>({ categories: [], tags: [] })
-const loading = ref(true)
-const errorMessage = ref('')
-const successMessage = ref('')
-const recoveredDraft = ref(false)
-const persistedUpdatedAt = ref<string | null>(null)
-const viewMode = ref<EditorViewMode>('split')
+const form = ref<ArticleEditorForm>(createEmptyArticleForm());
+const options = ref<ArticleEditorOptions>({ categories: [], tags: [] });
+const loading = ref(true);
+const errorMessage = ref('');
+const successMessage = ref('');
+const recoveredDraft = ref(false);
+const persistedUpdatedAt = ref<string | null>(null);
 const actionState = ref<
   null | 'local-draft' | 'save-draft' | 'publish'
->(null)
+>(null);
 
-const previewHtml = computed(() => renderMarkdown(form.value.contentMarkdown))
-const wordCount = computed(() => countWords(form.value.contentMarkdown))
-const readingTime = computed(() => estimateReadingTime(form.value.contentMarkdown))
-const resolvedSlug = computed(() => (isEditing.value ? form.value.slug : ''))
+const wordCount = computed(() => countWords(form.value.contentMarkdown));
+const readingTime = computed(() => estimateReadingTime(form.value.contentMarkdown));
+const resolvedSlug = computed(() => (isEditing.value ? form.value.slug : ''));
 
 const selectedCategories = computed(() =>
   options.value.categories.filter((item) => form.value.categoryIds.includes(item.id)),
-)
+);
 
 const selectedTags = computed(() =>
   options.value.tags.filter((item) => form.value.tagIds.includes(item.id)),
-)
+);
 
 function updateForm(patch: Partial<ArticleEditorForm>) {
   form.value = {
     ...form.value,
     ...patch,
-  }
+  };
 }
 
 async function loadEditor() {
-  loading.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
-  recoveredDraft.value = false
-  hydrateSession()
+  loading.value = true;
+  errorMessage.value = '';
+  successMessage.value = '';
+  recoveredDraft.value = false;
+  hydrateSession();
 
   try {
     const [optionResult, articleResult] = await Promise.all([
@@ -93,258 +76,79 @@ async function loadEditor() {
       props.articleId
         ? adminApiFetch<ArticleDetailItem>(`/api/v1/admin/articles/${props.articleId}`)
         : Promise.resolve<ArticleDetailItem | null>(null),
-    ])
+    ]);
 
-    options.value = optionResult
-    persistedUpdatedAt.value = articleResult?.updatedAt ?? null
+    options.value = optionResult;
+    persistedUpdatedAt.value = articleResult?.updatedAt ?? null;
 
     const baseForm = articleResult
       ? mapArticleToEditorForm(articleResult)
-      : createEmptyArticleForm(optionResult.categories[0]?.id)
+      : createEmptyArticleForm(optionResult.categories[0]?.id);
 
-    const cachedDraft = loadDraftSnapshot(draftKey.value)
-    form.value = cachedDraft ?? baseForm
-    recoveredDraft.value = Boolean(cachedDraft)
+    const cachedDraft = loadDraftSnapshot(draftKey.value);
+    form.value = cachedDraft ?? baseForm;
+    recoveredDraft.value = Boolean(cachedDraft);
 
     if (!form.value.categoryIds.length && optionResult.categories[0]?.id) {
-      form.value.categoryIds = [optionResult.categories[0].id]
+      form.value.categoryIds = [optionResult.categories[0].id];
     }
   } catch (error) {
     if (error instanceof AdminApiError && error.status === 401) {
-      logout()
-      await navigateTo(adminPaths.login)
-      return
+      logout();
+      await navigateTo(adminPaths.login);
+      return;
     }
 
-    errorMessage.value = error instanceof Error ? error.message : 'Failed to load article editor.'
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to load article editor.';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
-function focusTextareaSelection(selectionStart: number, selectionEnd: number) {
-  nextTick(() => {
-    if (!textareaRef.value) {
-      return
-    }
-
-    textareaRef.value.focus()
-    textareaRef.value.setSelectionRange(selectionStart, selectionEnd)
-  })
-}
-
-function applyInsertion(
-  builder: (textarea: HTMLTextAreaElement) => {
-    value: string
-    selectionStart: number
-    selectionEnd: number
-  },
-) {
-  if (!textareaRef.value) {
-    viewMode.value = 'edit'
-    successMessage.value = 'Switched to edit mode. Click the toolbar action again.'
-    return
-  }
-
-  const next = builder(textareaRef.value)
-  updateForm({ contentMarkdown: next.value })
-  focusTextareaSelection(next.selectionStart, next.selectionEnd)
-}
-
-function handleToolbarAction(
-  action: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'bold' | 'italic' | 'quote' | 'code' | 'list' | 'link' | 'table' | 'image',
-) {
-  const textarea = textareaRef.value
-
-  if (!textarea) {
-    viewMode.value = 'edit'
-    successMessage.value = 'Switched to edit mode. Click the toolbar action again.'
-    return
-  }
-
-  if (action === 'table') {
-    handleInsertTable()
-    return
-  }
-
-  if (action === 'image') {
-    openMediaPicker('inline')
-    return
-  }
-
-  const actionMap: Record<string, () => ReturnType<typeof insertTextAtSelection>> = {
-    h1: () => insertTextAtSelection(textarea, '\n# ', '', 'Heading 1'),
-    h2: () => insertTextAtSelection(textarea, '\n## ', '', 'Heading 2'),
-    h3: () => insertTextAtSelection(textarea, '\n### ', '', 'Heading 3'),
-    h4: () => insertTextAtSelection(textarea, '\n#### ', '', 'Heading 4'),
-    h5: () => insertTextAtSelection(textarea, '\n##### ', '', 'Heading 5'),
-    h6: () => insertTextAtSelection(textarea, '\n###### ', '', 'Heading 6'),
-    bold: () => insertTextAtSelection(textarea, '**', '**', 'bold text'),
-    italic: () => insertTextAtSelection(textarea, '*', '*', 'italic text'),
-    quote: () => insertTextAtSelection(textarea, '\n> ', '', 'quoted text'),
-    code: () => insertTextAtSelection(textarea, '\n```ts\n', '\n```\n', 'console.log("hello");'),
-    list: () => insertTextAtSelection(textarea, '\n- ', '', 'list item'),
-    link: () => insertTextAtSelection(textarea, '[', '](https://example.com)', 'link text'),
-  }
-
-  const actionBuilder = actionMap[action]
-
-  if (!actionBuilder) {
-    return
-  }
-
-  const next = actionBuilder()
-  updateForm({ contentMarkdown: next.value })
-  focusTextareaSelection(next.selectionStart, next.selectionEnd)
-}
-
-function handleInsertTable() {
-  tableRowCount.value = '3'
-  tableColumnCount.value = '3'
-  tableDialogError.value = ''
-  tableDialogOpen.value = true
-}
-
-function closeTableDialog() {
-  tableDialogOpen.value = false
-  tableDialogError.value = ''
-}
-
-function confirmTableInsert() {
-  const rows = Number.parseInt(tableRowCount.value, 10)
-  const columns = Number.parseInt(tableColumnCount.value, 10)
-
-  if (!Number.isFinite(rows) || !Number.isFinite(columns) || rows < 1 || columns < 1) {
-    tableDialogError.value = 'Rows and columns must be positive integers.'
-    return
-  }
-
-  if (rows > 30 || columns > 15) {
-    tableDialogError.value = 'Table is too large. Keep rows <= 30 and columns <= 15.'
-    return
-  }
-
-  tableDialogError.value = ''
-  const tableMarkdown = buildMarkdownTable(rows, columns)
-  applyInsertion((textarea) => insertTextAtSelection(textarea, '\n', `\n${tableMarkdown}\n`))
-  tableDialogOpen.value = false
-}
-
-function handleInsertExternalImage() {
-  externalImageUrl.value = 'https://'
-  externalImageDialogError.value = ''
-  externalImageDialogOpen.value = true
-}
-
-function closeExternalImageDialog() {
-  externalImageDialogOpen.value = false
-  externalImageDialogError.value = ''
-}
-
-function confirmExternalImageInsert() {
-  const trimmedUrl = externalImageUrl.value.trim()
-
-  if (!trimmedUrl || !/^https?:\/\//i.test(trimmedUrl)) {
-    externalImageDialogError.value = 'Please enter a valid image URL starting with http:// or https://'
-    return
-  }
-
-  externalImageDialogError.value = ''
-  applyInsertion((textarea) => insertTextAtSelection(textarea, `![image](${trimmedUrl})`, ''))
-  closeExternalImageDialog()
-}
-
-function openMediaPicker(mode: MediaPickerMode) {
-  errorMessage.value = ''
-
-  if (mode === 'inline' && viewMode.value === 'preview') {
-    viewMode.value = 'split'
-  }
-
-  mediaPickerMode.value = mode
-}
-
-function closeMediaPicker() {
-  mediaPickerMode.value = null
-}
-
-function resolveInlineImageAltText(asset: MediaAssetItem) {
-  const candidate = asset.altText?.trim() || asset.title.trim() || asset.originalFilename.trim() || 'image'
-  return candidate.replace(/[\r\n]+/g, ' ').replace(/[[\]]/g, '').trim() || 'image'
-}
-
-function insertInlineImage(asset: MediaAssetItem) {
-  const performInsert = () => {
-    if (!textareaRef.value) {
-      errorMessage.value = 'Editor is not ready for image insertion.'
-      return
-    }
-
-    const altText = resolveInlineImageAltText(asset)
-    applyInsertion((textarea) => insertTextAtSelection(textarea, `\n![${altText}](`, ')\n', asset.url))
-    successMessage.value = 'Image inserted.'
-  }
-
-  if (!textareaRef.value) {
-    viewMode.value = 'split'
-    nextTick(performInsert)
-    return
-  }
-
-  performInsert()
-}
-
-function applyMediaSelection(asset: MediaAssetItem) {
-  errorMessage.value = ''
-
-  if (mediaPickerMode.value === 'cover') {
-    updateForm({
-      cover: {
-        url: asset.url,
-        objectKey: asset.filename,
-        fileName: asset.originalFilename,
-        mimeType: asset.mimeType,
-      },
-    })
-    successMessage.value = 'Cover selected.'
-    closeMediaPicker()
-    return
-  }
-
-  insertInlineImage(asset)
-  closeMediaPicker()
+function applyCoverSelection(asset: MediaAssetItem) {
+  errorMessage.value = '';
+  updateForm({
+    cover: {
+      url: asset.url,
+      objectKey: asset.filename,
+      fileName: asset.originalFilename,
+      mimeType: asset.mimeType,
+    },
+  });
+  successMessage.value = 'Cover selected.';
+  coverPickerOpen.value = false;
 }
 
 function validateBeforeSave() {
   if (!form.value.title.trim()) {
-    errorMessage.value = 'Title is required.'
-    return false
+    errorMessage.value = 'Title is required.';
+    return false;
   }
 
   if (!form.value.contentMarkdown.trim()) {
-    errorMessage.value = 'Content is required.'
-    return false
+    errorMessage.value = 'Content is required.';
+    return false;
   }
 
   if (!form.value.categoryIds.length) {
-    errorMessage.value = 'Select at least one category.'
-    return false
+    errorMessage.value = 'Select at least one category.';
+    return false;
   }
 
-  return true
+  return true;
 }
 
 async function saveArticle(targetStatus: 'draft' | 'published') {
   if (!validateBeforeSave()) {
-    return
+    return;
   }
 
-  actionState.value = targetStatus === 'draft' ? 'save-draft' : 'publish'
-  errorMessage.value = ''
-  successMessage.value = ''
+  actionState.value = targetStatus === 'draft' ? 'save-draft' : 'publish';
+  errorMessage.value = '';
+  successMessage.value = '';
 
   try {
-    const payload = buildArticlePayload(form.value, targetStatus, isEditing.value)
+    const payload = buildArticlePayload(form.value, targetStatus, isEditing.value);
 
     const saved = isEditing.value
       ? await adminApiFetch<ArticleDetailItem>(`/api/v1/admin/articles/${props.articleId}`, {
@@ -354,79 +158,74 @@ async function saveArticle(targetStatus: 'draft' | 'published') {
       : await adminApiFetch<ArticleDetailItem>('/api/v1/admin/articles', {
           method: 'POST',
           body: JSON.stringify(payload),
-        })
+        });
 
-    clearDraftSnapshot(draftKey.value)
-    form.value = mapArticleToEditorForm(saved)
-    persistedUpdatedAt.value = saved.updatedAt
-    invalidatePublicData()
-    successMessage.value = targetStatus === 'draft' ? 'Draft saved.' : 'Article published.'
+    clearDraftSnapshot(draftKey.value);
+    form.value = mapArticleToEditorForm(saved);
+    persistedUpdatedAt.value = saved.updatedAt;
+    invalidatePublicData();
+    successMessage.value = targetStatus === 'draft' ? 'Draft saved.' : 'Article published.';
 
     if (!isEditing.value) {
-      await navigateTo(adminPaths.articleEdit(saved.id))
-      return
+      await navigateTo(adminPaths.articleEdit(saved.id));
+      return;
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Article save failed.'
+    errorMessage.value = error instanceof Error ? error.message : 'Article save failed.';
   } finally {
-    actionState.value = null
+    actionState.value = null;
   }
 }
 
 function saveLocalDraft() {
-  saveDraftSnapshot(draftKey.value, form.value)
-  successMessage.value = 'Local draft saved.'
+  saveDraftSnapshot(draftKey.value, form.value);
+  successMessage.value = 'Local draft saved.';
 }
 
 function toggleCategory(categoryId: string) {
-  const active = form.value.categoryIds.includes(categoryId)
+  const active = form.value.categoryIds.includes(categoryId);
   updateForm({
     categoryIds: active
       ? form.value.categoryIds.filter((id) => id !== categoryId)
       : [...form.value.categoryIds, categoryId],
-  })
+  });
 }
 
 function toggleTag(tagId: string) {
-  const active = form.value.tagIds.includes(tagId)
+  const active = form.value.tagIds.includes(tagId);
   updateForm({
     tagIds: active
       ? form.value.tagIds.filter((id) => id !== tagId)
       : [...form.value.tagIds, tagId],
-  })
+  });
 }
 
 function handleTitleInput(event: Event) {
-  updateForm({ title: (event.target as HTMLInputElement).value })
+  updateForm({ title: (event.target as HTMLInputElement).value });
 }
 
 function handleExcerptInput(event: Event) {
-  updateForm({ excerpt: (event.target as HTMLTextAreaElement).value })
+  updateForm({ excerpt: (event.target as HTMLTextAreaElement).value });
 }
 
 function handleSlugInput(event: Event) {
-  updateForm({ slug: sanitizeArticleSlug((event.target as HTMLInputElement).value) })
-}
-
-function handleContentInput(event: Event) {
-  updateForm({ contentMarkdown: (event.target as HTMLTextAreaElement).value })
+  updateForm({ slug: sanitizeArticleSlug((event.target as HTMLInputElement).value) });
 }
 
 function handleStatusInput(event: Event) {
   updateForm({
     status: (event.target as HTMLSelectElement).value as ArticleEditorForm['status'],
-  })
+  });
 }
 
 function handleDateInput(event: Event) {
-  const value = (event.target as HTMLInputElement).value
-
-  updateForm(form.value.status === 'scheduled' ? { scheduledAt: value } : { publishedAt: value })
+  const value = (event.target as HTMLInputElement).value;
+  updateForm(form.value.status === 'scheduled' ? { scheduledAt: value } : { publishedAt: value });
 }
 
 onMounted(async () => {
-  await loadEditor()
-})
+  await loadEditor();
+});
 </script>
 
 <template>
@@ -516,44 +315,14 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="admin-card overflow-hidden">
-            <div class="flex flex-wrap items-center gap-2 border-b border-[var(--admin-border)] bg-slate-50/90 px-4 py-3">
-              <MarkdownToolbar
-                :disabled="Boolean(actionState)"
-                @action="handleToolbarAction"
-                @image-upload="openMediaPicker('inline')"
-                @external-image-insert="handleInsertExternalImage"
-              />
-
-              <div class="ml-auto flex flex-wrap gap-2">
-                <button class="admin-button-secondary" :class="{ 'admin-button-primary': viewMode === 'edit' }" type="button" @click="viewMode = 'edit'">
-                  Edit
-                </button>
-                <button class="admin-button-secondary" :class="{ 'admin-button-primary': viewMode === 'split' }" type="button" @click="viewMode = 'split'">
-                  Split
-                </button>
-                <button class="admin-button-secondary" :class="{ 'admin-button-primary': viewMode === 'preview' }" type="button" @click="viewMode = 'preview'">
-                  Preview
-                </button>
-              </div>
-            </div>
-
-            <div class="grid" :class="viewMode === 'split' ? 'lg:grid-cols-2' : 'grid-cols-1'">
-              <div v-if="viewMode !== 'preview'" class="h-[720px] overflow-y-auto" :class="viewMode === 'split' ? 'border-r border-[var(--admin-border)]' : ''">
-                <textarea
-                  ref="textareaRef"
-                  class="admin-editor-textarea h-full"
-                  :value="form.contentMarkdown"
-                  placeholder="Write markdown content here..."
-                  @input="handleContentInput"
-                />
-              </div>
-
-              <div v-if="viewMode !== 'edit'" class="h-[720px] overflow-y-auto" :class="viewMode === 'preview' ? '' : 'bg-white'">
-                <article class="article-content admin-markdown-preview mx-auto max-w-none px-6 py-6" v-html="previewHtml" />
-              </div>
-            </div>
-          </div>
+          <MarkdownEditor
+            v-model="form.contentMarkdown"
+            :disabled="Boolean(actionState)"
+            placeholder="Write markdown content here..."
+            preview-placeholder="## Start Editing\n\nLive preview appears here."
+            upload-usage="article_content"
+            media-picker-title="Choose Inline Image"
+          />
         </div>
 
         <aside class="space-y-6">
@@ -563,7 +332,7 @@ onMounted(async () => {
                 <p class="text-sm font-semibold text-slate-900">Cover Image</p>
                 <p class="mt-1 text-sm text-slate-500">Choose from the media library or upload a new cover image.</p>
               </div>
-              <button class="admin-button-secondary" type="button" @click="openMediaPicker('cover')">
+              <button class="admin-button-secondary" type="button" @click="coverPickerOpen = true">
                 Choose Cover
               </button>
             </div>
@@ -571,7 +340,7 @@ onMounted(async () => {
             <div v-if="form.cover" class="mt-4 overflow-hidden rounded-[4px] bg-slate-100">
               <AppImage class="aspect-[16/10] w-full object-cover" :src="form.cover.url" :alt="form.cover.fileName" loading="eager" />
             </div>
-            <button v-else class="admin-upload-dropzone mt-4" type="button" @click="openMediaPicker('cover')">
+            <button v-else class="admin-upload-dropzone mt-4" type="button" @click="coverPickerOpen = true">
               Open Media Library
             </button>
 
@@ -664,132 +433,13 @@ onMounted(async () => {
     </template>
 
     <MediaPickerDialog
-      :open="Boolean(mediaPickerMode)"
-      :title="mediaPickerMode === 'cover' ? 'Choose Cover Image' : 'Choose Inline Image'"
+      :open="coverPickerOpen"
+      title="Choose Cover Image"
       empty-message="No images are available yet. Upload one from this dialog to use it in the article."
       search-placeholder="Search media library images"
-      :upload-usage="mediaPickerMode === 'cover' ? 'article_cover' : 'article_content'"
-      @close="closeMediaPicker"
-      @select="applyMediaSelection"
+      upload-usage="article_cover"
+      @close="coverPickerOpen = false"
+      @select="applyCoverSelection"
     />
-
-    <Teleport to="body">
-      <div
-        v-if="externalImageDialogOpen"
-        class="admin-modal-overlay admin-modal-overlay-sheet"
-        @click.self="closeExternalImageDialog"
-      >
-        <div
-          class="admin-card w-full max-h-[90vh] overflow-y-auto rounded-t-2xl border-t border-[var(--admin-border)] bg-white p-0 sm:max-w-lg sm:rounded-[4px] sm:border"
-        >
-          <div class="flex items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Image URL</p>
-              <h3 class="mt-1 text-lg font-semibold text-slate-900">Insert External Image</h3>
-            </div>
-            <button class="admin-button-secondary px-3 py-2" type="button" @click="closeExternalImageDialog">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div class="space-y-4 p-5">
-            <p class="text-sm text-slate-500">Paste a direct image URL to insert it into the markdown content.</p>
-
-            <div
-              v-if="externalImageDialogError"
-              class="rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600"
-            >
-              {{ externalImageDialogError }}
-            </div>
-
-            <label class="block">
-              <span class="mb-2 block text-sm font-medium text-slate-700">Image URL</span>
-              <input
-                v-model="externalImageUrl"
-                class="admin-input"
-                placeholder="https://example.com/image.jpg"
-                @keyup.enter="confirmExternalImageInsert"
-              />
-            </label>
-
-            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button class="admin-button-secondary" type="button" @click="closeExternalImageDialog">
-                Cancel
-              </button>
-              <button class="admin-button-primary" type="button" @click="confirmExternalImageInsert">
-                Insert Image
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <Teleport to="body">
-      <div
-        v-if="tableDialogOpen"
-        class="admin-modal-overlay admin-modal-overlay-sheet"
-        @click.self="closeTableDialog"
-      >
-        <div
-          class="admin-card w-full max-h-[90vh] overflow-y-auto rounded-t-2xl border-t border-[var(--admin-border)] bg-white p-0 sm:max-w-lg sm:rounded-[4px] sm:border"
-        >
-          <div class="flex items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Table</p>
-              <h3 class="mt-1 text-lg font-semibold text-slate-900">Insert Table</h3>
-            </div>
-            <button class="admin-button-secondary px-3 py-2" type="button" @click="closeTableDialog">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div class="space-y-4 p-5">
-            <p class="text-sm text-slate-500">Choose row and column counts for the Markdown table.</p>
-
-            <div v-if="tableDialogError" class="rounded-[4px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
-              {{ tableDialogError }}
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <label class="block">
-                <span class="mb-2 block text-sm font-medium text-slate-700">Rows</span>
-                <input
-                  v-model="tableRowCount"
-                  class="admin-input"
-                  type="number"
-                  min="1"
-                  max="30"
-                />
-              </label>
-
-              <label class="block">
-                <span class="mb-2 block text-sm font-medium text-slate-700">Columns</span>
-                <input
-                  v-model="tableColumnCount"
-                  class="admin-input"
-                  type="number"
-                  min="1"
-                  max="15"
-                />
-              </label>
-            </div>
-
-            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button class="admin-button-secondary" type="button" @click="closeTableDialog">
-                Cancel
-              </button>
-              <button class="admin-button-primary" type="button" @click="confirmTableInsert">
-                Insert Table
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>

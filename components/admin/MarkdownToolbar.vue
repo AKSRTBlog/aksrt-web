@@ -9,11 +9,12 @@ type ToolbarAction =
   | 'bold'
   | 'italic'
   | 'quote'
-  | 'code'
-  | 'list'
+  | 'inlineCode'
+  | 'codeBlock'
+  | 'unorderedList'
+  | 'orderedList'
   | 'link'
   | 'table'
-  | 'image'
 
 defineProps<{
   disabled?: boolean
@@ -41,8 +42,10 @@ const quickActions = [
   { id: 'bold', title: 'Bold', icon: 'B' },
   { id: 'italic', title: 'Italic', icon: 'I' },
   { id: 'quote', title: 'Quote', icon: '"' },
-  { id: 'code', title: 'Code Block', icon: '<>' },
-  { id: 'list', title: 'List', icon: '-' },
+  { id: 'inlineCode', title: 'Inline Code', icon: '`' },
+  { id: 'codeBlock', title: 'Code Block', icon: '</>' },
+  { id: 'unorderedList', title: 'Unordered List', icon: '• List' },
+  { id: 'orderedList', title: 'Ordered List', icon: '1. List' },
   { id: 'link', title: 'Link', icon: 'Link' },
   { id: 'table', title: 'Table', icon: 'Table' },
 ] as const
