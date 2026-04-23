@@ -28,6 +28,7 @@ const emit = defineEmits<{
 
 const rootRef = ref<HTMLElement | null>(null)
 const headingMenuOpen = ref(false)
+const listMenuOpen = ref(false)
 
 const headingActions = [
   { id: 'h1', label: '一级标题', scale: 'text-3xl font-bold tracking-tight', size: '32px' },
@@ -39,15 +40,18 @@ const headingActions = [
 ] as const
 
 const quickActions = [
-  { id: 'bold', title: '加粗', icon: 'B' },
-  { id: 'italic', title: '斜体', icon: 'I' },
-  { id: 'quote', title: '引用', icon: '"' },
-  { id: 'inlineCode', title: '行内代码', icon: '`' },
-  { id: 'codeBlock', title: '代码块', icon: '</>' },
-  { id: 'unorderedList', title: '无序列表', icon: '• 列表' },
-  { id: 'orderedList', title: '有序列表', icon: '1. 列表' },
+  { id: 'bold', title: '加粗', icon: '加粗' },
+  { id: 'italic', title: '斜体', icon: '/' },
+  { id: 'quote', title: '引用', icon: '引用' },
+  { id: 'inlineCode', title: '行内代码', icon: '行内代码' },
+  { id: 'codeBlock', title: '代码块', icon: '代码块' },
   { id: 'link', title: '链接', icon: '链接' },
   { id: 'table', title: '表格', icon: '表格' },
+] as const
+
+const listActions = [
+  { id: 'unorderedList', label: '无序列表' },
+  { id: 'orderedList', label: '有序列表' },
 ] as const
 
 function handleToolbarAction(action: ToolbarAction) {
@@ -56,10 +60,24 @@ function handleToolbarAction(action: ToolbarAction) {
 
 function toggleHeadingMenu() {
   headingMenuOpen.value = !headingMenuOpen.value
+  if (headingMenuOpen.value) {
+    listMenuOpen.value = false
+  }
+}
+
+function toggleListMenu() {
+  listMenuOpen.value = !listMenuOpen.value
+  if (listMenuOpen.value) {
+    headingMenuOpen.value = false
+  }
 }
 
 function closeHeadingMenu() {
   headingMenuOpen.value = false
+}
+
+function closeListMenu() {
+  listMenuOpen.value = false
 }
 
 function selectHeading(action: (typeof headingActions)[number]['id']) {
@@ -67,8 +85,13 @@ function selectHeading(action: (typeof headingActions)[number]['id']) {
   closeHeadingMenu()
 }
 
+function selectList(action: (typeof listActions)[number]['id']) {
+  emit('action', action)
+  closeListMenu()
+}
+
 function handleGlobalPointerDown(event: PointerEvent) {
-  if (!headingMenuOpen.value || !rootRef.value) {
+  if ((!headingMenuOpen.value && !listMenuOpen.value) || !rootRef.value) {
     return
   }
 
@@ -78,6 +101,7 @@ function handleGlobalPointerDown(event: PointerEvent) {
   }
 
   closeHeadingMenu()
+  closeListMenu()
 }
 
 onMounted(() => {
@@ -136,8 +160,45 @@ onBeforeUnmount(() => {
       type="button"
       @click="handleToolbarAction(action.id)"
     >
-      {{ action.icon }}
+      <span
+        v-if="action.id === 'italic'"
+        class="inline-block -skew-x-[18deg] text-base leading-none"
+      >
+        {{ action.icon }}
+      </span>
+      <span v-else>{{ action.icon }}</span>
     </button>
+
+    <div class="relative">
+      <button
+        :disabled="disabled"
+        class="admin-toolbar-button"
+        title="列表"
+        type="button"
+        @click="toggleListMenu"
+      >
+        列表
+        <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <div
+        v-if="listMenuOpen"
+        class="absolute left-0 top-[calc(100%+0.4rem)] z-30 w-40 rounded-xl border border-[var(--admin-border)] bg-white p-2 shadow-xl"
+      >
+        <button
+          v-for="action in listActions"
+          :key="action.id"
+          :disabled="disabled"
+          class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          type="button"
+          @click="selectList(action.id)"
+        >
+          {{ action.label }}
+        </button>
+      </div>
+    </div>
 
     <div class="mx-2 h-5 w-px bg-slate-200" />
 

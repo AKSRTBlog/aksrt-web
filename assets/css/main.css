@@ -256,11 +256,39 @@ img {
 
 .article-content ul,
 .article-content ol {
-  padding-left: 1.5rem;
+  padding-left: 1.85rem;
+  list-style-position: outside;
+}
+
+.article-content ul {
+  list-style-type: disc;
+}
+
+.article-content ol {
+  list-style-type: decimal;
 }
 
 .article-content li {
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.6rem;
+  padding-left: 0.2rem;
+}
+
+.article-content ul li::marker {
+  content: '\2022\00a0';
+  color: #64748b;
+  font-size: 1.05em;
+}
+
+.article-content ol li::marker {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.article-content li > ul,
+.article-content li > ol {
+  margin-top: 0.55rem;
+  margin-bottom: 0.3rem;
 }
 
 .article-content blockquote {
