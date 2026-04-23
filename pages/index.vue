@@ -3,6 +3,11 @@ import { fetchPublicArticles, fetchPublicBanners } from '~/composables/api';
 import type { BlogArticleSummary } from '~/types/blog';
 
 const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
+const HOME_SPLASH_SEEN_KEY = 'home-splash-seen-v1';
+const hasSeenHomeSplash =
+  import.meta.client && window.sessionStorage.getItem(HOME_SPLASH_SEEN_KEY) === '1';
+const showHomeSplash = ref(!hasSeenHomeSplash);
+let homeSplashTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Banner 仍用 SSR（轻量，首屏展示需要）
 const { data: banners } = await useAsyncData('home-banners', () => fetchPublicBanners('home_top'));
@@ -30,6 +35,22 @@ usePublicLiveReload(loadArticles);
 
 onMounted(() => {
   loadArticles();
+
+  if (!showHomeSplash.value) {
+    return;
+  }
+
+  homeSplashTimer = window.setTimeout(() => {
+    showHomeSplash.value = false;
+    window.sessionStorage.setItem(HOME_SPLASH_SEEN_KEY, '1');
+  }, 420);
+});
+
+onBeforeUnmount(() => {
+  if (homeSplashTimer) {
+    clearTimeout(homeSplashTimer);
+    homeSplashTimer = null;
+  }
 });
 
 // SEO 元数据
@@ -54,6 +75,10 @@ useHead(() => ({
 
 <template>
   <div class="space-y-8">
+    <ClientOnly>
+      <HomeSplashLoader :visible="showHomeSplash" />
+    </ClientOnly>
+
     <section v-if="banners && banners.length > 0" class="mx-auto max-w-6xl px-2 pt-4 sm:px-6 lg:pt-0">
       <BannerShowcase :banners="banners.slice(0, 3)" />
     </section>
