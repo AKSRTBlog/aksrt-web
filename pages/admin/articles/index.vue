@@ -1,33 +1,39 @@
 <script setup lang="ts">
-import type { ArticleEditorOptions, ArticleSummaryItem, PaginatedResponse } from '~/types/admin';
-import { AdminApiError, useAdminSession } from '~/composables/useAdminSession';
-import { adminPaths, adminText, formatAdminDate, getAdminArticleStatusLabel, getAdminArticleStatusTone } from '~/utils/admin';
+import type { ArticleEditorOptions, ArticleSummaryItem, PaginatedResponse } from '~/types/admin'
+import { AdminApiError, useAdminSession } from '~/composables/useAdminSession'
+import {
+  adminPaths,
+  adminText,
+  formatAdminDate,
+  getAdminArticleStatusLabel,
+  getAdminArticleStatusTone,
+} from '~/utils/admin'
 
 definePageMeta({
   layout: 'admin',
   middleware: 'admin-auth',
-});
+})
 
 useHead({
   title: '文章管理',
-});
+})
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 6
 
-const { adminApiFetch, logout, hydrateSession } = useAdminSession();
+const { adminApiFetch, logout, hydrateSession } = useAdminSession()
 
-const items = ref<ArticleSummaryItem[]>([]);
-const options = ref<ArticleEditorOptions>({ categories: [], tags: [] });
-const keyword = ref('');
-const status = ref<'all' | 'published' | 'draft'>('all');
-const categoryId = ref('all');
-const page = ref(1);
-const total = ref(0);
-const loading = ref(true);
-const errorMessage = ref('');
-const busyId = ref<string | null>(null);
+const items = ref<ArticleSummaryItem[]>([])
+const options = ref<ArticleEditorOptions>({ categories: [], tags: [] })
+const keyword = ref('')
+const status = ref<'all' | 'published' | 'draft'>('all')
+const categoryId = ref('all')
+const page = ref(1)
+const total = ref(0)
+const loading = ref(true)
+const errorMessage = ref('')
+const busyId = ref<string | null>(null)
 
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)));
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
 
 function buildArticleListPath() {
   const params = new URLSearchParams({
@@ -35,92 +41,96 @@ function buildArticleListPath() {
     pageSize: String(PAGE_SIZE),
     sortBy: 'updatedAt',
     sortOrder: 'desc',
-  });
+  })
 
   if (keyword.value.trim()) {
-    params.set('keyword', keyword.value.trim());
+    params.set('keyword', keyword.value.trim())
   }
 
   if (status.value !== 'all') {
-    params.set('status', status.value);
+    params.set('status', status.value)
   }
 
   if (categoryId.value !== 'all') {
-    params.set('categoryId', categoryId.value);
+    params.set('categoryId', categoryId.value)
   }
 
-  return `/api/v1/admin/articles?${params.toString()}`;
+  return `/api/v1/admin/articles?${params.toString()}`
 }
 
 async function loadArticles() {
-  loading.value = true;
-  errorMessage.value = '';
-  hydrateSession();
+  loading.value = true
+  errorMessage.value = ''
+  hydrateSession()
 
   try {
     const [articleResult, optionResult] = await Promise.all([
       adminApiFetch<PaginatedResponse<ArticleSummaryItem>>(buildArticleListPath()),
       adminApiFetch<ArticleEditorOptions>('/api/v1/admin/articles/meta/options'),
-    ]);
+    ])
 
-    items.value = articleResult.list;
-    total.value = articleResult.total;
-    options.value = optionResult;
-  } catch (error) {
+    items.value = articleResult.list
+    total.value = articleResult.total
+    options.value = optionResult
+  }
+  catch (error) {
     if (error instanceof AdminApiError && error.status === 401) {
-      logout();
-      await navigateTo(adminPaths.login);
-      return;
+      logout()
+      await navigateTo(adminPaths.login)
+      return
     }
 
-    errorMessage.value = error instanceof Error ? error.message : '文章列表加载失败，请稍后重试。';
-  } finally {
-    loading.value = false;
+    errorMessage.value = error instanceof Error ? error.message : '文章列表加载失败，请稍后重试。'
+  }
+  finally {
+    loading.value = false
   }
 }
 
 async function handleDelete(article: ArticleSummaryItem) {
-  if (!window.confirm(确定删除文章《》吗？)) {
-    return;
+  if (!window.confirm(`确定删除文章《${article.title}》吗？`)) {
+    return
   }
 
-  busyId.value = article.id;
-  errorMessage.value = '';
+  busyId.value = article.id
+  errorMessage.value = ''
 
   try {
     await adminApiFetch(`/api/v1/admin/articles/${article.id}`, {
       method: 'DELETE',
-    });
+    })
 
     if (items.value.length === 1 && page.value > 1) {
-      page.value -= 1;
-      await loadArticles();
-      return;
+      page.value -= 1
+      await loadArticles()
+      return
     }
 
-    items.value = items.value.filter((item) => item.id !== article.id);
-    total.value = Math.max(0, total.value - 1);
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '删除文章失败，请稍后重试。';
-  } finally {
-    busyId.value = null;
+    items.value = items.value.filter(item => item.id !== article.id)
+    total.value = Math.max(0, total.value - 1)
+  }
+  catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '删除文章失败，请稍后重试。'
+  }
+  finally {
+    busyId.value = null
   }
 }
 
 watch([page, keyword, status, categoryId], async () => {
-  await loadArticles();
-});
+  await loadArticles()
+})
 
 onMounted(async () => {
-  await loadArticles();
-});
+  await loadArticles()
+})
 </script>
 
 <template>
   <div class="space-y-6">
     <AdminPageHeader
       title="文章管理"
-      description="在这里浏览真实文章数据，按关键词、状态和分类筛选，并进入编辑或删除。"
+      description="在这里浏览文章数据，按关键词、状态和分类筛选，并进入编辑或删除。"
     >
       <template #actions>
         <NuxtLink class="admin-button-primary" :to="adminPaths.articleCreate">新建文章</NuxtLink>
@@ -132,14 +142,14 @@ onMounted(async () => {
         <AdminSearchField
           v-model="keyword"
           placeholder="搜索标题或摘要"
-          @update:modelValue="page = 1"
+          @update:model-value="page = 1"
         />
 
         <div class="flex flex-wrap gap-2">
           <select v-model="status" class="admin-select w-auto min-w-36" @change="page = 1">
             <option value="all">{{ adminText.allStatuses }}</option>
-            <option value="published">已发布</option>
-            <option value="draft">草稿</option>
+            <option value="published">{{ getAdminArticleStatusLabel('published') }}</option>
+            <option value="draft">{{ getAdminArticleStatusLabel('draft') }}</option>
           </select>
 
           <select v-model="categoryId" class="admin-select w-auto min-w-40" @change="page = 1">
@@ -183,6 +193,7 @@ onMounted(async () => {
             <tr v-else-if="items.length === 0">
               <td class="px-5 py-10 text-sm text-slate-400" colspan="6">
                 当前筛选条件下还没有文章。
+              </td>
             </tr>
 
             <template v-else>
@@ -198,7 +209,7 @@ onMounted(async () => {
                       class="h-14 w-14 rounded-[4px] object-cover"
                       :src="article.coverImageUrl"
                       :alt="article.title"
-                    />
+                    >
                     <div
                       v-else
                       class="flex h-14 w-14 items-center justify-center rounded-[4px] bg-slate-100 text-xs text-slate-400"
@@ -216,7 +227,7 @@ onMounted(async () => {
                 <td class="px-5 py-4 text-sm text-slate-600">
                   {{
                     article.categories && article.categories.length > 0
-                      ? article.categories.map((cat) => cat.name).join(', ')
+                      ? article.categories.map(cat => cat.name).join(', ')
                       : adminText.uncategorized
                   }}
                 </td>
