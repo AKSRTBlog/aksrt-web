@@ -48,7 +48,15 @@ const tag = computed(() => typeof route.query.tag === 'string' ? route.query.tag
 const sort = computed<'latest' | 'popular' | 'reading'>(() => {
   return route.query.sort === 'reading' || route.query.sort === 'popular' ? route.query.sort : 'latest';
 });
-const view = computed<'grid' | 'list'>(() => (route.query.view === 'grid' ? 'grid' : 'list'));
+const defaultArticleLayout = computed<'grid' | 'list'>(() => (
+  siteSettings.value?.articleLayout === 'grid' ? 'grid' : 'list'
+));
+const view = computed<'grid' | 'list'>(() => {
+  if (route.query.view === 'grid' || route.query.view === 'list') {
+    return route.query.view;
+  }
+  return defaultArticleLayout.value;
+});
 
 const filteredArticles = computed(() =>
   filterArticles(articles.value, {

@@ -35,6 +35,7 @@ export interface PublicSiteSettings {
   siteTitle: string
   siteDescription: string
   logoUrl: string | null
+  articleLayout: 'list' | 'grid'
   commentEnabled: boolean
   seo: SeoMeta
   navigationItems: NavigationItem[]

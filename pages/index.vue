@@ -3,6 +3,9 @@ import { fetchPublicArticles, fetchPublicBanners } from '~/composables/api';
 import type { BlogArticleSummary } from '~/types/blog';
 
 const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
+const homeArticleLayout = computed<'grid' | 'list'>(() => (
+  siteSettings.value?.articleLayout === 'grid' ? 'grid' : 'list'
+));
 
 // Banner 仍用 SSR（轻量，首屏展示需要）
 const { data: banners } = await useAsyncData('home-banners', () => fetchPublicBanners('home_top'));
@@ -83,7 +86,7 @@ useHead(() => ({
 
         <!-- 正常列表 -->
         <template v-else>
-          <ArticleFeed :articles="articles" view="list" />
+          <ArticleFeed :articles="articles" :view="homeArticleLayout" />
         </template>
       </div>
     </section>

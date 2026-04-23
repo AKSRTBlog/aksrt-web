@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  blogAuthor,
   fetchAllPublicArticles,
   fetchPublicArticleDetail,
   formatDate,
@@ -22,6 +21,7 @@ const articleIndex = computed(() => orderedArticles.value.findIndex((item) => it
 const olderArticle = computed(() => articleIndex.value >= 0 ? orderedArticles.value[articleIndex.value + 1] || null : null);
 const newerArticle = computed(() => articleIndex.value > 0 ? orderedArticles.value[articleIndex.value - 1] || null : null);
 const primaryCategory = computed(() => article.value?.categories?.[0] || null);
+const articleAuthorName = computed(() => siteSettings.value?.aboutDisplayName?.trim() || 'Admin');
 const canonicalUrl = computed(() => {
   const base = siteSettings.value?.seo?.canonicalUrl?.replace(/\/+$/, '') || '';
   return article.value && base ? `${base}/articles/${article.value.slug}` : '';
@@ -86,7 +86,7 @@ useHead(() => ({
             <p class="mt-4 max-w-3xl text-base leading-8 text-[var(--blog-muted)]">{{ article.excerpt }}</p>
 
             <ul class="mt-8 flex flex-wrap gap-4 text-sm text-[var(--blog-muted)]">
-              <li>Author: {{ blogAuthor.name }}</li>
+              <li>Author: {{ articleAuthorName }}</li>
               <li>Category: {{ article.categories.map((item) => item.name).join(' / ') || 'Uncategorized' }}</li>
               <li>Published: {{ formatDate(article.publishedAt) }}</li>
               <li>Reading time: {{ article.readingTime }} min</li>
@@ -135,18 +135,20 @@ useHead(() => ({
 
     <section v-if="relatedArticles.length > 0" class="mt-16 border-t border-[var(--blog-border)] bg-white/70 py-16">
       <div class="mx-auto max-w-7xl px-0 sm:px-6">
-        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--blog-subtle)]">Related</p>
-            <h2 class="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">Related reads</h2>
+        <div class="px-6 md:px-10">
+          <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--blog-subtle)]">Related</p>
+              <h2 class="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">Related reads</h2>
+            </div>
+            <NuxtLink class="text-sm font-medium text-[var(--blog-accent)]" :to="primaryCategory ? `/categories/${primaryCategory.slug}` : '/articles'">
+              More in this category
+            </NuxtLink>
           </div>
-          <NuxtLink class="text-sm font-medium text-[var(--blog-accent)]" :to="primaryCategory ? `/categories/${primaryCategory.slug}` : '/articles'">
-            More in this category
-          </NuxtLink>
-        </div>
 
-        <div class="mt-8 grid gap-4 md:grid-cols-3">
-          <ArticleCard v-for="item in relatedArticles" :key="item.id" :article="item" variant="compact" />
+          <div class="mt-8 grid gap-4 md:grid-cols-3">
+            <ArticleCard v-for="item in relatedArticles" :key="item.id" :article="item" variant="compact" />
+          </div>
         </div>
       </div>
     </section>

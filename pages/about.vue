@@ -35,7 +35,7 @@ onMounted(() => {
   loadData();
 });
 
-const aboutDisplayName = computed(() => siteSettings.value?.aboutDisplayName?.trim() || blogAuthor.name);
+const aboutDisplayName = computed(() => siteSettings.value?.aboutDisplayName?.trim() || 'Admin');
 const aboutBio = computed(() => siteSettings.value?.aboutBio?.trim() || siteSettings.value?.siteDescription || blogAuthor.bio);
 const aboutAvatar = computed(() => siteSettings.value?.adminAvatarUrl || blogAuthor.avatar);
 

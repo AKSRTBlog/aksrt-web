@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppImage from '~/components/AppImage.vue';
 import type { BlogArticleSummary } from '~/types/blog';
-import { blogAuthor, formatDate } from '~/composables/api';
+import { formatDate } from '~/composables/api';
 
 withDefaults(defineProps<{
   article: BlogArticleSummary;
@@ -15,6 +15,8 @@ function estimateCardReadingTime(article: BlogArticleSummary) {
 }
 
 const uncategorizedLabel = 'Uncategorized';
+const siteSettings = inject<ReturnType<typeof useAsyncData>['value'] | undefined>('site-settings', undefined);
+const articleAuthorName = computed(() => siteSettings?.value?.aboutDisplayName?.trim() || 'Admin');
 </script>
 
 <template>
@@ -55,7 +57,7 @@ const uncategorizedLabel = 'Uncategorized';
         <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--blog-subtle)] sm:text-xs">
           <span class="hidden font-medium text-[var(--blog-accent)] sm:inline">{{ article.categories?.[0]?.name || uncategorizedLabel }}</span>
           <span class="hidden sm:inline text-[var(--blog-border-strong)]">/</span>
-          <span class="hidden sm:inline">{{ blogAuthor.name }}</span>
+          <span class="hidden sm:inline">{{ articleAuthorName }}</span>
           <span class="hidden sm:inline text-[var(--blog-border-strong)]">/</span>
           <span>{{ formatDate(article.publishedAt) }}</span>
         </div>
