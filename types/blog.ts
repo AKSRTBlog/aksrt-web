@@ -54,7 +54,6 @@ export interface PublicSiteSettingsItem {
   siteTitle: string;
   siteDescription: string;
   logoUrl: string | null;
-  articleLayout: 'list' | 'grid';
   commentEnabled: boolean;
   seo: {
     title: string;

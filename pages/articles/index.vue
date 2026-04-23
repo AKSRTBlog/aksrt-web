@@ -48,15 +48,7 @@ const tag = computed(() => typeof route.query.tag === 'string' ? route.query.tag
 const sort = computed<'latest' | 'popular' | 'reading'>(() => {
   return route.query.sort === 'reading' || route.query.sort === 'popular' ? route.query.sort : 'latest';
 });
-const defaultArticleLayout = computed<'grid' | 'list'>(() => (
-  siteSettings.value?.articleLayout === 'grid' ? 'grid' : 'list'
-));
-const view = computed<'grid' | 'list'>(() => {
-  if (route.query.view === 'grid' || route.query.view === 'list') {
-    return route.query.view;
-  }
-  return defaultArticleLayout.value;
-});
+const view: 'list' = 'list';
 
 const filteredArticles = computed(() =>
   filterArticles(articles.value, {
@@ -88,6 +80,9 @@ function updateQuery(patch: Record<string, string>) {
   const merged = { ...route.query, ...patch };
   const nextQuery: Record<string, string> = {};
   for (const [key, rawValue] of Object.entries(merged)) {
+    if (key === 'view') {
+      continue;
+    }
     const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
     if (typeof value === 'string' && value.trim()) {
       nextQuery[key] = value.trim();
@@ -151,11 +146,6 @@ useHead(() => ({
                 <option value="reading">Reading time</option>
                 <option value="popular">Popular</option>
               </select>
-
-              <div class="flex items-center gap-1 rounded-full border border-[var(--blog-border)] bg-[var(--blog-soft)] p-1">
-                <button class="blog-toggle" :class="view === 'grid' ? 'blog-toggle-active' : ''" type="button" @click="updateQuery({ view: 'grid' })">G</button>
-                <button class="blog-toggle" :class="view === 'list' ? 'blog-toggle-active' : ''" type="button" @click="updateQuery({ view: 'list' })">L</button>
-              </div>
             </div>
           </div>
 

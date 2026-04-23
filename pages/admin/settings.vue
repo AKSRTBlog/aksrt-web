@@ -202,14 +202,6 @@ onMounted(async () => {
             <input v-model="publicForm.seoKeywords" class="admin-input" placeholder="keyword1, keyword2, keyword3" />
           </div>
 
-          <div>
-            <label class="admin-label">Article layout</label>
-            <select v-model="publicForm.articleLayout" class="admin-select">
-              <option value="list">List</option>
-              <option value="grid">Grid</option>
-            </select>
-          </div>
-
           <div class="lg:col-span-2">
             <label class="admin-checkbox-label">
               <input v-model="publicForm.commentEnabled" type="checkbox" class="admin-checkbox" />
