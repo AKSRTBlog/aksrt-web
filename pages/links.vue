@@ -43,6 +43,7 @@ const form = reactive({
 
 const submitting = ref(false);
 const submitMessage = ref('');
+const submitMessageIsSuccess = ref(false);
 const captchaEnabled = ref(false);
 const captchaId = ref<string | null>(null);
 
@@ -67,6 +68,7 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
 
   submitting.value = true;
   submitMessage.value = '';
+  submitMessageIsSuccess.value = false;
 
   try {
     await submitPublicFriendLinkApplication({
@@ -85,9 +87,11 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
     form.description = '';
     form.contactName = '';
     form.contactEmail = '';
-    submitMessage.value = 'Application submitted. It will appear after review.';
+    submitMessage.value = '申请已提交，审核通过后会展示在友情链接列表中。';
+    submitMessageIsSuccess.value = true;
   } catch (error) {
-    submitMessage.value = error instanceof Error ? error.message : 'Application submission failed.';
+    submitMessage.value = error instanceof Error ? error.message : '提交申请失败，请稍后重试。';
+    submitMessageIsSuccess.value = false;
   } finally {
     submitting.value = false;
   }
@@ -96,7 +100,8 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
 function handleSubmit() {
   if (captchaEnabled.value) {
     if (!captchaLoaded.value) {
-      submitMessage.value = 'Captcha is still loading. Please try again in a moment.';
+      submitMessage.value = '验证码仍在加载中，请稍后再试。';
+      submitMessageIsSuccess.value = false;
       return;
     }
     showCaptcha();
@@ -199,7 +204,7 @@ useHead(() => ({
 
             <div class="min-w-0">
               <p class="text-base font-medium text-[var(--blog-ink)]">{{ item.label }}</p>
-              <p class="mt-2 text-sm leading-7 text-[var(--blog-muted)]">{{ item.description || 'Curated partner site.' }}</p>
+              <p class="mt-2 truncate text-sm text-[var(--blog-muted)]">{{ item.description || 'Curated partner site.' }}</p>
             </div>
           </a>
         </div>
@@ -213,37 +218,37 @@ useHead(() => ({
     <!-- 申请表单（始终渲染）-->
     <section class="mx-auto max-w-6xl px-6 pb-20">
       <div class="blog-panel border border-[var(--blog-border)] p-6 sm:p-8">
-        <h2 class="text-2xl font-semibold text-[var(--blog-ink)]">Submit your site</h2>
+        <h2 class="text-2xl font-semibold text-[var(--blog-ink)]">提交友情链接申请</h2>
         <p class="mt-3 text-sm leading-7 text-[var(--blog-muted)]">
-          Share your site profile and contact information. Approved sites can be added to the public links list.
+          填写站点信息与联系方式。审核通过后，你的网站将展示在公开友情链接列表中。
         </p>
 
         <form class="mt-6 space-y-4" @submit.prevent="handleSubmit">
           <div class="grid gap-4 md:grid-cols-2">
-            <input v-model="form.siteName" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="Site name" required>
+            <input v-model="form.siteName" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="站点名称" required>
             <input v-model="form.siteUrl" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="https://example.com" type="url" required>
           </div>
           <div class="grid gap-4 md:grid-cols-2">
-            <input v-model="form.iconUrl" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="Icon URL (optional)" type="url">
-            <input v-model="form.contactName" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="Contact name" required>
+            <input v-model="form.iconUrl" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="站点图标链接（可选）" type="url">
+            <input v-model="form.contactName" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="联系人" required>
           </div>
-          <input v-model="form.contactEmail" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="Contact email" type="email" required>
+          <input v-model="form.contactEmail" class="w-full rounded-2xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm outline-none" placeholder="联系邮箱" type="email" required>
           <textarea
             v-model="form.description"
             class="min-h-28 w-full rounded-3xl border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3 text-sm leading-7 outline-none"
-            placeholder="Describe your site in a few sentences."
+            placeholder="请用几句话介绍你的网站。"
             required
           ></textarea>
 
           <p v-if="captchaEnabled" class="text-xs text-[var(--blog-muted)]">
-            GeeTest verification is required before this application can be submitted.
+            提交前需要先完成人机验证。
           </p>
 
           <div class="flex flex-wrap items-center gap-3">
             <button class="blog-button-primary" type="submit" :disabled="submitting">
-              {{ submitting ? 'Submitting...' : 'Submit application' }}
+              {{ submitting ? '提交中...' : '提交申请' }}
             </button>
-            <span v-if="submitMessage" class="text-sm" :class="submitMessage.includes('submitted') ? 'text-emerald-600' : 'text-[var(--blog-muted)]'">{{ submitMessage }}</span>
+            <span v-if="submitMessage" class="text-sm" :class="submitMessageIsSuccess ? 'text-emerald-600' : 'text-[var(--blog-muted)]'">{{ submitMessage }}</span>
           </div>
         </form>
       </div>
