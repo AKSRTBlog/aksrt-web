@@ -37,7 +37,7 @@ const {
 const { adminApiFetch } = useAdminSession()
 
 const activeTab = ref('general')
-const captchaDebugArticleSlug = ref('article-1')
+const captchaDebugArticleSlug = ref('1')
 const captchaDebugMessage = ref('')
 const captchaDebugResult = ref<CommentCaptchaDebugResult | null>(null)
 const captchaDebugPayload = ref<AdminCaptchaResult | null>(null)
@@ -480,7 +480,7 @@ onMounted(async () => {
           <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <label class="block">
               <span class="mb-2 block text-sm font-medium text-slate-700">Article slug</span>
-              <input v-model="captchaDebugArticleSlug" class="admin-input" placeholder="article-1" />
+              <input v-model="captchaDebugArticleSlug" class="admin-input" placeholder="1" />
             </label>
 
             <button
