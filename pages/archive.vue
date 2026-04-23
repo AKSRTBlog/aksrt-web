@@ -37,13 +37,6 @@ useSeoMeta({
 
 <template>
   <div>
-    <PageHero
-      centered
-      eyebrow="Archive"
-      title="Timeline of posts"
-      description="Browse the full publishing history by year and month."
-    />
-
     <section class="mx-auto max-w-6xl px-6 pb-20">
       <div class="space-y-6">
         <!-- 骨架屏 -->
