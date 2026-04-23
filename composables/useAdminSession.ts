@@ -4,6 +4,9 @@ import { resolveRuntimeApiBase } from '~/utils/api-base';
 
 const ADMIN_LOCAL_SESSION_KEY = 'aksrt-admin-session';
 const ADMIN_SESSION_SESSION_KEY = 'aksrt-admin-session-temporary';
+const TOKEN_EXPIRY_SKEW_MS = 5_000;
+
+let adminSessionExpiryTimer: ReturnType<typeof setTimeout> | null = null;
 
 export class AdminApiError extends Error {
   status: number;
@@ -35,14 +38,51 @@ function readStoredSession(raw: string | null) {
   }
 }
 
+function parseExpiryTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function isExpired(value: string | null | undefined, now = Date.now()) {
+  const expiresAt = parseExpiryTimestamp(value);
+  if (expiresAt === null) {
+    return true;
+  }
+
+  return expiresAt <= now + TOKEN_EXPIRY_SKEW_MS;
+}
+
+function hasUsableRefreshToken(session: AdminSessionData | null | undefined, now = Date.now()) {
+  if (!session?.refreshToken) {
+    return false;
+  }
+
+  return !isExpired(session.refreshTokenExpiresAt, now);
+}
+
 export function loadStoredAdminSession() {
   const sessionStorage = getBrowserStorage('session');
   const localStorage = getBrowserStorage('local');
 
-  return (
+  const storedSession = (
     readStoredSession(sessionStorage?.getItem(ADMIN_SESSION_SESSION_KEY) ?? null) ??
     readStoredSession(localStorage?.getItem(ADMIN_LOCAL_SESSION_KEY) ?? null)
   );
+
+  if (!storedSession) {
+    return null;
+  }
+
+  if (!hasUsableRefreshToken(storedSession)) {
+    persistStoredAdminSession(null);
+    return null;
+  }
+
+  return storedSession;
 }
 
 function persistStoredAdminSession(session: AdminSessionData | null) {
@@ -108,12 +148,39 @@ export function useAdminSession() {
   const session = useState<AdminSessionData | null>('admin-session', () => null);
   const ready = useState('admin-session-ready', () => false);
 
+  function clearExpiryTimer() {
+    if (adminSessionExpiryTimer) {
+      clearTimeout(adminSessionExpiryTimer);
+      adminSessionExpiryTimer = null;
+    }
+  }
+
+  function scheduleAutoLogout(nextSession: AdminSessionData | null) {
+    clearExpiryTimer();
+
+    if (import.meta.server || !nextSession) {
+      return;
+    }
+
+    const refreshExpiry = parseExpiryTimestamp(nextSession.refreshTokenExpiresAt);
+    if (refreshExpiry === null) {
+      setSession(null);
+      return;
+    }
+
+    const delay = Math.max(0, refreshExpiry - Date.now() + TOKEN_EXPIRY_SKEW_MS);
+    adminSessionExpiryTimer = setTimeout(() => {
+      setSession(null);
+    }, delay);
+  }
+
   function hydrateSession() {
     if (ready.value || import.meta.server) {
       return session.value;
     }
 
     session.value = loadStoredAdminSession();
+    scheduleAutoLogout(session.value);
     ready.value = true;
     return session.value;
   }
@@ -122,6 +189,7 @@ export function useAdminSession() {
     session.value = nextSession;
     ready.value = true;
     persistStoredAdminSession(nextSession);
+    scheduleAutoLogout(nextSession);
   }
 
   async function login(payload: {
@@ -151,7 +219,7 @@ export function useAdminSession() {
   async function refreshSession() {
     const currentSession = session.value ?? hydrateSession();
 
-    if (!currentSession?.refreshToken) {
+    if (!hasUsableRefreshToken(currentSession)) {
       setSession(null);
       throw new AdminApiError('Admin session expired.', 401);
     }
@@ -164,12 +232,21 @@ export function useAdminSession() {
   async function adminApiFetch<T>(path: string, init?: RequestInit) {
     const currentSession = session.value ?? hydrateSession();
 
-    if (!currentSession?.accessToken) {
+    if (!hasUsableRefreshToken(currentSession)) {
+      setSession(null);
       throw new AdminApiError('Admin session expired.', 401);
     }
 
+    let activeSession = currentSession;
+    if (!activeSession.accessToken || isExpired(activeSession.accessTokenExpiresAt)) {
+      activeSession = await refreshSession().catch((refreshError) => {
+        setSession(null);
+        throw refreshError;
+      });
+    }
+
     const headers = prepareHeaders(init);
-    headers.set('Authorization', `Bearer ${currentSession.accessToken}`);
+    headers.set('Authorization', `Bearer ${activeSession.accessToken}`);
 
     try {
       return await requestAdminApi<T>(path, {
