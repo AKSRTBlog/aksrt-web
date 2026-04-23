@@ -9,7 +9,7 @@ import {
 export interface UpdateStandalonePageInput {
   id?: string
   title: string
-  slug: string
+  slug?: string
   summary: string
   content: string
   sortOrder: number
@@ -92,11 +92,11 @@ export function useAdminStandalonePages() {
   async function savePages() {
     // 检查必填字段
     const validItems = items.value.filter(
-      item => item.title.trim() && item.slug.trim() && item.content.trim(),
+      item => item.title.trim() && item.content.trim(),
     )
 
     if (validItems.length === 0) {
-      showMessage('Please complete at least one standalone page (title, slug, and content).', true)
+      showMessage('Please complete at least one standalone page (title and content).', true)
       return
     }
 
@@ -111,7 +111,7 @@ export function useAdminStandalonePages() {
         return {
           id: item.id,
           title: item.title.trim(),
-          slug: sanitizeArticleSlug(item.slug.trim()),
+          slug: item.slug.trim() ? sanitizeArticleSlug(item.slug.trim()) : undefined,
           summary: resolvedSummary,
           content: normalizedContent,
           sortOrder: index,

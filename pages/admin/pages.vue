@@ -301,7 +301,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
 
     <AdminPageHeader
       title="独立页面"
-      description="管理站点中的自定义独立页面。保存后可通过 /pages/slug 访问，也可以手动加入导航菜单。"
+      description="管理站点中的自定义独立页面。保存后会自动分配数字 slug（例如 /pages/1），也可以手动加入导航菜单。"
     >
       <template #actions>
         <NuxtLink
@@ -417,7 +417,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                     </span>
                   </div>
                   <p class="mt-1 truncate text-xs text-slate-500">
-                    {{ item.slug ? `/pages/${item.slug}` : 'slug not set yet' }}
+                    {{ item.slug ? `/pages/${item.slug}` : 'slug will be generated on save' }}
                   </p>
                   <p class="mt-2 line-clamp-2 text-sm text-slate-600">
                     {{ item.summary.trim() || 'Summary preview will appear here once filled.' }}
@@ -445,7 +445,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
           <!-- 基本信息 -->
           <section class="admin-card p-6">
             <div class="mb-4 rounded-[4px] border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              <strong>Tip:</strong> Title, slug, and content are required. Summary is optional.
+              <strong>Tip:</strong> Title and content are required. Slug is optional and auto-generated if left blank.
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
@@ -457,38 +457,20 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                   :value="activePage.title"
                   class="admin-input"
                   placeholder="For example: About This Site"
-                  @input="updateItem(activePage.id, (item) => {
-                    const currentTitleSlug = sanitizeArticleSlug(item.title)
-                    const nextTitle = ($event.target as HTMLInputElement).value
-                    const shouldSyncSlug = !item.slug || item.slug === currentTitleSlug
-                    return {
-                      ...item,
-                      title: nextTitle,
-                      slug: shouldSyncSlug ? sanitizeArticleSlug(nextTitle) : item.slug
-                    }
-                  })"
+                  @input="updateItem(activePage.id, item => ({ ...item, title: ($event.target as HTMLInputElement).value }))"
                 >
               </div>
 
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-slate-700">
-                  Page Slug <span class="text-rose-500">*</span>
+                  Page Slug (optional)
                 </label>
-                <div class="flex gap-3">
-                  <input
-                    :value="activePage.slug"
-                    class="admin-input"
-                    placeholder="about-site"
-                    @input="updateItem(activePage.id, item => ({ ...item, slug: sanitizeArticleSlug(($event.target as HTMLInputElement).value) }))"
-                  >
-                  <button
-                    class="admin-button-secondary shrink-0"
-                    type="button"
-                    @click="updateItem(activePage.id, item => ({ ...item, slug: sanitizeArticleSlug(item.title) || item.slug }))"
-                  >
-                    Generate
-                  </button>
-                </div>
+                <input
+                  :value="activePage.slug"
+                  class="admin-input"
+                  placeholder="Leave blank to auto-generate"
+                  @input="updateItem(activePage.id, item => ({ ...item, slug: sanitizeArticleSlug(($event.target as HTMLInputElement).value) }))"
+                >
               </div>
 
               <div class="flex items-end">
@@ -600,7 +582,7 @@ function applyMediaSelection(asset: { url: string; altText?: string | null; titl
                 </svg>
               </div>
               <div class="space-y-2 text-sm text-slate-600">
-                <p>Current URL: {{ activePage.slug ? `/pages/${activePage.slug}` : 'Please fill in slug first' }}</p>
+                <p>Current URL: {{ activePage.slug ? `/pages/${activePage.slug}` : 'Save page to generate slug automatically' }}</p>
                 <p>If you want this page in the public navigation, add a matching link from Content Settings.</p>
               </div>
             </div>

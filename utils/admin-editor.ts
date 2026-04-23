@@ -48,10 +48,6 @@ export function sanitizeArticleSlug(value: string) {
     .replace(/-{2,}/g, '-');
 }
 
-export function slugifyArticleTitle(value: string) {
-  return sanitizeArticleSlug(value) || `article-${Date.now().toString(36)}`;
-}
-
 export function estimateReadingTime(markdown: string) {
   const text = markdown
     .replace(/```[\s\S]*?```/g, ' ')
@@ -248,7 +244,10 @@ export function buildArticlePayload(
   };
 
   if (isEditing) {
-    payload.slug = sanitizeArticleSlug(form.slug.trim());
+    const slug = sanitizeArticleSlug(form.slug.trim());
+    if (slug) {
+      payload.slug = slug;
+    }
   }
 
   return payload;

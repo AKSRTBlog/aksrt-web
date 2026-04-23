@@ -23,7 +23,6 @@ import {
   mapArticleToEditorForm,
   saveDraftSnapshot,
   sanitizeArticleSlug,
-  slugifyArticleTitle,
 } from '~/utils/admin-editor';
 import { adminPaths, formatAdminDate } from '~/utils/admin';
 
@@ -64,9 +63,7 @@ const actionState = ref<
 const previewHtml = computed(() => renderMarkdown(form.value.contentMarkdown))
 const wordCount = computed(() => countWords(form.value.contentMarkdown))
 const readingTime = computed(() => estimateReadingTime(form.value.contentMarkdown))
-const resolvedSlug = computed(() =>
-  isEditing.value ? form.value.slug : slugifyArticleTitle(form.value.title),
-)
+const resolvedSlug = computed(() => (isEditing.value ? form.value.slug : ''))
 
 const selectedCategories = computed(() =>
   options.value.categories.filter((item) => form.value.categoryIds.includes(item.id)),
@@ -497,13 +494,13 @@ onMounted(async () => {
 
               <label class="block">
                 <span class="mb-2 block text-sm font-medium text-slate-700">
-                  Slug{{ isEditing ? '' : ' (auto generated on first save)' }}
+                  Slug{{ isEditing ? '' : ' (auto generated on publish)' }}
                 </span>
                 <input
                   class="admin-input"
                   :value="resolvedSlug"
                   :disabled="!isEditing"
-                  placeholder="Article slug"
+                  :placeholder="isEditing ? 'Article slug' : 'Generated automatically'"
                   @input="handleSlugInput"
                 />
               </label>
