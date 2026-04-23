@@ -74,6 +74,8 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
       siteUrl: form.siteUrl.trim(),
       iconUrl: form.iconUrl.trim() || undefined,
       description: form.description.trim(),
+      contactName: form.contactName.trim(),
+      contactEmail: form.contactEmail.trim(),
       captcha,
     });
 
