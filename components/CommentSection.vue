@@ -77,11 +77,13 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
     website.value = '';
     content.value = '';
     if (result.status === 'approved') {
-      message.value = 'Comment approved automatically. Hidden content is unlocked immediately, and your comment is now visible.';
+      message.value = result.unlockToken
+        ? 'Comment approved automatically. Hidden content is unlocked, and your comment is now visible.'
+        : 'Comment approved automatically, and your comment is now visible.';
     } else if (result.status === 'rejected') {
-      message.value = 'Comment rejected by automated moderation. Hidden content is unlocked immediately, but this comment will not be displayed.';
+      message.value = 'Comment rejected by automated moderation. It will not be displayed or unlock hidden content.';
     } else {
-      message.value = 'Comment received. Hidden content is unlocked immediately, and your comment is now in the moderation queue.';
+      message.value = 'Comment received. It is waiting for moderation before it appears or unlocks hidden content.';
     }
     emit('submitted', result);
     await loadComments();

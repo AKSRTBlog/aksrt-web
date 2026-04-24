@@ -139,8 +139,8 @@ export interface BlogArticleDetail extends BlogArticleSummary {
 export interface PublicCommentSubmissionResult {
   id: string;
   status: 'pending' | 'approved' | 'rejected';
-  unlockToken: string;
-  unlockTokenExpiresAt: string;
+  unlockToken: string | null;
+  unlockTokenExpiresAt: string | null;
   postId: string;
 }
 

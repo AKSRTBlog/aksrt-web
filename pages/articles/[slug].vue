@@ -43,7 +43,9 @@ const relatedArticles = computed(() => {
 const ogImage = computed(() => article.value?.coverImage || siteSettings.value?.logoUrl || '');
 
 async function handleCommentSubmitted(result: PublicCommentSubmissionResult) {
-  await unlockArticle(result.postId, result.unlockToken);
+  if (result.unlockToken) {
+    await unlockArticle(result.postId, result.unlockToken);
+  }
 }
 
 useSeoMeta({
@@ -114,9 +116,9 @@ useHead(() => ({
             <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div class="max-w-2xl">
                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--blog-accent)]">Comment To Unlock</p>
-                <h2 class="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">Submit a comment to reveal the rest instantly.</h2>
+                <h2 class="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">Submit an approved comment to reveal the rest.</h2>
                 <p class="mt-3 text-sm leading-7 text-[var(--blog-muted)]">
-                  As soon as your comment is submitted, we silently reload this article and reveal the hidden section in place. Your comment itself will still wait for moderation before it appears publicly.
+                  We check new comments before unlocking hidden sections. Approved comments reveal the protected content automatically.
                 </p>
                 <p v-if="unlockMessage" class="mt-3 text-sm font-medium text-rose-600">
                   {{ unlockMessage }}
