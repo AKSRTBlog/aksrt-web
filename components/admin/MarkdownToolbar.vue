@@ -14,6 +14,7 @@ type ToolbarAction =
   | 'unorderedList'
   | 'orderedList'
   | 'link'
+  | 'commentLock'
   | 'table'
 
 defineProps<{
@@ -46,6 +47,7 @@ const quickActions = [
   { id: 'inlineCode', title: '行内代码', icon: '行内代码' },
   { id: 'codeBlock', title: '代码块', icon: '代码块' },
   { id: 'link', title: '链接', icon: '链接' },
+  { id: 'commentLock', title: '评论后可见', icon: '评论可见' },
   { id: 'table', title: '表格', icon: '表格' },
 ] as const
 

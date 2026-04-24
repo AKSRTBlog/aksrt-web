@@ -4,6 +4,9 @@ export type EditorStatus = 'draft' | 'published' | 'scheduled';
 export type EditorViewMode = 'split' | 'edit' | 'preview';
 export type MarkdownListType = 'unordered' | 'ordered';
 
+const COMMENT_LOCK_START = '<!-- comment-lock:start -->';
+const COMMENT_LOCK_END = '<!-- comment-lock:end -->';
+
 export interface ObjectStorageAsset {
   url: string;
   objectKey: string;
@@ -163,6 +166,15 @@ export function insertTextAtSelection(
     selectionStart: nextPosition,
     selectionEnd: nextPosition,
   };
+}
+
+export function insertCommentLockBlock(textarea: HTMLTextAreaElement) {
+  return insertTextAtSelection(
+    textarea,
+    `\n${COMMENT_LOCK_START}\n`,
+    `\n${COMMENT_LOCK_END}\n`,
+    '评论后可见内容',
+  );
 }
 
 function getSelectedLineRange(value: string, selectionStart: number, selectionEnd: number) {

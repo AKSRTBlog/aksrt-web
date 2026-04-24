@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import type { MediaAssetItem, MediaUsage } from '~/types/admin';
 import { renderMarkdown } from '~/composables/api';
-import { buildMarkdownTable, handleMarkdownListEnter, insertMarkdownList, type EditorViewMode, insertTextAtSelection } from '~/utils/admin-editor';
+import { buildMarkdownTable, handleMarkdownListEnter, insertCommentLockBlock, insertMarkdownList, type EditorViewMode, insertTextAtSelection } from '~/utils/admin-editor';
 import { enhanceMarkdownCodeBlocks } from '~/utils/markdown-code-blocks';
 
 type ToolbarAction =
@@ -19,6 +19,7 @@ type ToolbarAction =
   | 'unorderedList'
   | 'orderedList'
   | 'link'
+  | 'commentLock'
   | 'table';
 
 const props = withDefaults(
@@ -209,6 +210,7 @@ function handleToolbarAction(action: ToolbarAction) {
     unorderedList: () => insertMarkdownList(textarea, 'unordered'),
     orderedList: () => insertMarkdownList(textarea, 'ordered'),
     link: () => insertTextAtSelection(textarea, '[', '](https://example.com)', '链接文本'),
+    commentLock: () => insertCommentLockBlock(textarea),
     table: () => insertTextAtSelection(textarea, '', ''),
   };
 
