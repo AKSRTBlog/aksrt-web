@@ -2,6 +2,7 @@
 import type { MediaAssetItem, MediaUsage } from '~/types/admin';
 import { renderMarkdown } from '~/composables/api';
 import { buildMarkdownTable, type EditorViewMode, insertTextAtSelection } from '~/utils/admin-editor';
+import { enhanceMarkdownCodeBlocks } from '~/utils/markdown-code-blocks';
 
 type ToolbarAction =
   | 'h1'
@@ -46,6 +47,7 @@ const emit = defineEmits<{
 }>();
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
+const previewRootRef = ref<HTMLElement | null>(null);
 const viewMode = ref<EditorViewMode>('split');
 const mediaPickerOpen = ref(false);
 const tableDialogOpen = ref(false);
@@ -92,6 +94,14 @@ function applyInsertion(
   const next = builder(textareaRef.value);
   emitValue(next.value);
   focusTextareaSelection(next.selectionStart, next.selectionEnd);
+}
+
+function enhancePreviewCodeBlocks() {
+  if (import.meta.server || !previewRootRef.value) {
+    return;
+  }
+
+  enhanceMarkdownCodeBlocks(previewRootRef.value);
 }
 
 function openExternalImageDialog() {
@@ -206,6 +216,15 @@ function handleToolbarAction(action: ToolbarAction) {
   emitValue(next.value);
   focusTextareaSelection(next.selectionStart, next.selectionEnd);
 }
+
+watch(
+  [previewHtml, viewMode],
+  async () => {
+    await nextTick();
+    enhancePreviewCodeBlocks();
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -254,7 +273,7 @@ function handleToolbarAction(action: ToolbarAction) {
         v-if="viewMode !== 'edit'"
         class="min-h-[560px] lg:min-h-[720px] bg-white"
       >
-        <article class="article-content admin-markdown-preview mx-auto max-w-none px-6 py-6" v-html="previewHtml" />
+        <article ref="previewRootRef" class="article-content admin-markdown-preview mx-auto max-w-none px-6 py-6" v-html="previewHtml" />
       </div>
     </div>
 
