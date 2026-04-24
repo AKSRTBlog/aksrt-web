@@ -26,7 +26,7 @@ import type {
 } from '~/types/blog';
 import { resolveRuntimeApiBase } from '~/utils/api-base';
 
-type ArticleSort = 'latest' | 'popular' | 'reading';
+type ArticleSort = 'latest' | 'oldest' | 'title';
 
 const FALLBACK_COVER =
   'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%221200%22 height=%22675%22 viewBox=%220 0 1200 675%22%3E%3Crect width=%221200%22 height=%22675%22 fill=%22%23e2e8f0%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%2364758b%22 font-family=%22sans-serif%22 font-size=%2242%22%3ENo Cover%3C/text%3E%3C/svg%3E';
@@ -149,12 +149,12 @@ export function formatLongDate(date: string) {
 export function sortArticles(list: BlogArticleSummary[], sort: ArticleSort = 'latest') {
   const next = [...list];
 
-  if (sort === 'reading') {
-    return next.sort((left, right) => estimateReadingTime(right.excerpt) - estimateReadingTime(left.excerpt));
+  if (sort === 'oldest') {
+    return next.sort((left, right) => new Date(left.publishedAt).getTime() - new Date(right.publishedAt).getTime());
   }
 
-  if (sort === 'popular') {
-    return next.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  if (sort === 'title') {
+    return next.sort((left, right) => left.title.localeCompare(right.title, 'zh-CN'));
   }
 
   return next.sort((left, right) => new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime());

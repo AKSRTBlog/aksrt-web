@@ -10,7 +10,6 @@ import type { BlogArticleSummary, PublicArticleCategoryItem } from '~/types/blog
 const route = useRoute();
 const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 
-// --- 纯客户端 AJAX 加载 ---
 const articles = ref<BlogArticleSummary[]>([]);
 const publicCategories = ref<PublicArticleCategoryItem[]>([]);
 const loading = ref(true);
@@ -41,12 +40,11 @@ onMounted(() => {
   loadData();
 });
 
-// --- 筛选逻辑（纯客户端计算）---
 const keyword = computed(() => typeof route.query.q === 'string' ? route.query.q : '');
 const category = computed(() => typeof route.query.category === 'string' ? route.query.category : '');
 const tag = computed(() => typeof route.query.tag === 'string' ? route.query.tag : '');
-const sort = computed<'latest' | 'popular' | 'reading'>(() => {
-  return route.query.sort === 'reading' || route.query.sort === 'popular' ? route.query.sort : 'latest';
+const sort = computed<'latest' | 'oldest' | 'title'>(() => {
+  return route.query.sort === 'oldest' || route.query.sort === 'title' ? route.query.sort : 'latest';
 });
 const view: 'list' = 'list';
 
@@ -127,7 +125,6 @@ useHead(() => ({
   <div class="-mx-4 sm:mx-0">
     <section class="mx-auto max-w-6xl px-0 pb-20 sm:px-6">
       <div class="space-y-6">
-        <!-- 筛选栏 -->
         <div class="blog-panel p-5">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex flex-1 items-center gap-3 rounded-[4px] border border-[var(--blog-border)] bg-[var(--blog-soft)] px-4 py-3">
@@ -143,13 +140,12 @@ useHead(() => ({
             <div class="flex flex-wrap items-center gap-3">
               <select class="blog-select" :value="sort" @change="updateQuery({ sort: ($event.target as HTMLSelectElement).value })">
                 <option value="latest">Latest</option>
-                <option value="reading">Reading time</option>
-                <option value="popular">Popular</option>
+                <option value="oldest">Oldest</option>
+                <option value="title">Title A-Z</option>
               </select>
             </div>
           </div>
 
-          <!-- 分类/标签筛选（加载中显示骨架） -->
           <template v-if="loading">
             <div class="mt-5 space-y-4">
               <div class="animate-pulse space-y-3">
@@ -205,13 +201,6 @@ useHead(() => ({
           </template>
         </div>
 
-        <!-- 结果计数 + 搜索链接 -->
-        <div v-if="!loading" class="flex flex-wrap items-center justify-between gap-3 px-0 sm:px-1">
-          <p class="text-sm text-[var(--blog-muted)]">{{ filteredArticles.length }} articles</p>
-          <NuxtLink class="text-sm font-medium text-[var(--blog-accent)]" to="/search">Search</NuxtLink>
-        </div>
-
-        <!-- 文章列表：加载中 -->
         <div v-if="loading" :class="view === 'grid' ? 'grid gap-6 md:grid-cols-2' : 'space-y-0 overflow-hidden rounded-none border border-[var(--blog-border)] bg-white/88 sm:rounded-[4px]'">
           <template v-if="view === 'grid'">
             <div v-for="i in 6" :key="i" class="animate-pulse blog-panel overflow-hidden">
@@ -236,14 +225,12 @@ useHead(() => ({
           </template>
         </div>
 
-        <!-- 错误状态 -->
         <div v-else-if="error" class="blog-panel flex flex-col items-center gap-3 px-8 py-12 text-center">
           <svg class="h-10 w-10 text-[var(--blog-subtle)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
           <p class="text-sm text-[var(--blog-subtle)]">{{ error }}</p>
           <button class="blog-button-secondary text-sm" @click="loadData">Retry</button>
         </div>
 
-        <!-- 空结果 -->
         <EmptyState
           v-else-if="filteredArticles.length === 0"
           title="No matching articles"
@@ -252,7 +239,6 @@ useHead(() => ({
           action-href="/archive"
         />
 
-        <!-- 正常列表 -->
         <TransitionGroup v-else name="list-fade" tag="div" appear>
           <ArticleFeed key="articles-loaded" :articles="filteredArticles" :view="view" />
         </TransitionGroup>
@@ -265,6 +251,7 @@ useHead(() => ({
 .list-fade-enter-active {
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
+
 .list-fade-enter-from {
   opacity: 0;
   transform: translateY(10px);
