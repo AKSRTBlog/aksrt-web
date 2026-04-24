@@ -1,11 +1,9 @@
 import type { ArticleDetailItem } from '~/types/admin';
+import { COMMENT_LOCK_END, COMMENT_LOCK_START, stripCommentLockBlocks } from '~/utils/comment-lock';
 
 export type EditorStatus = 'draft' | 'published' | 'scheduled';
 export type EditorViewMode = 'split' | 'edit' | 'preview';
 export type MarkdownListType = 'unordered' | 'ordered';
-
-const COMMENT_LOCK_START = '<!-- comment-lock:start -->';
-const COMMENT_LOCK_END = '<!-- comment-lock:end -->';
 
 export interface ObjectStorageAsset {
   url: string;
@@ -34,7 +32,7 @@ const editorDraftPrefix = 'quiet-letters-editor-draft';
 export const editorTemplate = `# 输入文章标题
 
 ## 写作提纲
-- 先概括这篇文章要解决的问题
+- 先概述这篇文章要解决的问题
 - 再补充关键论点和例子
 - 最后加上总结或行动建议
 
@@ -75,6 +73,21 @@ export function countWords(markdown: string) {
   return text ? text.split(' ').length : 0;
 }
 
+function toDatetimeLocalValue(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
 export function createEmptyArticleForm(defaultCategoryId?: string): ArticleEditorForm {
   return {
     id: `draft-${Date.now()}`,
@@ -87,12 +100,17 @@ export function createEmptyArticleForm(defaultCategoryId?: string): ArticleEdito
     tagIds: [],
     status: 'draft',
     allowComments: true,
-    publishedAt: new Date().toISOString().slice(0, 16),
+    publishedAt: null,
     scheduledAt: null,
   };
 }
 
 export function mapArticleToEditorForm(article: ArticleDetailItem): ArticleEditorForm {
+  const publishedAt = toDatetimeLocalValue(article.publishedAt);
+  const isScheduled = article.status === 'published'
+    && article.publishedAt
+    && new Date(article.publishedAt).getTime() > Date.now();
+
   return {
     id: article.id,
     title: article.title,
@@ -102,35 +120,42 @@ export function mapArticleToEditorForm(article: ArticleDetailItem): ArticleEdito
       ? {
           url: article.coverImageUrl,
           objectKey: article.coverImageUrl,
-          fileName: article.coverImageUrl.split('/').pop() ?? `${article.slug}.jpg`,
-          mimeType: 'image/jpeg',
+          fileName: article.coverImageUrl.split('/').pop() || 'cover',
+          mimeType: '',
         }
       : null,
     contentMarkdown: article.content,
-    categoryIds: article.categories.map((cat) => cat.id),
-    tagIds: article.tags.map((tag) => tag.id),
-    status: article.status,
+    categoryIds: article.categories.map((item) => item.id),
+    tagIds: article.tags.map((item) => item.id),
+    status: isScheduled ? 'scheduled' : article.status,
     allowComments: article.allowComment,
-    publishedAt: article.publishedAt ? article.publishedAt.slice(0, 16) : new Date().toISOString().slice(0, 16),
-    scheduledAt: null,
+    publishedAt,
+    scheduledAt: isScheduled ? publishedAt : null,
   };
 }
 
-export function saveDraftSnapshot(id: string, form: ArticleEditorForm) {
-  if (typeof window === 'undefined') {
+function getDraftStorageKey(key: string) {
+  return `${editorDraftPrefix}:${key}`;
+}
+
+function canUseStorage() {
+  return import.meta.client && typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+}
+
+export function saveDraftSnapshot(key: string, form: ArticleEditorForm) {
+  if (!canUseStorage()) {
     return;
   }
 
-  window.localStorage.setItem(`${editorDraftPrefix}:${id}`, JSON.stringify(form));
+  window.localStorage.setItem(getDraftStorageKey(key), JSON.stringify(form));
 }
 
-export function loadDraftSnapshot(id: string) {
-  if (typeof window === 'undefined') {
+export function loadDraftSnapshot(key: string) {
+  if (!canUseStorage()) {
     return null;
   }
 
-  const raw = window.localStorage.getItem(`${editorDraftPrefix}:${id}`);
-
+  const raw = window.localStorage.getItem(getDraftStorageKey(key));
   if (!raw) {
     return null;
   }
@@ -138,26 +163,27 @@ export function loadDraftSnapshot(id: string) {
   try {
     return JSON.parse(raw) as ArticleEditorForm;
   } catch {
+    window.localStorage.removeItem(getDraftStorageKey(key));
     return null;
   }
 }
 
-export function clearDraftSnapshot(id: string) {
-  if (typeof window === 'undefined') {
+export function clearDraftSnapshot(key: string) {
+  if (!canUseStorage()) {
     return;
   }
 
-  window.localStorage.removeItem(`${editorDraftPrefix}:${id}`);
+  window.localStorage.removeItem(getDraftStorageKey(key));
 }
 
 export function insertTextAtSelection(
   textarea: HTMLTextAreaElement,
   before: string,
-  after = '',
-  placeholder = '',
+  after: string,
+  fallbackSelection = '',
 ) {
   const { selectionStart, selectionEnd, value } = textarea;
-  const selected = value.slice(selectionStart, selectionEnd) || placeholder;
+  const selected = value.slice(selectionStart, selectionEnd) || fallbackSelection;
   const nextValue = `${value.slice(0, selectionStart)}${before}${selected}${after}${value.slice(selectionEnd)}`;
   const nextPosition = selectionStart + before.length + selected.length + after.length;
 
@@ -286,7 +312,7 @@ export function buildMarkdownTable(rowCount: number, columnCount: number) {
 }
 
 export function buildExcerptFromMarkdown(markdown: string, maxLength = 150) {
-  const plainText = markdown
+  const plainText = stripCommentLockBlocks(markdown)
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`[^`]+`/g, ' ')
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1 ')

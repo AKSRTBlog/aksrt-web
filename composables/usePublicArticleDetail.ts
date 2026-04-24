@@ -3,7 +3,7 @@ import { mapArticleDetail } from '~/composables/api';
 import { readUnlockToken, removeUnlockToken, writeUnlockToken } from '~/utils/article-unlock';
 import { resolveRuntimeApiBase } from '~/utils/api-base';
 
-const EXPIRED_UNLOCK_MESSAGE = '凭证已失效，请重新评论a';
+const EXPIRED_UNLOCK_MESSAGE = '解锁凭证已失效，请重新提交评论以再次解锁内容。';
 
 export function usePublicArticleDetail(slug: MaybeRefOrGetter<string>) {
   const config = useRuntimeConfig();

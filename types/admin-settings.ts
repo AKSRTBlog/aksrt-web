@@ -94,6 +94,24 @@ export interface CaptchaConfig {
   enabledOnLogin: boolean
 }
 
+export interface CommentModerationConfig {
+  id: string
+  enabled: boolean
+  akismetEnabled: boolean
+  akismetApiKeyConfigured: boolean
+  akismetSiteUrl: string
+  akismetBlogLang: string
+  aiEnabled: boolean
+  aiProvider: string
+  aiApiKeyConfigured: boolean
+  aiModel: string
+  autoApproveLowRisk: boolean
+  autoRejectHighRisk: boolean
+  lowRiskMaxScore: number
+  highRiskMinScore: number
+  blockedKeywords: string[]
+}
+
 export interface AdminSiteSettings {
   publicConfig: PublicSiteSettings
   smtpConfig: SmtpConfig

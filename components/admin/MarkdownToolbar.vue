@@ -17,9 +17,13 @@ type ToolbarAction =
   | 'commentLock'
   | 'table'
 
-defineProps<{
+const props = withDefaults(defineProps<{
   disabled?: boolean
-}>()
+  allowCommentLock?: boolean
+}>(), {
+  disabled: false,
+  allowCommentLock: true,
+})
 
 const emit = defineEmits<{
   action: [action: ToolbarAction]
@@ -40,7 +44,7 @@ const headingActions = [
   { id: 'h6', label: '六级标题', scale: 'text-sm font-medium uppercase tracking-wide', size: '14px' },
 ] as const
 
-const quickActions = [
+const allQuickActions = [
   { id: 'bold', title: '加粗', icon: '加粗' },
   { id: 'italic', title: '倾斜', icon: '倾斜' },
   { id: 'quote', title: '引用', icon: '引用' },
@@ -50,6 +54,10 @@ const quickActions = [
   { id: 'commentLock', title: '评论后可见', icon: '评论可见' },
   { id: 'table', title: '表格', icon: '表格' },
 ] as const
+
+const quickActions = computed(() =>
+  allQuickActions.filter(action => props.allowCommentLock || action.id !== 'commentLock'),
+)
 
 const listActions = [
   { id: 'unorderedList', label: '无序列表' },
@@ -119,7 +127,7 @@ onBeforeUnmount(() => {
   <div ref="rootRef" class="flex flex-wrap items-center gap-1">
     <div class="relative">
       <button
-        :disabled="disabled"
+        :disabled="props.disabled"
         class="admin-toolbar-button"
         title="标题层级"
         type="button"
@@ -138,7 +146,7 @@ onBeforeUnmount(() => {
         <button
           v-for="heading in headingActions"
           :key="heading.id"
-          :disabled="disabled"
+          :disabled="props.disabled"
           class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           @click="selectHeading(heading.id)"
@@ -156,7 +164,7 @@ onBeforeUnmount(() => {
     <button
       v-for="action in quickActions"
       :key="action.id"
-      :disabled="disabled"
+      :disabled="props.disabled"
       :title="action.title"
       class="admin-toolbar-button"
       type="button"
@@ -167,7 +175,7 @@ onBeforeUnmount(() => {
 
     <div class="relative">
       <button
-        :disabled="disabled"
+        :disabled="props.disabled"
         class="admin-toolbar-button"
         title="列表"
         type="button"
@@ -186,7 +194,7 @@ onBeforeUnmount(() => {
         <button
           v-for="action in listActions"
           :key="action.id"
-          :disabled="disabled"
+          :disabled="props.disabled"
           class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           @click="selectList(action.id)"
@@ -199,7 +207,7 @@ onBeforeUnmount(() => {
     <div class="mx-2 h-5 w-px bg-slate-200" />
 
     <button
-      :disabled="disabled"
+      :disabled="props.disabled"
       class="admin-toolbar-button"
       title="从媒体库插入图片"
       type="button"
@@ -209,7 +217,7 @@ onBeforeUnmount(() => {
     </button>
 
     <button
-      :disabled="disabled"
+      :disabled="props.disabled"
       class="admin-toolbar-button"
       title="插入外链图片"
       type="button"

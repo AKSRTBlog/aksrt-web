@@ -236,12 +236,17 @@ onMounted(() => {
             <AdminMarkdownEditor
               :model-value="activePage.content"
               :disabled="saving"
+              :allow-comment-lock="false"
+              comment-lock-preview-mode="disabled"
               placeholder="使用 Markdown 编写页面内容..."
               preview-placeholder="## 开始编写\n\n这里会实时显示预览效果。"
               upload-usage="article_content"
               media-picker-title="选择页面内图片"
               @update:model-value="updateItem(activePage.id, item => ({ ...item, content: $event }))"
             />
+            <div class="border-t border-[var(--admin-border)] bg-amber-50 px-5 py-3 text-sm text-amber-800">
+              独立页不支持“评论后可见”。历史正文里的评论锁区块会在公开页被自动隐藏，也不会参与自动摘要。
+            </div>
           </div>
 
           <section class="admin-card p-5">

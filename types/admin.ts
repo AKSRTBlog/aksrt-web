@@ -93,6 +93,12 @@ export interface AdminCommentItem {
   reviewedBy: string | null;
   reviewedAt: string | null;
   rejectReason: string | null;
+  moderationRiskLevel: 'low' | 'medium' | 'high' | null;
+  moderationRiskScore: number | null;
+  moderationSummary: string | null;
+  moderationAkismetRaw: string | null;
+  moderationAiRaw: string | null;
+  moderationPipelineVersion: string | null;
   createdAt: string;
   updatedAt: string;
 }

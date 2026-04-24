@@ -64,6 +64,45 @@ function handleKeywordChange(value: string) {
   setKeyword(value)
 }
 
+function getRiskTone(level: 'low' | 'medium' | 'high' | null) {
+  if (level === 'high') {
+    return 'bg-rose-100 text-rose-700'
+  }
+  if (level === 'medium') {
+    return 'bg-amber-100 text-amber-700'
+  }
+  if (level === 'low') {
+    return 'bg-emerald-100 text-emerald-700'
+  }
+  return 'bg-slate-100 text-slate-600'
+}
+
+function getRiskLabel(level: 'low' | 'medium' | 'high' | null) {
+  if (level === 'high') {
+    return '高风险'
+  }
+  if (level === 'medium') {
+    return '中风险'
+  }
+  if (level === 'low') {
+    return '低风险'
+  }
+  return '未评级'
+}
+
+function formatModerationSignal(raw: string | null) {
+  if (!raw) {
+    return 'No signal payload.'
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    return JSON.stringify(parsed, null, 2)
+  } catch {
+    return raw
+  }
+}
+
 async function handleApprove(comment: typeof selectedComment.value) {
   if (comment) {
     await reviewComment(comment.id, 'approved')
@@ -232,6 +271,17 @@ async function handleDelete(comment: typeof selectedComment.value) {
                   <button class="block text-left" type="button" @click="selectedId = comment.id">
                     <p class="text-sm font-semibold text-slate-900">{{ comment.nickname }}</p>
                     <p class="mt-1 line-clamp-2 text-sm leading-7 text-slate-500">{{ comment.content }}</p>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                      <span
+                        class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        :class="getRiskTone(comment.moderationRiskLevel)"
+                      >
+                        {{ getRiskLabel(comment.moderationRiskLevel) }}
+                      </span>
+                      <span v-if="comment.moderationRiskScore !== null" class="text-xs text-slate-500">
+                        score {{ comment.moderationRiskScore }}
+                      </span>
+                    </div>
                     <p class="mt-2 text-xs text-slate-400">{{ comment.article.title }}</p>
                   </button>
                 </td>
@@ -287,8 +337,35 @@ async function handleDelete(comment: typeof selectedComment.value) {
             <p>创建时间: {{ new Date(selectedComment.createdAt).toLocaleString('zh-CN') }}</p>
             <p>邮箱: {{ selectedComment.email }}</p>
             <p>网站: {{ selectedComment.website || '未填写' }}</p>
+            <p v-if="selectedComment.moderationRiskLevel">
+              风险等级: {{ selectedComment.moderationRiskLevel }} ({{ selectedComment.moderationRiskScore ?? 0 }})
+            </p>
+            <p v-if="selectedComment.moderationSummary" class="break-words">
+              审核摘要: {{ selectedComment.moderationSummary }}
+            </p>
+            <p v-if="selectedComment.moderationPipelineVersion">
+              审核管道版本: {{ selectedComment.moderationPipelineVersion }}
+            </p>
             <p>回复层级: {{ selectedComment.parent ? `回复 ${selectedComment.parent.nickname}` : '一级评论' }}</p>
             <p v-if="selectedComment.rejectReason">驳回原因: {{ selectedComment.rejectReason }}</p>
+          </div>
+
+          <div class="mt-6 space-y-3">
+            <p class="text-sm font-semibold text-slate-900">审核命中详情（原始信号）</p>
+
+            <details class="rounded-[4px] border border-[var(--admin-border)] bg-slate-50/70">
+              <summary class="cursor-pointer list-none px-4 py-3 text-sm font-medium text-slate-700">
+                Akismet 原始信号
+              </summary>
+              <pre class="overflow-x-auto border-t border-[var(--admin-border)] bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ formatModerationSignal(selectedComment.moderationAkismetRaw) }}</pre>
+            </details>
+
+            <details class="rounded-[4px] border border-[var(--admin-border)] bg-slate-50/70">
+              <summary class="cursor-pointer list-none px-4 py-3 text-sm font-medium text-slate-700">
+                AI 审核原始信号
+              </summary>
+              <pre class="overflow-x-auto border-t border-[var(--admin-border)] bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ formatModerationSignal(selectedComment.moderationAiRaw) }}</pre>
+            </details>
           </div>
 
           <div class="mt-6 grid gap-3 sm:grid-cols-2">

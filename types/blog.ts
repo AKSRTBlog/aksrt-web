@@ -48,6 +48,7 @@ export interface PublicStandalonePageSummaryItem {
 
 export interface PublicStandalonePageDetailItem extends PublicStandalonePageSummaryItem {
   content: string;
+  containsCommentLockedContent: boolean;
 }
 
 export interface PublicSiteSettingsItem {

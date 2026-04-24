@@ -76,7 +76,13 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
     email.value = '';
     website.value = '';
     content.value = '';
-    message.value = 'Comment received. It will appear after moderation.';
+    if (result.status === 'approved') {
+      message.value = 'Comment approved automatically. Hidden content is unlocked immediately, and your comment is now visible.';
+    } else if (result.status === 'rejected') {
+      message.value = 'Comment rejected by automated moderation. Hidden content is unlocked immediately, but this comment will not be displayed.';
+    } else {
+      message.value = 'Comment received. Hidden content is unlocked immediately, and your comment is now in the moderation queue.';
+    }
     emit('submitted', result);
     await loadComments();
   } catch (currentError) {
@@ -143,7 +149,11 @@ onMounted(async () => {
           <button class="blog-button-primary" type="submit" :disabled="submitting">
             {{ submitting ? 'Submitting...' : 'Post comment' }}
           </button>
-          <span v-if="message" class="text-sm" :class="message.includes('received') ? 'text-emerald-600' : 'text-[var(--blog-muted)]'">{{ message }}</span>
+          <span
+            v-if="message"
+            class="text-sm"
+            :class="message.includes('rejected') ? 'text-amber-600' : message.startsWith('Comment') ? 'text-emerald-600' : 'text-[var(--blog-muted)]'"
+          >{{ message }}</span>
         </div>
       </form>
     </div>

@@ -58,6 +58,50 @@ function getFetchError(error: unknown) {
   return error as FetchError<ApiEnvelope<never>>;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeAttribute(value: string) {
+  return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function sanitizeUrl(rawValue: unknown, mode: 'link' | 'image') {
+  const value = typeof rawValue === 'string' ? rawValue.trim() : '';
+  if (!value) {
+    return '';
+  }
+
+  if (value.startsWith('#') || value.startsWith('/') || value.startsWith('./') || value.startsWith('../')) {
+    return value;
+  }
+
+  if (mode === 'image' && /^data:image\/(?:png|gif|jpe?g|webp|svg\+xml);/i.test(value)) {
+    return value;
+  }
+
+  const hasProtocol = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value);
+  if (!hasProtocol) {
+    return value;
+  }
+
+  try {
+    const parsed = new URL(value);
+    if (mode === 'image') {
+      return ['http:', 'https:'].includes(parsed.protocol) ? value : '';
+    }
+
+    return ['http:', 'https:', 'mailto:', 'tel:'].includes(parsed.protocol) ? value : '';
+  } catch {
+    return '';
+  }
+}
+
 export function renderMarkdown(markdown: unknown) {
   const safeMarkdown = typeof markdown === 'string' ? markdown : '';
   const renderer = new marked.Renderer();
@@ -65,12 +109,32 @@ export function renderMarkdown(markdown: unknown) {
   renderer.heading = ({ tokens, depth }) => {
     const text = tokens.map((token) => ('text' in token ? token.text : '')).join('');
     const id = slugify(text);
-    return `<h${depth} id="${id}" class="scroll-mt-24">${marked.Parser.parseInline(tokens)}</h${depth}>`;
+    return `<h${depth} id="${escapeAttribute(id)}" class="scroll-mt-24">${marked.Parser.parseInline(tokens)}</h${depth}>`;
   };
 
   renderer.image = ({ href, title, text }) => {
-    return `<img src="${typeof href === 'string' ? href : ''}" alt="${typeof text === 'string' ? text : ''}" title="${typeof title === 'string' ? title : ''}" loading="lazy" />`;
+    const src = sanitizeUrl(href, 'image');
+    if (!src) {
+      return typeof text === 'string' && text.trim() ? `<span>${escapeHtml(text)}</span>` : '';
+    }
+
+    const alt = typeof text === 'string' ? escapeAttribute(text) : '';
+    const titleAttr = typeof title === 'string' && title.trim() ? ` title="${escapeAttribute(title)}"` : '';
+    return `<img src="${escapeAttribute(src)}" alt="${alt}"${titleAttr} loading="lazy" />`;
   };
+
+  renderer.link = ({ href, title, tokens }) => {
+    const linkText = marked.Parser.parseInline(tokens);
+    const safeHref = sanitizeUrl(href, 'link');
+    if (!safeHref) {
+      return linkText;
+    }
+
+    const titleAttr = typeof title === 'string' && title.trim() ? ` title="${escapeAttribute(title)}"` : '';
+    return `<a href="${escapeAttribute(safeHref)}"${titleAttr} target="_blank" rel="noopener noreferrer nofollow">${linkText}</a>`;
+  };
+
+  renderer.html = ({ text }) => escapeHtml(text);
 
   return marked.parse(safeMarkdown, { renderer }) as string;
 }

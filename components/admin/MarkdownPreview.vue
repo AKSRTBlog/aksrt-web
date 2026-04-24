@@ -1,65 +1,12 @@
 <script setup lang="ts">
+import { renderMarkdown } from '~/composables/api'
+
 const props = defineProps<{
   value?: string
   class?: string
 }>()
 
-// 简单的 Markdown 渲染（基础支持）
-const renderedHtml = computed(() => {
-  if (!props.value) return ''
-
-  let html = props.value
-    // 转义 HTML
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
-  // 标题
-  html = html.replace(/^###### (.+)$/gm, '<h6>$1</h6>')
-  html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>')
-  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>')
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
-
-  // 引用
-  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
-
-  // 粗体和斜体
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
-
-  // 行内代码
-  html = html.replace(/`(.+?)`/g, '<code>$1</code>')
-
-  // 链接
-  html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-
-  // 图片
-  html = html.replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%;" />')
-
-  // 代码块
-  html = html.replace(/```[\s\S]*?```/g, (match) => {
-    const code = match.replace(/```\w*\n?/, '').replace(/```$/, '')
-    return `<pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto;"><code>${code}</code></pre>`
-  })
-
-  // 列表
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>')
-  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-
-  // 段落
-  html = html.replace(/\n\n/g, '</p><p>')
-  html = `<p>${html}</p>`
-
-  // 清理空段落
-  html = html.replace(/<p><\/p>/g, '')
-
-  // hr
-  html = html.replace(/^---$/gm, '<hr>')
-
-  return html
-})
+const renderedHtml = computed(() => renderMarkdown(props.value ?? ''))
 </script>
 
 <template>

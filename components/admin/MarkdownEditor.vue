@@ -2,6 +2,7 @@
 import type { MediaAssetItem, MediaUsage } from '~/types/admin';
 import { renderMarkdown } from '~/composables/api';
 import { buildMarkdownTable, handleMarkdownListEnter, insertCommentLockBlock, insertMarkdownList, type EditorViewMode, insertTextAtSelection } from '~/utils/admin-editor';
+import { buildCommentLockPreviewMarkdown, type CommentLockPreviewMode } from '~/utils/comment-lock';
 import { enhanceMarkdownCodeBlocks } from '~/utils/markdown-code-blocks';
 
 type ToolbarAction =
@@ -31,6 +32,8 @@ const props = withDefaults(
     uploadUsage?: MediaUsage;
     mediaPickerTitle?: string;
     toolbarClass?: string;
+    allowCommentLock?: boolean;
+    commentLockPreviewMode?: CommentLockPreviewMode;
   }>(),
   {
     disabled: false,
@@ -39,6 +42,8 @@ const props = withDefaults(
     uploadUsage: 'article_content',
     mediaPickerTitle: '选择正文图片',
     toolbarClass: 'bg-slate-50/90',
+    allowCommentLock: true,
+    commentLockPreviewMode: 'unlock',
   },
 );
 
@@ -63,7 +68,7 @@ const previewSource = computed(() => {
   return props.modelValue.trim() ? props.modelValue : props.previewPlaceholder;
 });
 
-const previewHtml = computed(() => renderMarkdown(previewSource.value));
+const previewHtml = computed(() => renderMarkdown(buildCommentLockPreviewMarkdown(previewSource.value, props.commentLockPreviewMode)));
 
 function emitValue(value: string) {
   emit('update:modelValue', value);
@@ -249,6 +254,7 @@ watch(
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-border)] px-4 py-3" :class="toolbarClass">
       <AdminMarkdownToolbar
         :disabled="disabled"
+        :allow-comment-lock="props.allowCommentLock"
         @action="handleToolbarAction"
         @image-upload="mediaPickerOpen = true"
         @external-image-insert="openExternalImageDialog"

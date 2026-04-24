@@ -2,6 +2,7 @@
 import { useGeeTestCaptcha } from '~/composables/useGeeTestCaptcha'
 import { useAdminSession } from '~/composables/useAdminSession'
 import type { AdminCaptchaResult, CommentCaptchaDebugResult } from '~/types/admin'
+import type { CommentModerationConfig } from '~/types/admin-settings'
 
 definePageMeta({
   layout: 'admin',
@@ -35,13 +36,52 @@ const {
 } = useAdminSiteSettings()
 
 const { adminApiFetch } = useAdminSession()
+const route = useRoute()
+const allowedSettingsTabs = new Set([
+  'general',
+  'customCode',
+  'storage',
+  'smtp',
+  'security',
+  'commentModeration',
+])
 
-const activeTab = ref('general')
+function resolveSettingsTab(tab: unknown) {
+  return typeof tab === 'string' && allowedSettingsTabs.has(tab) ? tab : 'general'
+}
+
+const activeTab = ref(resolveSettingsTab(route.query.tab))
 const captchaDebugArticleSlug = ref('1')
 const captchaDebugMessage = ref('')
 const captchaDebugResult = ref<CommentCaptchaDebugResult | null>(null)
 const captchaDebugPayload = ref<AdminCaptchaResult | null>(null)
 const runningCaptchaDebug = ref(false)
+const moderationLoading = ref(false)
+const moderationSaving = ref(false)
+const moderationError = ref('')
+const moderationSuccessMessage = ref('')
+
+const moderationForm = reactive({
+  enabled: true,
+  akismetEnabled: false,
+  akismetSiteUrl: '',
+  akismetBlogLang: 'zh-CN',
+  akismetApiKey: '',
+  aiEnabled: false,
+  aiProvider: 'openai',
+  aiModel: 'omni-moderation-latest',
+  aiApiKey: '',
+  autoApproveLowRisk: true,
+  autoRejectHighRisk: true,
+  lowRiskMaxScore: 35,
+  highRiskMinScore: 80,
+  blockedKeywordsText: '',
+})
+
+const moderationKeyStatus = reactive({
+  akismetApiKeyConfigured: false,
+  aiApiKeyConfigured: false,
+})
 
 const savedCommentCaptchaId = computed(() => {
   if (!captchaConfig.value?.enabled || !captchaConfig.value.enabledOnComment) {
@@ -58,7 +98,115 @@ const tabs = [
   { id: 'storage', label: '存储' },
   { id: 'smtp', label: 'SMTP' },
   { id: 'security', label: '安全' },
+  { id: 'commentModeration', label: '评论内容审核' },
 ]
+
+function clearModerationFeedback() {
+  moderationError.value = ''
+  moderationSuccessMessage.value = ''
+}
+
+function parseBlockedKeywords(text: string) {
+  return Array.from(
+    new Set(
+      text
+        .split(/[\n,]/g)
+        .map(item => item.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  )
+}
+
+function normalizeThresholds(low: number, high: number) {
+  let normalizedLow = Math.max(0, Math.min(95, Number.isFinite(low) ? low : 35))
+  let normalizedHigh = Math.max(5, Math.min(100, Number.isFinite(high) ? high : 80))
+
+  if (normalizedLow >= normalizedHigh) {
+    normalizedLow = Math.max(0, normalizedHigh - 5)
+  }
+
+  return {
+    low: normalizedLow,
+    high: normalizedHigh,
+  }
+}
+
+async function loadCommentModerationConfig() {
+  moderationLoading.value = true
+  clearModerationFeedback()
+
+  try {
+    const result = await adminApiFetch<CommentModerationConfig>('/api/v1/admin/site-settings/comment-moderation')
+    const keywords = result.blockedKeywords ?? []
+
+    moderationForm.enabled = result.enabled
+    moderationForm.akismetEnabled = result.akismetEnabled
+    moderationForm.akismetSiteUrl = result.akismetSiteUrl || ''
+    moderationForm.akismetBlogLang = result.akismetBlogLang || 'zh-CN'
+    moderationForm.akismetApiKey = ''
+    moderationForm.aiEnabled = result.aiEnabled
+    moderationForm.aiProvider = result.aiProvider || 'openai'
+    moderationForm.aiModel = result.aiModel || 'omni-moderation-latest'
+    moderationForm.aiApiKey = ''
+    moderationForm.autoApproveLowRisk = result.autoApproveLowRisk
+    moderationForm.autoRejectHighRisk = result.autoRejectHighRisk
+    moderationForm.lowRiskMaxScore = result.lowRiskMaxScore
+    moderationForm.highRiskMinScore = result.highRiskMinScore
+    moderationForm.blockedKeywordsText = keywords.join('\n')
+
+    moderationKeyStatus.akismetApiKeyConfigured = result.akismetApiKeyConfigured
+    moderationKeyStatus.aiApiKeyConfigured = result.aiApiKeyConfigured
+  } catch (currentError) {
+    moderationError.value = currentError instanceof Error ? currentError.message : '加载评论审核配置失败'
+  } finally {
+    moderationLoading.value = false
+  }
+}
+
+async function saveCommentModerationConfig() {
+  moderationSaving.value = true
+  clearModerationFeedback()
+
+  try {
+    const thresholds = normalizeThresholds(moderationForm.lowRiskMaxScore, moderationForm.highRiskMinScore)
+    const payload: Record<string, unknown> = {
+      enabled: moderationForm.enabled,
+      akismetEnabled: moderationForm.akismetEnabled,
+      akismetSiteUrl: moderationForm.akismetSiteUrl.trim(),
+      akismetBlogLang: moderationForm.akismetBlogLang.trim() || 'zh-CN',
+      aiEnabled: moderationForm.aiEnabled,
+      aiProvider: moderationForm.aiProvider.trim() || 'openai',
+      aiModel: moderationForm.aiModel.trim() || 'omni-moderation-latest',
+      autoApproveLowRisk: moderationForm.autoApproveLowRisk,
+      autoRejectHighRisk: moderationForm.autoRejectHighRisk,
+      lowRiskMaxScore: thresholds.low,
+      highRiskMinScore: thresholds.high,
+      blockedKeywords: parseBlockedKeywords(moderationForm.blockedKeywordsText),
+    }
+
+    if (moderationForm.akismetApiKey.trim()) {
+      payload.akismetApiKey = moderationForm.akismetApiKey.trim()
+    }
+    if (moderationForm.aiApiKey.trim()) {
+      payload.aiApiKey = moderationForm.aiApiKey.trim()
+    }
+
+    const result = await adminApiFetch<CommentModerationConfig>('/api/v1/admin/site-settings/comment-moderation', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    })
+
+    moderationForm.akismetApiKey = ''
+    moderationForm.aiApiKey = ''
+    moderationKeyStatus.akismetApiKeyConfigured = result.akismetApiKeyConfigured
+    moderationKeyStatus.aiApiKeyConfigured = result.aiApiKeyConfigured
+    moderationSuccessMessage.value = '评论审核配置已保存'
+  } catch (currentError) {
+    moderationError.value = currentError instanceof Error ? currentError.message : '保存评论审核配置失败'
+  } finally {
+    moderationSaving.value = false
+  }
+}
 
 async function runCommentCaptchaDebug(captcha: AdminCaptchaResult) {
   runningCaptchaDebug.value = true
@@ -136,7 +284,10 @@ async function startCommentCaptchaDebug() {
 }
 
 onMounted(async () => {
-  await loadSettings()
+  await Promise.all([
+    loadSettings(),
+    loadCommentModerationConfig(),
+  ])
 })
 </script>
 
@@ -531,6 +682,124 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div v-if="activeTab === 'commentModeration'" class="space-y-6">
+        <section class="admin-card p-6">
+          <h3 class="text-lg font-semibold text-slate-900">总开关</h3>
+          <label class="mt-5 inline-flex items-center gap-3 text-sm text-slate-700">
+            <input v-model="moderationForm.enabled" type="checkbox" class="admin-checkbox">
+            启用评论审核管道
+          </label>
+          <p class="mt-3 text-xs leading-6 text-slate-500">
+            开启后：评论提交会进入审核管道（反垃圾 + AI + 风险分级），再决定自动通过、人工审核或拒绝。
+          </p>
+        </section>
+
+        <div v-if="moderationError" class="admin-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+          {{ moderationError }}
+        </div>
+        <div v-if="moderationSuccessMessage" class="admin-card border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {{ moderationSuccessMessage }}
+        </div>
+
+        <div v-if="moderationLoading" class="admin-card px-5 py-10 text-center text-sm text-slate-500">
+          正在加载评论审核配置...
+        </div>
+
+        <template v-else>
+          <section class="admin-card p-6">
+            <h3 class="text-lg font-semibold text-slate-900">Akismet 反垃圾</h3>
+            <div class="mt-5 grid gap-5 md:grid-cols-2">
+              <label class="md:col-span-2 inline-flex items-center gap-3 text-sm text-slate-700">
+                <input v-model="moderationForm.akismetEnabled" type="checkbox" class="admin-checkbox">
+                启用 Akismet 检测
+              </label>
+
+              <div>
+                <p class="admin-label">Site URL</p>
+                <input v-model="moderationForm.akismetSiteUrl" class="admin-input" placeholder="https://example.com">
+              </div>
+
+              <div>
+                <p class="admin-label">Blog Language</p>
+                <input v-model="moderationForm.akismetBlogLang" class="admin-input" placeholder="zh-CN">
+              </div>
+
+              <div class="md:col-span-2">
+                <p class="admin-label">Akismet API Key</p>
+                <input v-model="moderationForm.akismetApiKey" type="password" class="admin-input" placeholder="留空则保持当前密钥不变">
+                <p class="mt-2 text-xs text-slate-500">当前状态：{{ moderationKeyStatus.akismetApiKeyConfigured ? '已配置' : '未配置' }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-card p-6">
+            <h3 class="text-lg font-semibold text-slate-900">AI 内容审核</h3>
+            <div class="mt-5 grid gap-5 md:grid-cols-2">
+              <label class="md:col-span-2 inline-flex items-center gap-3 text-sm text-slate-700">
+                <input v-model="moderationForm.aiEnabled" type="checkbox" class="admin-checkbox">
+                启用 AI 审核
+              </label>
+
+              <div>
+                <p class="admin-label">Provider</p>
+                <input v-model="moderationForm.aiProvider" class="admin-input" placeholder="openai">
+              </div>
+
+              <div>
+                <p class="admin-label">Model</p>
+                <input v-model="moderationForm.aiModel" class="admin-input" placeholder="omni-moderation-latest">
+              </div>
+
+              <div class="md:col-span-2">
+                <p class="admin-label">API Key</p>
+                <input v-model="moderationForm.aiApiKey" type="password" class="admin-input" placeholder="留空则保持当前密钥不变">
+                <p class="mt-2 text-xs text-slate-500">当前状态：{{ moderationKeyStatus.aiApiKeyConfigured ? '已配置' : '未配置' }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-card p-6">
+            <h3 class="text-lg font-semibold text-slate-900">风险分级与自动决策</h3>
+            <div class="mt-5 grid gap-5 md:grid-cols-2">
+              <div>
+                <p class="admin-label">低风险最大分值</p>
+                <input v-model.number="moderationForm.lowRiskMaxScore" type="number" min="0" max="95" class="admin-input">
+              </div>
+
+              <div>
+                <p class="admin-label">高风险最小分值</p>
+                <input v-model.number="moderationForm.highRiskMinScore" type="number" min="5" max="100" class="admin-input">
+              </div>
+
+              <label class="inline-flex items-center gap-3 text-sm text-slate-700">
+                <input v-model="moderationForm.autoApproveLowRisk" type="checkbox" class="admin-checkbox">
+                低风险自动放行
+              </label>
+
+              <label class="inline-flex items-center gap-3 text-sm text-slate-700">
+                <input v-model="moderationForm.autoRejectHighRisk" type="checkbox" class="admin-checkbox">
+                高风险自动拒绝
+              </label>
+
+              <div class="md:col-span-2">
+                <p class="admin-label">敏感词（每行一个，或用英文逗号分隔）</p>
+                <textarea
+                  v-model="moderationForm.blockedKeywordsText"
+                  class="admin-textarea min-h-36"
+                  placeholder="spam keyword&#10;fake casino&#10;恶意引流"
+                />
+              </div>
+            </div>
+          </section>
+
+          <div class="flex justify-end">
+            <button class="admin-button-primary" :disabled="moderationSaving" @click="saveCommentModerationConfig">
+              {{ moderationSaving ? '保存中...' : '保存评论审核配置' }}
+            </button>
+          </div>
+        </template>
       </div>
     </template>
   </div>

@@ -44,6 +44,12 @@ useHead(() => ({
           <div class="mt-8 max-w-4xl">
             <h1 class="text-4xl font-semibold leading-tight tracking-[-0.05em] text-[var(--blog-ink)] md:text-6xl">{{ page.title }}</h1>
             <p v-if="page.summary" class="mt-6 max-w-3xl text-base leading-8 text-[var(--blog-muted)] md:text-lg">{{ page.summary }}</p>
+            <div
+              v-if="page.containsCommentLockedContent"
+              class="mt-6 rounded-[4px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800"
+            >
+              This standalone page contains comment-locked blocks. Standalone pages do not support unlock flows, so those sections are hidden on the public page.
+            </div>
 
             <ul class="mt-8 flex flex-wrap gap-4 text-sm text-[var(--blog-muted)]">
               <li>Path: /pages/{{ page.slug }}</li>
