@@ -76,6 +76,14 @@ const moderationForm = reactive({
   lowRiskMaxScore: 35,
   highRiskMinScore: 80,
   blockedKeywordsText: '',
+  rateLimitEnabled: true,
+  rateLimitMinIntervalSeconds: 8,
+  rateLimitPerArticleWindowMinutes: 10,
+  rateLimitPerArticleEmailMax: 3,
+  rateLimitPerArticleIpMax: 0,
+  rateLimitGlobalWindowMinutes: 60,
+  rateLimitGlobalEmailMax: 15,
+  rateLimitGlobalIpMax: 60,
 })
 
 const moderationKeyStatus = reactive({
@@ -131,6 +139,14 @@ function normalizeThresholds(low: number, high: number) {
   }
 }
 
+function normalizeRateLimitValue(value: number, min: number, max: number, fallback: number) {
+  if (!Number.isFinite(value)) {
+    return fallback
+  }
+
+  return Math.max(min, Math.min(max, Math.trunc(value)))
+}
+
 async function loadCommentModerationConfig() {
   moderationLoading.value = true
   clearModerationFeedback()
@@ -153,6 +169,14 @@ async function loadCommentModerationConfig() {
     moderationForm.lowRiskMaxScore = result.lowRiskMaxScore
     moderationForm.highRiskMinScore = result.highRiskMinScore
     moderationForm.blockedKeywordsText = keywords.join('\n')
+    moderationForm.rateLimitEnabled = result.rateLimitEnabled ?? true
+    moderationForm.rateLimitMinIntervalSeconds = result.rateLimitMinIntervalSeconds ?? 8
+    moderationForm.rateLimitPerArticleWindowMinutes = result.rateLimitPerArticleWindowMinutes ?? 10
+    moderationForm.rateLimitPerArticleEmailMax = result.rateLimitPerArticleEmailMax ?? 3
+    moderationForm.rateLimitPerArticleIpMax = result.rateLimitPerArticleIpMax ?? 0
+    moderationForm.rateLimitGlobalWindowMinutes = result.rateLimitGlobalWindowMinutes ?? 60
+    moderationForm.rateLimitGlobalEmailMax = result.rateLimitGlobalEmailMax ?? 15
+    moderationForm.rateLimitGlobalIpMax = result.rateLimitGlobalIpMax ?? 60
 
     moderationKeyStatus.akismetApiKeyConfigured = result.akismetApiKeyConfigured
     moderationKeyStatus.aiApiKeyConfigured = result.aiApiKeyConfigured
@@ -169,6 +193,15 @@ async function saveCommentModerationConfig() {
 
   try {
     const thresholds = normalizeThresholds(moderationForm.lowRiskMaxScore, moderationForm.highRiskMinScore)
+    const rateLimit = {
+      minIntervalSeconds: normalizeRateLimitValue(moderationForm.rateLimitMinIntervalSeconds, 0, 3600, 8),
+      perArticleWindowMinutes: normalizeRateLimitValue(moderationForm.rateLimitPerArticleWindowMinutes, 0, 24 * 60, 10),
+      perArticleEmailMax: normalizeRateLimitValue(moderationForm.rateLimitPerArticleEmailMax, 0, 500, 3),
+      perArticleIpMax: normalizeRateLimitValue(moderationForm.rateLimitPerArticleIpMax, 0, 1000, 0),
+      globalWindowMinutes: normalizeRateLimitValue(moderationForm.rateLimitGlobalWindowMinutes, 0, 24 * 60, 60),
+      globalEmailMax: normalizeRateLimitValue(moderationForm.rateLimitGlobalEmailMax, 0, 2000, 15),
+      globalIpMax: normalizeRateLimitValue(moderationForm.rateLimitGlobalIpMax, 0, 5000, 60),
+    }
     const payload: Record<string, unknown> = {
       enabled: moderationForm.enabled,
       akismetEnabled: moderationForm.akismetEnabled,
@@ -182,6 +215,14 @@ async function saveCommentModerationConfig() {
       lowRiskMaxScore: thresholds.low,
       highRiskMinScore: thresholds.high,
       blockedKeywords: parseBlockedKeywords(moderationForm.blockedKeywordsText),
+      rateLimitEnabled: moderationForm.rateLimitEnabled,
+      rateLimitMinIntervalSeconds: rateLimit.minIntervalSeconds,
+      rateLimitPerArticleWindowMinutes: rateLimit.perArticleWindowMinutes,
+      rateLimitPerArticleEmailMax: rateLimit.perArticleEmailMax,
+      rateLimitPerArticleIpMax: rateLimit.perArticleIpMax,
+      rateLimitGlobalWindowMinutes: rateLimit.globalWindowMinutes,
+      rateLimitGlobalEmailMax: rateLimit.globalEmailMax,
+      rateLimitGlobalIpMax: rateLimit.globalIpMax,
     }
 
     if (moderationForm.akismetApiKey.trim()) {
@@ -790,6 +831,54 @@ onMounted(async () => {
                   class="admin-textarea min-h-36"
                   placeholder="spam keyword&#10;fake casino&#10;恶意引流"
                 />
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-card p-6">
+            <h3 class="text-lg font-semibold text-slate-900">评论频率限制</h3>
+            <p class="mt-2 text-xs leading-6 text-slate-500">
+              0 表示禁用该条规则。建议优先按邮箱限流，IP 限流用于兜底并适当放宽。
+            </p>
+            <div class="mt-5 grid gap-5 md:grid-cols-2">
+              <label class="md:col-span-2 inline-flex items-center gap-3 text-sm text-slate-700">
+                <input v-model="moderationForm.rateLimitEnabled" type="checkbox" class="admin-checkbox">
+                启用评论频率限制
+              </label>
+
+              <div>
+                <p class="admin-label">短冷却（秒）</p>
+                <input v-model.number="moderationForm.rateLimitMinIntervalSeconds" type="number" min="0" max="3600" class="admin-input">
+              </div>
+
+              <div>
+                <p class="admin-label">每篇窗口（分钟）</p>
+                <input v-model.number="moderationForm.rateLimitPerArticleWindowMinutes" type="number" min="0" max="1440" class="admin-input">
+              </div>
+
+              <div>
+                <p class="admin-label">每篇每邮箱上限</p>
+                <input v-model.number="moderationForm.rateLimitPerArticleEmailMax" type="number" min="0" max="500" class="admin-input">
+              </div>
+
+              <div>
+                <p class="admin-label">每篇每 IP 上限</p>
+                <input v-model.number="moderationForm.rateLimitPerArticleIpMax" type="number" min="0" max="1000" class="admin-input">
+              </div>
+
+              <div>
+                <p class="admin-label">全局窗口（分钟）</p>
+                <input v-model.number="moderationForm.rateLimitGlobalWindowMinutes" type="number" min="0" max="1440" class="admin-input">
+              </div>
+
+              <div>
+                <p class="admin-label">全局每邮箱上限</p>
+                <input v-model.number="moderationForm.rateLimitGlobalEmailMax" type="number" min="0" max="2000" class="admin-input">
+              </div>
+
+              <div class="md:col-span-2">
+                <p class="admin-label">全局每 IP 上限</p>
+                <input v-model.number="moderationForm.rateLimitGlobalIpMax" type="number" min="0" max="5000" class="admin-input">
               </div>
             </div>
           </section>

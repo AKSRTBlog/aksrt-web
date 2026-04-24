@@ -110,6 +110,14 @@ export interface CommentModerationConfig {
   lowRiskMaxScore: number
   highRiskMinScore: number
   blockedKeywords: string[]
+  rateLimitEnabled: boolean
+  rateLimitMinIntervalSeconds: number
+  rateLimitPerArticleWindowMinutes: number
+  rateLimitPerArticleEmailMax: number
+  rateLimitPerArticleIpMax: number
+  rateLimitGlobalWindowMinutes: number
+  rateLimitGlobalEmailMax: number
+  rateLimitGlobalIpMax: number
 }
 
 export interface AdminSiteSettings {
