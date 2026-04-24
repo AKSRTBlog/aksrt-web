@@ -1,7 +1,9 @@
 import type { BlogArticleDetail, ApiEnvelope, PublicArticleDetailItem } from '~/types/blog';
 import { mapArticleDetail } from '~/composables/api';
-import { readUnlockToken, writeUnlockToken } from '~/utils/article-unlock';
+import { readUnlockToken, removeUnlockToken, writeUnlockToken } from '~/utils/article-unlock';
 import { resolveRuntimeApiBase } from '~/utils/api-base';
+
+const EXPIRED_UNLOCK_MESSAGE = '凭证已失效，请重新评论a';
 
 export function usePublicArticleDetail(slug: MaybeRefOrGetter<string>) {
   const config = useRuntimeConfig();
@@ -10,6 +12,8 @@ export function usePublicArticleDetail(slug: MaybeRefOrGetter<string>) {
   const postId = ref('');
   const authorizationToken = ref('');
   const isSyncingStoredToken = ref(false);
+  const isRecoveringExpiredToken = ref(false);
+  const unlockMessage = ref('');
 
   const headers = computed<Record<string, string>>(() => {
     if (!authorizationToken.value) {
@@ -52,6 +56,7 @@ export function usePublicArticleDetail(slug: MaybeRefOrGetter<string>) {
 
     try {
       await fetchState.refresh();
+      unlockMessage.value = '';
     } finally {
       isSyncingStoredToken.value = false;
     }
@@ -66,6 +71,36 @@ export function usePublicArticleDetail(slug: MaybeRefOrGetter<string>) {
     postId.value = targetPostId;
     authorizationToken.value = token.trim();
     await fetchState.refresh();
+    unlockMessage.value = '';
+  }
+
+  async function recoverExpiredUnlock(targetPostId: string) {
+    if (!import.meta.client || !targetPostId || isRecoveringExpiredToken.value) {
+      return;
+    }
+
+    isRecoveringExpiredToken.value = true;
+    removeUnlockToken(targetPostId);
+    authorizationToken.value = '';
+    unlockMessage.value = EXPIRED_UNLOCK_MESSAGE;
+
+    try {
+      await fetchState.refresh();
+    } finally {
+      isRecoveringExpiredToken.value = false;
+    }
+  }
+
+  function getErrorStatus(error: unknown) {
+    const currentError = error as {
+      statusCode?: number;
+      status?: number;
+      response?: {
+        status?: number;
+      };
+    } | null;
+
+    return currentError?.statusCode ?? currentError?.status ?? currentError?.response?.status ?? 0;
   }
 
   watch(
@@ -92,11 +127,32 @@ export function usePublicArticleDetail(slug: MaybeRefOrGetter<string>) {
     { immediate: true },
   );
 
+  watch(
+    () => fetchState.error.value,
+    (value) => {
+      if (!import.meta.client || !value || isRecoveringExpiredToken.value) {
+        return;
+      }
+
+      if (getErrorStatus(value) !== 401) {
+        return;
+      }
+
+      const expiredPostId = postId.value;
+      if (!expiredPostId || !authorizationToken.value) {
+        return;
+      }
+
+      void recoverExpiredUnlock(expiredPostId);
+    },
+  );
+
   return {
     article: fetchState.data,
     pending: fetchState.pending,
     error: fetchState.error,
     status: fetchState.status,
+    unlockMessage,
     refresh: fetchState.refresh,
     unlockArticle,
   };

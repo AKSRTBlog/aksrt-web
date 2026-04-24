@@ -29,3 +29,11 @@ export function writeUnlockToken(postId: string, token: string) {
 
   window.localStorage.removeItem(key);
 }
+
+export function removeUnlockToken(postId: string) {
+  if (!canUseStorage() || !postId) {
+    return;
+  }
+
+  window.localStorage.removeItem(buildUnlockTokenKey(postId));
+}

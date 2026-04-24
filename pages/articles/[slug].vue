@@ -7,7 +7,7 @@ const route = useRoute();
 const slug = computed(() => String(route.params.slug || ''));
 const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 
-const { article, pending, refresh, unlockArticle } = usePublicArticleDetail(slug);
+const { article, pending, refresh, unlockArticle, unlockMessage } = usePublicArticleDetail(slug);
 const { data: allArticles } = useAsyncData('shared-all-articles', fetchAllPublicArticles, { lazy: true });
 
 const orderedArticles = computed(() => sortArticles(allArticles.value || [], 'latest'));
@@ -113,6 +113,9 @@ useHead(() => ({
                 <h2 class="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">There is more waiting below the fold.</h2>
                 <p class="mt-3 text-sm leading-7 text-[var(--blog-muted)]">
                   Leave a comment and we will silently reload this article for you. No full-page refresh, just the hidden section unfolding in place.
+                </p>
+                <p v-if="unlockMessage" class="mt-3 text-sm font-medium text-rose-600">
+                  {{ unlockMessage }}
                 </p>
               </div>
               <button class="article-unlock-cta__badge" type="button" @click="refresh()">
