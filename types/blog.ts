@@ -104,6 +104,10 @@ export interface PublicArticleSummaryItem {
 
 export interface PublicArticleDetailItem extends PublicArticleSummaryItem {
   content: string;
+  publicContent: string;
+  hiddenContent: string | null;
+  requiresCommentUnlock: boolean;
+  isUnlocked: boolean;
   createdBy: string;
   updatedBy: string;
 }
@@ -124,7 +128,19 @@ export interface BlogArticleSummary {
 
 export interface BlogArticleDetail extends BlogArticleSummary {
   content: string;
+  publicContent: string;
+  hiddenContent: string | null;
+  requiresCommentUnlock: boolean;
+  isUnlocked: boolean;
   readingTime: number;
+}
+
+export interface PublicCommentSubmissionResult {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  unlockToken: string;
+  unlockTokenExpiresAt: string;
+  postId: string;
 }
 
 export interface BlogCategory {

@@ -17,6 +17,7 @@ import type {
   PublicBannerItem,
   PublicCaptchaConfig,
   PublicCommentItem,
+  PublicCommentSubmissionResult,
   PublicFooterLinkItem,
   PublicProjectItem,
   PublicSiteSettingsItem,
@@ -109,10 +110,14 @@ function mapArticleSummary(item: PublicArticleSummaryItem): BlogArticleSummary {
   };
 }
 
-function mapArticleDetail(item: PublicArticleDetailItem): BlogArticleDetail {
+export function mapArticleDetail(item: PublicArticleDetailItem): BlogArticleDetail {
   return {
     ...mapArticleSummary(item),
     content: item.content,
+    publicContent: item.publicContent,
+    hiddenContent: item.hiddenContent,
+    requiresCommentUnlock: item.requiresCommentUnlock,
+    isUnlocked: item.isUnlocked,
     readingTime: estimateReadingTime(item.content),
   };
 }
@@ -366,7 +371,7 @@ export async function submitPublicComment(
     captcha?: Record<string, string>;
   },
 ) {
-  return apiFetch<{ id: string; status: 'pending' | 'approved' | 'rejected' }>(
+  return apiFetch<PublicCommentSubmissionResult>(
     `/api/v1/public/articles/${slug}/comments`,
     {
       method: 'POST',

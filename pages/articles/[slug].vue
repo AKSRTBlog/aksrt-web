@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import {
-  fetchAllPublicArticles,
-  fetchPublicArticleDetail,
-  formatDate,
-  sortArticles,
-} from '~/composables/api';
+import { fetchAllPublicArticles, formatDate, sortArticles } from '~/composables/api';
+import { usePublicArticleDetail } from '~/composables/usePublicArticleDetail';
+import type { PublicCommentSubmissionResult } from '~/types/blog';
 
 const route = useRoute();
 const slug = computed(() => String(route.params.slug || ''));
 const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 
-// 核心数据阻塞加载（文章详情）
-const { data: article } = await useAsyncData(() => `article-${slug.value}`, () => fetchPublicArticleDetail(slug.value));
-
-// 上下篇和推荐文章数据非阻塞加载（lazy: true）
+const { article, pending, refresh, unlockArticle } = usePublicArticleDetail(slug);
 const { data: allArticles } = useAsyncData('shared-all-articles', fetchAllPublicArticles, { lazy: true });
 
 const orderedArticles = computed(() => sortArticles(allArticles.value || [], 'latest'));
@@ -27,6 +21,10 @@ const canonicalUrl = computed(() => {
   return article.value && base ? `${base}/articles/${article.value.slug}` : '';
 });
 
+const articleLockPromptVisible = computed(() => {
+  return Boolean(article.value?.requiresCommentUnlock && !article.value?.hiddenContent);
+});
+
 const relatedArticles = computed(() => {
   if (!article.value) {
     return [];
@@ -34,14 +32,15 @@ const relatedArticles = computed(() => {
 
   const categorySlugs = new Set(article.value.categories.map((item) => item.slug));
   return orderedArticles.value
-    .filter((item) => item.id !== article.value?.id && item.categories.some((cat) => categorySlugs.has(cat.slug)))
+    .filter((item) => item.id !== article.value?.id && item.categories.some((category) => categorySlugs.has(category.slug)))
     .slice(0, 3);
 });
 
-// OG 图片：优先使用文章特色图，回退到站点 Logo
-const ogImage = computed(() => {
-  return article.value?.coverImage || siteSettings.value?.logoUrl || '';
-});
+const ogImage = computed(() => article.value?.coverImage || siteSettings.value?.logoUrl || '');
+
+async function handleCommentSubmitted(result: PublicCommentSubmissionResult) {
+  await unlockArticle(result.postId, result.unlockToken);
+}
 
 useSeoMeta({
   title: () => article.value?.title || 'Article',
@@ -95,12 +94,36 @@ useHead(() => ({
         </div>
 
         <div class="border-t border-[var(--blog-border)]">
-          <MarkdownContent :content="article.content" :copy-code-blocks="true" />
+          <Transition name="unlock-content" mode="out-in">
+            <div :key="article.isUnlocked ? 'unlocked' : 'locked'">
+              <MarkdownContent :content="article.content" :copy-code-blocks="true" />
+            </div>
+          </Transition>
         </div>
       </div>
     </section>
 
     <section class="mx-auto max-w-7xl px-0 pt-0 sm:px-6">
+      <Transition name="unlock-banner">
+        <div v-if="articleLockPromptVisible" class="mt-8 overflow-hidden rounded-none sm:rounded-[4px]">
+          <div class="article-unlock-cta rounded-none border border-[color:color-mix(in_srgb,var(--blog-accent)_26%,white)] px-6 py-6 sm:rounded-[4px] md:px-8">
+            <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div class="max-w-2xl">
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--blog-accent)]">Comment To Unlock</p>
+                <h2 class="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">There is more waiting below the fold.</h2>
+                <p class="mt-3 text-sm leading-7 text-[var(--blog-muted)]">
+                  Leave a comment and we will silently reload this article for you. No full-page refresh, just the hidden section unfolding in place.
+                </p>
+              </div>
+              <button class="article-unlock-cta__badge" type="button" @click="refresh()">
+                <span class="article-unlock-cta__badge-icon">+</span>
+                Check unlock status
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
       <div class="mt-8 blog-panel rounded-none px-6 py-6 sm:rounded-[4px] md:px-10 md:py-8">
         <div v-if="!allArticles" class="text-center text-sm text-[var(--blog-subtle)]">Loading navigation...</div>
         <div v-else class="flex flex-col gap-5 md:flex-row md:justify-between md:gap-6">
@@ -130,7 +153,7 @@ useHead(() => ({
         </div>
       </div>
 
-      <CommentSection :article-slug="article.slug" :allow-comment="article.allowComment" />
+      <CommentSection :article-slug="article.slug" :allow-comment="article.allowComment" @submitted="handleCommentSubmitted" />
     </section>
 
     <section v-if="relatedArticles.length > 0" class="mt-16 border-t border-[var(--blog-border)] bg-white/70 py-16">
@@ -154,6 +177,12 @@ useHead(() => ({
     </section>
   </div>
 
+  <section v-else-if="pending" class="mx-auto max-w-4xl px-6 py-16">
+    <div class="blog-panel rounded-none p-8 text-center text-sm text-[var(--blog-subtle)] sm:rounded-[4px]">
+      Loading article...
+    </div>
+  </section>
+
   <section v-else class="mx-auto max-w-4xl px-6 py-16">
     <EmptyState
       title="Article not found"
@@ -163,3 +192,67 @@ useHead(() => ({
     />
   </section>
 </template>
+
+<style scoped>
+.unlock-content-enter-active,
+.unlock-content-leave-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.unlock-content-enter-from,
+.unlock-content-leave-to {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.unlock-banner-enter-active,
+.unlock-banner-leave-active {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.unlock-banner-enter-from,
+.unlock-banner-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.article-unlock-cta {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--blog-accent) 16%, white), transparent 48%),
+    linear-gradient(135deg, color-mix(in srgb, var(--blog-surface) 92%, white), white);
+  box-shadow: 0 22px 60px -42px color-mix(in srgb, var(--blog-accent) 65%, transparent);
+}
+
+.article-unlock-cta__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  align-self: flex-start;
+  border: 1px solid color-mix(in srgb, var(--blog-accent) 24%, white);
+  background: color-mix(in srgb, white 86%, var(--blog-accent));
+  color: var(--blog-ink);
+  padding: 0.9rem 1.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.article-unlock-cta__badge:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--blog-accent) 42%, white);
+  background: color-mix(in srgb, white 80%, var(--blog-accent));
+}
+
+.article-unlock-cta__badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: var(--blog-accent);
+  color: white;
+  font-size: 1rem;
+  line-height: 1;
+}
+</style>
