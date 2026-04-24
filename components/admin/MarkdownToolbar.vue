@@ -41,7 +41,7 @@ const headingActions = [
 
 const quickActions = [
   { id: 'bold', title: '加粗', icon: '加粗' },
-  { id: 'italic', title: '斜体', icon: '/' },
+  { id: 'italic', title: '倾斜', icon: '倾斜' },
   { id: 'quote', title: '引用', icon: '引用' },
   { id: 'inlineCode', title: '行内代码', icon: '行内代码' },
   { id: 'codeBlock', title: '代码块', icon: '代码块' },
@@ -160,13 +160,7 @@ onBeforeUnmount(() => {
       type="button"
       @click="handleToolbarAction(action.id)"
     >
-      <span
-        v-if="action.id === 'italic'"
-        class="inline-block -skew-x-[18deg] text-base leading-none"
-      >
-        {{ action.icon }}
-      </span>
-      <span v-else>{{ action.icon }}</span>
+      <span>{{ action.icon }}</span>
     </button>
 
     <div class="relative">

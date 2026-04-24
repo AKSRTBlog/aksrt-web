@@ -202,7 +202,7 @@ function handleToolbarAction(action: ToolbarAction) {
     h5: () => insertTextAtSelection(textarea, '\n##### ', '', '五级标题'),
     h6: () => insertTextAtSelection(textarea, '\n###### ', '', '六级标题'),
     bold: () => insertTextAtSelection(textarea, '**', '**', '加粗文本'),
-    italic: () => insertTextAtSelection(textarea, '*', '*', '斜体文本'),
+    italic: () => insertTextAtSelection(textarea, '*', '*', '倾斜文本'),
     quote: () => insertTextAtSelection(textarea, '\n> ', '', '引用内容'),
     inlineCode: () => insertTextAtSelection(textarea, '`', '`', '行内代码'),
     codeBlock: () => insertTextAtSelection(textarea, '\n```ts\n', '\n```\n', 'console.log("hello");'),
