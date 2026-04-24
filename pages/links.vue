@@ -187,7 +187,7 @@ useHead(() => ({
             :href="item.href"
             :target="isExternal(item.href) ? '_blank' : undefined"
             :rel="isExternal(item.href) ? 'noopener noreferrer' : undefined"
-            class="blog-panel flex items-center gap-4 border border-[var(--blog-border)] p-5 transition hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)]"
+            class="blog-panel flex flex-col items-start gap-4 border border-[var(--blog-border)] p-4 transition hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)] sm:flex-row sm:items-center sm:p-5"
           >
             <AppImage
               v-if="item.iconUrl"
@@ -202,9 +202,9 @@ useHead(() => ({
               {{ item.label.slice(0, 1).toUpperCase() }}
             </div>
 
-            <div class="min-w-0">
-              <p class="text-base font-medium text-[var(--blog-ink)]">{{ item.label }}</p>
-              <p class="mt-2 truncate text-sm text-[var(--blog-muted)]">{{ item.description || 'Curated partner site.' }}</p>
+            <div class="min-w-0 w-full flex-1">
+              <p class="break-words text-base font-medium text-[var(--blog-ink)]">{{ item.label }}</p>
+              <p class="mt-2 break-words text-sm leading-6 text-[var(--blog-muted)]">{{ item.description || 'Curated partner site.' }}</p>
             </div>
           </a>
         </div>
