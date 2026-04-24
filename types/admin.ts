@@ -90,6 +90,8 @@ export interface AdminCommentItem {
   website: string | null;
   content: string;
   status: 'pending' | 'approved' | 'rejected';
+  ip: string | null;
+  userAgent: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
   rejectReason: string | null;

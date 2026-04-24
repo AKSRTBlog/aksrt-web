@@ -193,6 +193,8 @@ function mapComment(item: PublicCommentItem): BlogComment {
     nickname: item.nickname,
     avatarUrl: item.avatarUrl,
     content: item.content,
+    ip: item.ip,
+    browserLabel: item.browserLabel || 'Unknown browser',
     createdAt: item.createdAt,
     replies: item.replies.map(mapComment),
   };

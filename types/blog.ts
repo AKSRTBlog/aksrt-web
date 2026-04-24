@@ -164,6 +164,8 @@ export interface BlogComment {
   nickname: string;
   avatarUrl: string;
   content: string;
+  ip: string | null;
+  browserLabel: string;
   createdAt: string;
   replies: BlogComment[];
 }
@@ -174,6 +176,8 @@ export interface PublicCommentItem {
   nickname: string;
   avatarUrl: string;
   content: string;
+  ip: string | null;
+  browserLabel: string;
   createdAt: string;
   replies: PublicCommentItem[];
 }

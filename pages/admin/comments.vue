@@ -337,6 +337,8 @@ async function handleDelete(comment: typeof selectedComment.value) {
             <p>创建时间: {{ new Date(selectedComment.createdAt).toLocaleString('zh-CN') }}</p>
             <p>邮箱: {{ selectedComment.email }}</p>
             <p>网站: {{ selectedComment.website || '未填写' }}</p>
+            <p>IP: {{ selectedComment.ip || 'unknown' }}</p>
+            <p class="break-words">User-Agent: {{ selectedComment.userAgent || 'unknown' }}</p>
             <p v-if="selectedComment.moderationRiskLevel">
               风险等级: {{ selectedComment.moderationRiskLevel }} ({{ selectedComment.moderationRiskScore ?? 0 }})
             </p>

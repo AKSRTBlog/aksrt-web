@@ -17,6 +17,14 @@ defineProps<{
             <span class="text-sm font-semibold text-[var(--blog-ink)]">{{ comment.nickname }}</span>
             <span class="text-xs text-[var(--blog-subtle)]">{{ new Date(comment.createdAt).toLocaleDateString('zh-CN') }}</span>
           </div>
+          <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--blog-subtle)]">
+            <span class="rounded-full border border-[var(--blog-border)] bg-[var(--blog-soft)] px-2 py-0.5">
+              {{ comment.browserLabel }}
+            </span>
+            <span class="rounded-full border border-[var(--blog-border)] bg-[var(--blog-soft)] px-2 py-0.5">
+              IP {{ comment.ip || 'unknown' }}
+            </span>
+          </div>
           <p class="mt-3 text-sm leading-7 text-[var(--blog-muted)]">{{ comment.content }}</p>
         </div>
       </div>
