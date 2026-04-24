@@ -2,6 +2,7 @@ import type { ArticleDetailItem } from '~/types/admin';
 
 export type EditorStatus = 'draft' | 'published' | 'scheduled';
 export type EditorViewMode = 'split' | 'edit' | 'preview';
+export type MarkdownListType = 'unordered' | 'ordered';
 
 export interface ObjectStorageAsset {
   url: string;
@@ -156,6 +157,100 @@ export function insertTextAtSelection(
   const selected = value.slice(selectionStart, selectionEnd) || placeholder;
   const nextValue = `${value.slice(0, selectionStart)}${before}${selected}${after}${value.slice(selectionEnd)}`;
   const nextPosition = selectionStart + before.length + selected.length + after.length;
+
+  return {
+    value: nextValue,
+    selectionStart: nextPosition,
+    selectionEnd: nextPosition,
+  };
+}
+
+function getSelectedLineRange(value: string, selectionStart: number, selectionEnd: number) {
+  const lineStart = value.lastIndexOf('\n', Math.max(0, selectionStart - 1)) + 1;
+  const nextLineBreak = value.indexOf('\n', selectionEnd);
+  const lineEnd = nextLineBreak === -1 ? value.length : nextLineBreak;
+
+  return { lineStart, lineEnd };
+}
+
+function formatListLine(line: string, listType: MarkdownListType, index: number) {
+  if (!line.trim()) {
+    return line;
+  }
+
+  const indentMatch = line.match(/^\s*/);
+  const indent = indentMatch?.[0] ?? '';
+  const content = line.slice(indent.length).replace(/^(?:[-*+]|\d+\.)\s+/, '').trim();
+  const marker = listType === 'ordered' ? `${index + 1}. ` : '- ';
+
+  return `${indent}${marker}${content || '列表项'}`;
+}
+
+export function insertMarkdownList(textarea: HTMLTextAreaElement, listType: MarkdownListType) {
+  const { selectionStart, selectionEnd, value } = textarea;
+  const hasSelection = selectionStart !== selectionEnd;
+
+  if (!hasSelection) {
+    const marker = listType === 'ordered' ? '1. ' : '- ';
+    return insertTextAtSelection(textarea, `\n${marker}`, '', '列表项');
+  }
+
+  const { lineStart, lineEnd } = getSelectedLineRange(value, selectionStart, selectionEnd);
+  const block = value.slice(lineStart, lineEnd);
+  const lines = block.split('\n');
+
+  let itemIndex = 0;
+  const formattedBlock = lines
+    .map((line) => {
+      if (!line.trim()) {
+        return line;
+      }
+
+      const formatted = formatListLine(line, listType, itemIndex);
+      itemIndex += 1;
+      return formatted;
+    })
+    .join('\n');
+
+  const nextValue = `${value.slice(0, lineStart)}${formattedBlock}${value.slice(lineEnd)}`;
+  const nextSelectionEnd = lineStart + formattedBlock.length;
+
+  return {
+    value: nextValue,
+    selectionStart: lineStart,
+    selectionEnd: nextSelectionEnd,
+  };
+}
+
+export function handleMarkdownListEnter(textarea: HTMLTextAreaElement) {
+  const { selectionStart, selectionEnd, value } = textarea;
+  if (selectionStart !== selectionEnd) {
+    return null;
+  }
+
+  const { lineStart, lineEnd } = getSelectedLineRange(value, selectionStart, selectionEnd);
+  const line = value.slice(lineStart, lineEnd);
+  const match = line.match(/^(\s*)([-*+]|\d+\.)\s(.*)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, indent, marker, content] = match;
+
+  if (!content.trim()) {
+    const nextValue = `${value.slice(0, lineStart)}${value.slice(lineEnd)}`;
+    return {
+      value: nextValue,
+      selectionStart: lineStart,
+      selectionEnd: lineStart,
+    };
+  }
+
+  const nextMarker = /\d+\./.test(marker) ? `${Number.parseInt(marker, 10) + 1}. ` : `${marker} `;
+  const insertion = `\n${indent}${nextMarker}`;
+  const nextValue = `${value.slice(0, selectionStart)}${insertion}${value.slice(selectionEnd)}`;
+  const nextPosition = selectionStart + insertion.length;
 
   return {
     value: nextValue,

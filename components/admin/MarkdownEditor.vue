@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import type { MediaAssetItem, MediaUsage } from '~/types/admin';
 import { renderMarkdown } from '~/composables/api';
-import { buildMarkdownTable, type EditorViewMode, insertTextAtSelection } from '~/utils/admin-editor';
+import { buildMarkdownTable, handleMarkdownListEnter, insertMarkdownList, type EditorViewMode, insertTextAtSelection } from '~/utils/admin-editor';
 import { enhanceMarkdownCodeBlocks } from '~/utils/markdown-code-blocks';
 
 type ToolbarAction =
@@ -206,13 +206,28 @@ function handleToolbarAction(action: ToolbarAction) {
     quote: () => insertTextAtSelection(textarea, '\n> ', '', '引用内容'),
     inlineCode: () => insertTextAtSelection(textarea, '`', '`', '行内代码'),
     codeBlock: () => insertTextAtSelection(textarea, '\n```ts\n', '\n```\n', 'console.log("hello");'),
-    unorderedList: () => insertTextAtSelection(textarea, '\n- ', '', '列表项'),
-    orderedList: () => insertTextAtSelection(textarea, '\n1. ', '', '列表项'),
+    unorderedList: () => insertMarkdownList(textarea, 'unordered'),
+    orderedList: () => insertMarkdownList(textarea, 'ordered'),
     link: () => insertTextAtSelection(textarea, '[', '](https://example.com)', '链接文本'),
     table: () => insertTextAtSelection(textarea, '', ''),
   };
 
   const next = actionMap[action]();
+  emitValue(next.value);
+  focusTextareaSelection(next.selectionStart, next.selectionEnd);
+}
+
+function handleTextareaKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey || !textareaRef.value) {
+    return;
+  }
+
+  const next = handleMarkdownListEnter(textareaRef.value);
+  if (!next) {
+    return;
+  }
+
+  event.preventDefault();
   emitValue(next.value);
   focusTextareaSelection(next.selectionStart, next.selectionEnd);
 }
@@ -266,6 +281,7 @@ watch(
           :placeholder="placeholder"
           :disabled="disabled"
           @input="emitValue(($event.target as HTMLTextAreaElement).value)"
+          @keydown="handleTextareaKeydown"
         />
       </div>
 
