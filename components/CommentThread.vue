@@ -5,6 +5,15 @@ import type { BlogComment } from '~/types/blog';
 defineProps<{
   comments: BlogComment[];
 }>();
+
+function formatCommentClient(comment: BlogComment) {
+  const parts = [comment.browserLabel || 'Unknown browser'];
+  if (comment.osLabel && comment.osLabel !== 'Unknown OS') {
+    parts.push(comment.osLabel);
+  }
+
+  return parts.join(' · ');
+}
 </script>
 
 <template>
@@ -18,8 +27,11 @@ defineProps<{
             <span class="text-xs text-[var(--blog-subtle)]">{{ new Date(comment.createdAt).toLocaleDateString('zh-CN') }}</span>
           </div>
           <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[var(--blog-subtle)]">
-            <span class="rounded-full border border-[var(--blog-border)] bg-[var(--blog-soft)] px-2 py-0.5">
-              {{ comment.browserLabel }}
+            <span
+              class="rounded-full border border-[var(--blog-border)] bg-[var(--blog-soft)] px-2 py-0.5"
+              :title="comment.userAgent || formatCommentClient(comment)"
+            >
+              {{ formatCommentClient(comment) }}
             </span>
             <span class="rounded-full border border-[var(--blog-border)] bg-[var(--blog-soft)] px-2 py-0.5">
               IP {{ comment.ip || 'unknown' }}

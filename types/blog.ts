@@ -165,7 +165,9 @@ export interface BlogComment {
   avatarUrl: string;
   content: string;
   ip: string | null;
+  userAgent: string | null;
   browserLabel: string;
+  osLabel: string;
   createdAt: string;
   replies: BlogComment[];
 }
@@ -177,7 +179,9 @@ export interface PublicCommentItem {
   avatarUrl: string;
   content: string;
   ip: string | null;
+  userAgent: string | null;
   browserLabel: string;
+  osLabel: string;
   createdAt: string;
   replies: PublicCommentItem[];
 }
