@@ -33,39 +33,39 @@ const browserIcon = computed(() => {
   const label = (props.browserLabel || '').toLowerCase();
 
   if (label.includes('brave')) {
-    return 'logos:brave';
+    return '/img/browsers/brave.svg';
   }
   if (label.includes('edge')) {
-    return 'logos:microsoft-edge';
+    return '/img/browsers/microsoft-edge.svg';
   }
   if (label.includes('firefox')) {
-    return 'logos:firefox';
+    return '/img/browsers/firefox.svg';
   }
   if (label.includes('safari')) {
-    return 'logos:safari';
+    return '/img/browsers/safari.svg';
   }
   if (label.includes('opera')) {
-    return 'logos:opera';
+    return '/img/browsers/opera.svg';
   }
   if (label.includes('chrome') || label.includes('chromium')) {
-    return 'logos:chrome';
+    return '/img/browsers/chrome.svg';
   }
   if (label.includes('internet explorer')) {
-    return 'logos:internetexplorer';
+    return '/img/browsers/internetexplorer.svg';
   }
 
-  return 'lucide:monitor';
+  return null;
 });
 </script>
 
 <template>
   <div class="comment-meta" :class="{ 'comment-meta-compact': compact }">
     <span
-      v-if="showBrowser"
+      v-if="showBrowser && browserIcon"
       class="comment-meta-chip comment-meta-browser"
       :title="userAgent || browserText"
     >
-      <Icon class="comment-meta-icon" :name="browserIcon" aria-hidden="true" />
+      <img class="comment-meta-icon" :src="browserIcon" aria-hidden="true" />
       <span class="comment-meta-text">{{ browserText }}</span>
     </span>
     <span v-if="showCountry" class="comment-meta-chip comment-meta-country" :title="countryText">

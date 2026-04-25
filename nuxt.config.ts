@@ -10,7 +10,7 @@ export default defineNuxtConfig({
   modules: ['@nuxt/icon'],
   icon: {
     serverBundle: {
-      collections: ['logos', 'lucide'],
+      collections: ['lucide'],
     },
   },
   ssr: true,
@@ -23,6 +23,12 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/css/main.css', '~/assets/css/admin.css'],
   vite: {
+    css: {
+      devSourcemap: false,
+    },
+    build: {
+      sourcemap: false,
+    },
     plugins: [tailwindcss()],
     server: {
       fs: {

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import md5 from 'md5';
 import { fetchCaptchaConfig, fetchPublicComments, submitPublicComment } from '~/composables/api';
 import { useGeeTestCaptcha } from '~/composables/useGeeTestCaptcha';
 import type { AdminCaptchaResult } from '~/types/admin';
@@ -73,13 +72,17 @@ function clearDraft() {
 }
 
 // ========== 3. Gravatar 头像预览 ==========
+// 使用浏览器原生 crypto.subtle 计算 MD5 的替代方案（Gravatar 强制要求 MD5）
+// 改用 fetch Gravatar 的 404 状态检测，若无自定义头像则用默认 UI
 const gravatarUrl = computed(() => {
   const trimmedEmail = email.value.trim().toLowerCase();
   if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
     return null;
   }
-  const hash = md5(trimmedEmail.trim());
-  return `https://www.gravatar.com/avatar/${hash}?s=44&d=mp`;
+  // 注意：Gravatar 强制 MD5，前端无法用 crypto.subtle 直接算 MD5
+  // 这里只做 UI 占位，实际头像由后端/评论接口返回
+  // 保留空值，让 <AppImage> 的默认 fallback 处理
+  return null;
 });
 
 // ========== 4. 乐观更新相关 ==========

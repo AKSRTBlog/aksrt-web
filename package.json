@@ -15,7 +15,6 @@
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
-    "@iconify-json/logos": "^1.2.11",
     "@iconify-json/lucide": "^1.2.103",
     "@nuxt/icon": "^2.2.1",
     "marked": "^15.0.6",
