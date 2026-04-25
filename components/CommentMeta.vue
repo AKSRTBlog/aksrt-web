@@ -61,11 +61,12 @@ const browserIcon = computed(() => {
 <template>
   <div class="comment-meta" :class="{ 'comment-meta-compact': compact }">
     <span
-      v-if="showBrowser && browserIcon"
+      v-if="showBrowser && (browserIcon || browserLabel)"
       class="comment-meta-chip comment-meta-browser"
       :title="userAgent || browserText"
     >
-      <img class="comment-meta-icon" :src="browserIcon" aria-hidden="true" />
+      <img v-if="browserIcon" class="comment-meta-icon" :src="browserIcon" aria-hidden="true" />
+      <Icon v-else class="comment-meta-icon" name="lucide:monitor" aria-hidden="true" />
       <span class="comment-meta-text">{{ browserText }}</span>
     </span>
     <span v-if="showCountry" class="comment-meta-chip comment-meta-country" :title="countryText">

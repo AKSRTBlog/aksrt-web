@@ -340,11 +340,10 @@ async function handleDelete(comment: typeof selectedComment.value) {
             <div>
               <p class="mb-2">Location:</p>
               <CommentMeta
-                :browser-label="null"
-                :os-label="null"
+                :browser-label="selectedComment.browserLabel"
+                :os-label="selectedComment.osLabel"
                 :user-agent="selectedComment.userAgent"
                 :country-name="selectedComment.countryName"
-                :show-browser="false"
                 compact
               />
             </div>

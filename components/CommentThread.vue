@@ -84,7 +84,6 @@ function toggleExpand(id: string) {
               :user-agent="comment.userAgent"
               :country-name="comment.countryName"
               :compact="true"
-              :show-browser="false"
             />
           </div>
 
