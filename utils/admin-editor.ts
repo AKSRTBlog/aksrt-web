@@ -183,9 +183,13 @@ export function insertTextAtSelection(
   fallbackSelection = '',
 ) {
   const { selectionStart, selectionEnd, value } = textarea;
-  const selected = value.slice(selectionStart, selectionEnd) || fallbackSelection;
+  const hasRealSelection = selectionEnd > selectionStart;
+  const selected = hasRealSelection ? value.slice(selectionStart, selectionEnd) : fallbackSelection;
   const nextValue = `${value.slice(0, selectionStart)}${before}${selected}${after}${value.slice(selectionEnd)}`;
-  const nextPosition = selectionStart + before.length + selected.length + after.length;
+  // 有真实选中文本时，光标放 after 之后；无选中时，光标放 fallback 文本内部（方便用户直接编辑）
+  const nextPosition = hasRealSelection
+    ? selectionStart + before.length + selected.length + after.length
+    : selectionStart + before.length;
 
   return {
     value: nextValue,

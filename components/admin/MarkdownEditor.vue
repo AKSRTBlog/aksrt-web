@@ -74,15 +74,18 @@ function emitValue(value: string) {
   emit('update:modelValue', value);
 }
 
-function focusTextareaSelection(selectionStart: number, selectionEnd: number) {
-  nextTick(() => {
-    if (!textareaRef.value) {
-      return;
-    }
-
-    textareaRef.value.focus();
-    textareaRef.value.setSelectionRange(selectionStart, selectionEnd);
-  });
+/**
+ * 同步设置 textarea 的值和光标位置。
+ * 关键点：直接修改 DOM .value 属性是同步的，
+ * 不需要等待 v-model / Vue 的异步渲染周期，
+ * 所以 setSelectionRange 能立即工作。
+ */
+function syncSetTextarea(value: string, selStart: number, selEnd: number) {
+  const ta = textareaRef.value;
+  if (!ta) return;
+  ta.value = value;
+  ta.focus();
+  ta.setSelectionRange(selStart, selEnd);
 }
 
 function applyInsertion(
@@ -98,8 +101,12 @@ function applyInsertion(
   }
 
   const next = builder(textareaRef.value);
+
+  // 1. 同步更新 DOM（立即可用）
+  syncSetTextarea(next.value, next.selectionStart, next.selectionEnd);
+
+  // 2. 通知父组件更新响应式数据（Vue 会在下一 tick 比对并发现一致）
   emitValue(next.value);
-  focusTextareaSelection(next.selectionStart, next.selectionEnd);
 }
 
 function enhancePreviewCodeBlocks() {
@@ -136,8 +143,8 @@ function confirmExternalImageInsert() {
   }
 
   const next = insertTextAtSelection(textarea, '\n![image](', `)\n`, trimmedUrl);
+  syncSetTextarea(next.value, next.selectionStart, next.selectionEnd);
   emitValue(next.value);
-  focusTextareaSelection(next.selectionStart, next.selectionEnd);
   closeExternalImageDialog();
   emit('imageInserted');
 }
@@ -220,8 +227,8 @@ function handleToolbarAction(action: ToolbarAction) {
   };
 
   const next = actionMap[action]();
+  syncSetTextarea(next.value, next.selectionStart, next.selectionEnd);
   emitValue(next.value);
-  focusTextareaSelection(next.selectionStart, next.selectionEnd);
 }
 
 function handleTextareaKeydown(event: KeyboardEvent) {
@@ -235,8 +242,8 @@ function handleTextareaKeydown(event: KeyboardEvent) {
   }
 
   event.preventDefault();
+  syncSetTextarea(next.value, next.selectionStart, next.selectionEnd);
   emitValue(next.value);
-  focusTextareaSelection(next.selectionStart, next.selectionEnd);
 }
 
 watch(
