@@ -132,7 +132,30 @@ function handlePaste(e: ClipboardEvent) {
   }
 }
 
-const commentCountLabel = computed(() => `${comments.value.length} ${comments.value.length === 1 ? 'response' : 'responses'}`);
+function countComments(list: BlogComment[]): number {
+  return list.reduce((total, comment) => total + 1 + countComments(comment.replies), 0);
+}
+
+function findComment(
+  list: BlogComment[],
+  predicate: (comment: BlogComment) => boolean,
+): BlogComment | null {
+  for (const comment of list) {
+    if (predicate(comment)) {
+      return comment;
+    }
+
+    const found = findComment(comment.replies, predicate);
+    if (found) {
+      return found;
+    }
+  }
+
+  return null;
+}
+
+const totalCommentCount = computed(() => countComments(comments.value));
+const commentCountLabel = computed(() => `${totalCommentCount.value} ${totalCommentCount.value === 1 ? 'response' : 'responses'}`);
 const contentLength = computed(() => content.value.trim().length);
 const canSubmit = computed(() =>
   props.allowComment
@@ -182,10 +205,6 @@ async function loadComments() {
   }
 }
 
-onMounted(() => {
-  void loadComments();
-});
-
 const { loaded: captchaLoaded, showCaptcha } = useGeeTestCaptcha(
   captchaId,
   async (result) => {
@@ -215,17 +234,13 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
   const optimistic: BlogComment = {
     id: tempId,
     parentId: replyTo.value,
-    articleSlug: props.articleSlug,
     nickname: savedNickname,
-    emailHash: '',
-    website: savedWebsite,
     content: savedContent,
     avatarUrl: gravatarUrl.value || '',
     browserLabel: null,
     osLabel: null,
     countryName: null,
     userAgent: null,
-    status: 'pending',
     createdAt: new Date().toISOString(),
     replies: [],
   };
@@ -299,8 +314,9 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
     // 滚动到新评论并高亮
     nextTick(() => {
       // 查找新评论（通过昵称和内容匹配）
-      const newComment = comments.value.find(
-        c => c.nickname === savedNickname && c.content === savedContent
+      const newComment = findComment(
+        comments.value,
+        c => c.nickname === savedNickname && c.content === savedContent,
       );
       if (newComment) {
         highlightCommentId.value = newComment.id;
@@ -475,7 +491,7 @@ onMounted(async () => {
 
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p class="text-xs leading-5 text-[var(--blog-subtle)]">
-              提交即表示同意将内容用于 AI 自动审核。评论（含昵称、邮箱）将被发送至审核服务进行处理。
+              提交即表示同意将内容用于自动审核。昵称、邮箱和评论正文会用于判断垃圾评论与风险内容。
             </p>
             <button class="blog-button-primary w-full sm:w-auto" type="submit" :disabled="!canSubmit">
               <span v-if="submitting" class="comment-spinner" aria-hidden="true" />
@@ -532,27 +548,26 @@ onMounted(async () => {
         <div
           v-for="comment in comments"
           :key="comment.id"
-          :id="`comment-${comment.id}`"
-          :class="{ 'comment-highlight': highlightCommentId === comment.id }"
           class="relative"
         >
-          <div
-            v-if="comment.id === optimisticCommentId"
-            class="absolute -inset-1 rounded-[8px] border-2 border-dashed border-amber-300 bg-amber-50/50 px-2 py-1 text-xs text-amber-600"
-          >
-            Submitting...
-          </div>
-          <CommentThread :comments="[comment]" @reply="handleReply" />
+          <CommentThread
+            :comments="[comment]"
+            :active-reply-id="replyTo"
+            :highlighted-comment-id="highlightCommentId"
+            :pending-comment-id="optimisticCommentId"
+            @reply="handleReply"
+          />
         </div>
       </TransitionGroup>
     </div>
 
     <div v-else class="rounded-[6px] border border-dashed border-[var(--blog-border-strong)] bg-white/70 p-10 text-center">
-      <div class="mb-4 text-4xl opacity-40">💬</div>
+      <Icon name="lucide:messages-square" class="mx-auto mb-4 h-10 w-10 text-[var(--blog-subtle)]" aria-hidden="true" />
       <p class="text-base font-semibold text-[var(--blog-ink)]">暂无评论</p>
       <p class="mt-2 text-sm leading-6 text-[var(--blog-subtle)]">
-        沙发还在，等一个有见地的评论<br>
-        <span class="text-xs opacity-60">写下你的想法，开始这段对话吧</span>
+        还没有人开始对话。
+        <br>
+        <span class="text-xs opacity-60">写下你的想法，成为第一个留言的人。</span>
       </p>
     </div>
   </section>
@@ -659,23 +674,6 @@ onMounted(async () => {
   border-radius: 50%;
   background: var(--blog-soft);
   flex-shrink: 0;
-}
-
-/* 评论高亮动画 */
-@keyframes highlight-fade {
-  0% {
-    background-color: rgba(250, 204, 21, 0.3);
-    box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.2);
-  }
-  100% {
-    background-color: transparent;
-    box-shadow: none;
-  }
-}
-
-.comment-highlight {
-  animation: highlight-fade 2s ease forwards;
-  border-radius: 8px;
 }
 
 /* 骨架屏闪光效果 (Shimmer Effect) */

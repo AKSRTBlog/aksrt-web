@@ -167,8 +167,8 @@ export interface BlogComment {
   ip: string | null;
   countryName: string | null;
   userAgent: string | null;
-  browserLabel: string;
-  osLabel: string;
+  browserLabel: string | null;
+  osLabel: string | null;
   createdAt: string;
   replies: BlogComment[];
 }
@@ -182,8 +182,8 @@ export interface PublicCommentItem {
   ip: string | null;
   countryName: string | null;
   userAgent: string | null;
-  browserLabel: string;
-  osLabel: string;
+  browserLabel: string | null;
+  osLabel: string | null;
   createdAt: string;
   replies: PublicCommentItem[];
 }

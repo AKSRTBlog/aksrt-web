@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import AppImage from '~/components/AppImage.vue';
 import type { BlogComment } from '~/types/blog';
 
 const props = withDefaults(defineProps<{
   comments: BlogComment[];
   depth?: number;
+  parentNickname?: string | null;
+  activeReplyId?: string | null;
+  highlightedCommentId?: string | null;
+  pendingCommentId?: string | null;
 }>(), {
   depth: 0,
+  parentNickname: null,
+  activeReplyId: null,
+  highlightedCommentId: null,
+  pendingCommentId: null,
 });
 
 const emit = defineEmits<{
@@ -15,70 +23,91 @@ const emit = defineEmits<{
 }>();
 
 const COLLAPSE_THRESHOLD = 500;
+const MAX_VISUAL_DEPTH = 4;
+
+const visualDepth = computed(() => Math.min(props.depth, MAX_VISUAL_DEPTH));
+const expandedComments = ref<string[]>([]);
 
 function formatCommentDate(date: string) {
-  return new Date(date).toLocaleDateString('zh-CN', {
+  return new Date(date).toLocaleString('zh-CN', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
-// 处理长评论折叠
 function shouldCollapse(content: string) {
   return content.length > COLLAPSE_THRESHOLD;
 }
 
-// 展开状态管理
-const expandedComments = ref<string[]>([]);
+function isExpanded(id: string) {
+  return expandedComments.value.includes(id);
+}
 
 function toggleExpand(id: string) {
   const index = expandedComments.value.indexOf(id);
   if (index > -1) {
     expandedComments.value.splice(index, 1);
-  } else {
-    expandedComments.value.push(id);
+    return;
   }
+
+  expandedComments.value.push(id);
+}
+
+function replyCount(comment: BlogComment): number {
+  return comment.replies.reduce((total, reply) => total + 1 + replyCount(reply), 0);
 }
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="comment-thread">
     <article
       v-for="comment in comments"
+      :id="`comment-${comment.id}`"
       :key="comment.id"
-      :class="props.depth === 0 ? 'comment-card' : 'comment-reply'"
+      class="comment-node"
+      :class="{
+        'comment-node-root': props.depth === 0,
+        'comment-node-reply': props.depth > 0,
+        'comment-node-active-reply': props.activeReplyId === comment.id,
+        'comment-node-highlight': props.highlightedCommentId === comment.id,
+        'comment-node-pending': props.pendingCommentId === comment.id,
+      }"
+      :style="{ '--comment-depth': visualDepth }"
     >
-      <div class="flex gap-3 sm:gap-4">
-        <!-- 头像：移动端缩小到 32px -->
-        <AppImage
-          class="h-8 w-8 shrink-0 rounded-full border border-[var(--blog-border)] bg-white object-cover sm:h-11 sm:w-11"
-          :src="comment.avatarUrl"
-          :alt="comment.nickname"
-        />
+      <span v-if="props.pendingCommentId === comment.id" class="comment-pending-badge">
+        <Icon name="lucide:loader-2" aria-hidden="true" />
+        提交中
+      </span>
 
-        <div class="min-w-0 flex-1">
-          <!-- 用户名和日期：优化层级 -->
-          <div class="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-            <div class="min-w-0">
-              <h3 class="truncate text-[0.875rem] font-bold leading-tight text-[#1a1a1a] letter-spacing-[0.01em]">
-                {{ comment.nickname }}
-              </h3>
+      <div class="comment-body">
+        <div class="comment-avatar-wrap">
+          <AppImage
+            class="comment-avatar"
+            :src="comment.avatarUrl"
+            :alt="comment.nickname"
+          />
+        </div>
+
+        <div class="comment-main">
+          <header class="comment-header">
+            <div class="comment-author-line">
+              <h3 class="comment-author">{{ comment.nickname }}</h3>
+              <span v-if="props.depth > 0 && parentNickname" class="comment-reply-context">
+                <Icon name="lucide:corner-down-right" aria-hidden="true" />
+                回复 {{ parentNickname }}
+              </span>
             </div>
 
-            <!-- 日期：12px，浅色 -->
-            <time
-              class="shrink-0 text-[0.75rem] leading-tight text-[var(--blog-subtle)]"
-              :datetime="comment.createdAt"
-            >
+            <time class="comment-time" :datetime="comment.createdAt">
               {{ formatCommentDate(comment.createdAt) }}
             </time>
-          </div>
+          </header>
 
-          <!-- Meta 信息：降低视觉权重，放在内容下方 -->
-          <div v-if="props.depth === 0" class="mt-1">
+          <div v-if="props.depth === 0" class="comment-meta-row">
             <CommentMeta
-              class="opacity-60 transition-opacity hover:opacity-100"
               :browser-label="comment.browserLabel"
               :os-label="comment.osLabel"
               :user-agent="comment.userAgent"
@@ -87,47 +116,56 @@ function toggleExpand(id: string) {
             />
           </div>
 
-          <!-- 评论内容：优化行高和间距 -->
-          <div class="mt-2.5">
+          <div class="comment-content">
             <p
-              v-if="!shouldCollapse(comment.content) || expandedComments?.includes(comment.id)"
-              class="whitespace-pre-wrap break-words text-[0.9375rem] leading-[1.8] text-[#2c2c2c] letter-spacing-[0.008em]"
+              v-if="!shouldCollapse(comment.content) || isExpanded(comment.id)"
+              class="comment-text"
             >
               {{ comment.content }}
             </p>
 
-            <!-- 折叠状态：显示前 500 字 + 展开按钮 -->
             <template v-else>
-              <p class="whitespace-pre-wrap break-words text-[0.9375rem] leading-[1.8] text-[#2c2c2c] letter-spacing-[0.008em] line-clamp-[8]">
+              <p class="comment-text comment-text-collapsed">
                 {{ comment.content.slice(0, COLLAPSE_THRESHOLD) }}...
               </p>
               <button
-                class="mt-2 text-[0.8125rem] font-medium text-[var(--blog-accent)] hover:underline"
+                class="comment-action comment-expand"
+                type="button"
                 @click="toggleExpand(comment.id)"
               >
-                展开阅读全文 ({{ comment.content.length }} 字)
+                <Icon name="lucide:chevrons-down" aria-hidden="true" />
+                展开全文（{{ comment.content.length }} 字）
               </button>
             </template>
           </div>
 
-          <!-- 辅助信息：回复按钮等（放在内容下方） -->
-          <div class="mt-2 flex items-center gap-3">
+          <footer class="comment-footer">
             <button
-              class="text-[0.75rem] font-medium text-[var(--blog-subtle)] hover:text-[var(--blog-accent)] transition-colors"
+              class="comment-action"
+              :class="{ 'comment-action-active': props.activeReplyId === comment.id }"
+              type="button"
               @click="emit('reply', comment.id)"
             >
-              回复
+              <Icon name="lucide:reply" aria-hidden="true" />
+              {{ props.activeReplyId === comment.id ? '正在回复' : '回复' }}
             </button>
-          </div>
+
+            <span v-if="comment.replies.length > 0" class="comment-reply-count">
+              <Icon name="lucide:message-square" aria-hidden="true" />
+              {{ replyCount(comment) }} 条回复
+            </span>
+          </footer>
         </div>
       </div>
 
-      <!-- 回复列表：优化缩进和视觉连线 -->
       <div v-if="comment.replies.length > 0" class="comment-replies">
-        <div class="comment-thread-line"></div>
         <CommentThread
           :comments="comment.replies"
           :depth="props.depth + 1"
+          :parent-nickname="comment.nickname"
+          :active-reply-id="props.activeReplyId"
+          :highlighted-comment-id="props.highlightedCommentId"
+          :pending-comment-id="props.pendingCommentId"
           @reply="emit('reply', $event)"
         />
       </div>
@@ -136,79 +174,294 @@ function toggleExpand(id: string) {
 </template>
 
 <style scoped>
-/* 1. 黄金行高与字符间距 */
-:deep(.comment-content) {
-  line-height: 1.8;
-  letter-spacing: 0.008em;
+.comment-thread {
+  display: grid;
+  gap: 1rem;
 }
 
-/* 2. 视觉层级：无边框排版，改用留白和细微分割 */
-.comment-card {
-  border: none;
+.comment-node {
+  position: relative;
+  min-width: 0;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
-.comment-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+.comment-node-root {
+  border: 1px solid var(--blog-border);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 1rem;
+  box-shadow: 0 10px 30px -26px rgba(25, 29, 36, 0.45);
 }
 
-/* 回复评论：去掉厚重边框，改用留白 */
-.comment-reply {
-  padding: 0.75rem 0 0.75rem 1rem;
-  border-left: 2px solid var(--blog-border);
-  transition: border-color 0.2s ease;
+.comment-node-root:hover {
+  border-color: var(--blog-border-strong);
+  box-shadow: 0 16px 36px -30px rgba(25, 29, 36, 0.55);
 }
 
-.comment-reply:hover {
-  border-left-color: var(--blog-accent);
+.comment-node-reply {
+  background: color-mix(in srgb, var(--blog-soft) 72%, #ffffff);
+  padding: 0.9rem 0.9rem 0.9rem 1rem;
 }
 
-/* 3. 层级缩进：缩进 1.5rem，移动端更小 */
+.comment-node-active-reply {
+  background: color-mix(in srgb, var(--blog-accent) 8%, #ffffff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blog-accent) 34%, transparent);
+}
+
+.comment-node-highlight {
+  animation: comment-highlight 2.2s ease forwards;
+}
+
+.comment-node-pending {
+  border-style: dashed;
+  border-color: color-mix(in srgb, #f59e0b 58%, var(--blog-border));
+  background: color-mix(in srgb, #fffbeb 72%, #ffffff);
+}
+
+.comment-pending-badge {
+  position: absolute;
+  right: 0.65rem;
+  top: -0.6rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+}
+
+.comment-pending-badge :deep(svg) {
+  width: 0.75rem;
+  height: 0.75rem;
+  animation: comment-spin 0.8s linear infinite;
+}
+
+.comment-body {
+  display: flex;
+  min-width: 0;
+  gap: 0.85rem;
+}
+
+.comment-avatar-wrap {
+  flex: 0 0 auto;
+}
+
+.comment-avatar {
+  width: clamp(2rem, 1.8rem + 0.8vw, 2.75rem);
+  height: clamp(2rem, 1.8rem + 0.8vw, 2.75rem);
+  border: 1px solid var(--blog-border);
+  border-radius: 999px;
+  background: #ffffff;
+  object-fit: cover;
+}
+
+.comment-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.comment-header {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.comment-author-line {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.comment-author {
+  max-width: min(18rem, 100%);
+  overflow: hidden;
+  color: var(--blog-ink);
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment-reply-context,
+.comment-reply-count,
+.comment-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.comment-reply-context {
+  max-width: 12rem;
+  overflow: hidden;
+  color: var(--blog-subtle);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment-reply-context :deep(svg),
+.comment-reply-count :deep(svg),
+.comment-action :deep(svg) {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: 0 0 auto;
+}
+
+.comment-time {
+  flex: 0 0 auto;
+  color: var(--blog-subtle);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.comment-meta-row {
+  margin-top: 0.45rem;
+  opacity: 0.68;
+  transition: opacity 0.2s ease;
+}
+
+.comment-node-root:hover .comment-meta-row {
+  opacity: 1;
+}
+
+.comment-content {
+  margin-top: 0.65rem;
+}
+
+.comment-text {
+  color: color-mix(in srgb, var(--blog-ink) 88%, #475569);
+  font-size: 0.94rem;
+  line-height: 1.78;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.comment-text-collapsed {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 7;
+}
+
+.comment-footer {
+  margin-top: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.comment-action {
+  border: 0;
+  background: transparent;
+  color: var(--blog-subtle);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1;
+  padding: 0.15rem 0;
+  transition: color 0.2s ease;
+}
+
+.comment-action:hover,
+.comment-action-active {
+  color: var(--blog-accent);
+}
+
+.comment-expand {
+  margin-top: 0.45rem;
+}
+
+.comment-reply-count {
+  color: var(--blog-subtle);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
 .comment-replies {
   position: relative;
-  margin-top: 1rem;
-  margin-left: 1.5rem;
-  padding-left: 1.25rem;
+  margin-top: 0.9rem;
+  margin-left: calc(1.35rem + (var(--comment-depth) * 0.35rem));
+  padding-left: 1rem;
 }
 
-/* 视觉连线：浅灰色垂直线 */
-.comment-thread-line {
+.comment-replies::before {
   position: absolute;
-  left: -1px;
+  left: 0;
   top: 0;
   bottom: 0;
+  content: "";
   width: 2px;
   background: linear-gradient(
     to bottom,
-    var(--blog-border) 0%,
-    rgba(226, 232, 240, 0.3) 100%
+    color-mix(in srgb, var(--blog-accent) 38%, var(--blog-border)),
+    color-mix(in srgb, var(--blog-border) 64%, transparent)
   );
   border-radius: 1px;
 }
 
-/* 4. 响应式适配：移动端减小内边距和头像 */
 @media (max-width: 640px) {
-  .comment-card {
-    padding: 1rem;
+  .comment-node-root {
+    padding: 0.9rem;
+  }
+
+  .comment-node-reply {
+    padding: 0.8rem 0.75rem;
+  }
+
+  .comment-body {
+    gap: 0.65rem;
+  }
+
+  .comment-header {
+    flex-direction: column;
+    gap: 0.2rem;
   }
 
   .comment-replies {
-    margin-left: 0.75rem;
-    padding-left: 0.875rem;
+    margin-left: 0.5rem;
+    padding-left: 0.7rem;
   }
 
-  .comment-reply {
-    padding-left: 0.625rem;
-    border-left-width: 1.5px;
+  .comment-author {
+    max-width: 13rem;
   }
 }
 
-/* 5. 对比度保护：确保 --blog-subtle 符合 WCAG AA */
 :deep(.comment-meta-chip) {
-  color: #64748b; /* slate-500，对比度 4.5:1+ */
+  color: #64748b;
+}
+
+@keyframes comment-highlight {
+  0% {
+    background-color: color-mix(in srgb, var(--blog-accent) 18%, #ffffff);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--blog-accent) 14%, transparent);
+  }
+
+  100% {
+    box-shadow: none;
+  }
+}
+
+@keyframes comment-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
