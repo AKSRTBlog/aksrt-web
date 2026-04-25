@@ -474,7 +474,9 @@ onMounted(async () => {
           </div>
 
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p class="text-xs leading-5 text-[var(--blog-subtle)]">Your comment may be reviewed before publishing.</p>
+            <p class="text-xs leading-5 text-[var(--blog-subtle)]">
+              提交即表示同意将内容用于 AI 自动审核。评论（含昵称、邮箱）将被发送至审核服务进行处理。
+            </p>
             <button class="blog-button-primary w-full sm:w-auto" type="submit" :disabled="!canSubmit">
               <span v-if="submitting" class="comment-spinner" aria-hidden="true" />
               {{ submitting ? 'Posting...' : 'Post comment' }}

@@ -103,7 +103,18 @@ export interface AdminCommentItem {
   moderationSummary: string | null;
   moderationAkismetRaw: string | null;
   moderationAiRaw: string | null;
+  moderationAiCategories: AiCategoryDetail[] | null;
+  moderationAiWeightedScore: number | null;
   moderationPipelineVersion: string | null;
+
+export interface AiCategoryDetail {
+  category: string
+  label: string
+  score: number
+  weight: number
+  weightedScore: number
+  flagged: boolean
+}
   createdAt: string;
   updatedAt: string;
 }

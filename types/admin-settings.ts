@@ -105,6 +105,9 @@ export interface CommentModerationConfig {
   aiProvider: string
   aiApiKeyConfigured: boolean
   aiModel: string
+  aiBaseUrl: string           // Custom API base URL
+  azureDeploymentId: string   // Azure deployment ID
+  azureApiVersion: string    // Azure API version
   autoApproveLowRisk: boolean
   autoRejectHighRisk: boolean
   lowRiskMaxScore: number
