@@ -9,7 +9,9 @@ export default defineNuxtConfig({
   srcDir: '.',
   modules: ['@nuxt/icon'],
   icon: {
-    serverBundle: {
+    // 使用动态加载，只加载用到的图标，不打包全部
+    serverBundle: false,
+    clientBundle: {
       collections: ['lucide'],
     },
   },

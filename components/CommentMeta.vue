@@ -17,43 +17,31 @@ const props = withDefaults(defineProps<{
   showCountry: true,
 });
 
+const hasBrowserInfo = computed(() =>
+  props.browserLabel && props.browserLabel.trim() !== '' && props.browserLabel.trim() !== 'Unknown browser'
+);
+
 const browserText = computed(() => {
-  const parts = [props.browserLabel?.trim() || 'Unknown browser'];
+  if (!hasBrowserInfo.value) return '';
+  const parts = [props.browserLabel!.trim()];
   const os = props.osLabel?.trim();
   if (os && os !== 'Unknown OS') {
     parts.push(os);
   }
-
   return parts.join(' / ');
 });
 
-const countryText = computed(() => props.countryName?.trim() || 'Unknown location');
+const countryText = computed(() => props.countryName?.trim() || '');
 
-const browserIcon = computed(() => {
+const browserIconName = computed(() => {
   const label = (props.browserLabel || '').toLowerCase();
-
-  if (label.includes('brave')) {
-    return '/img/browsers/brave.svg';
-  }
-  if (label.includes('edge')) {
-    return '/img/browsers/microsoft-edge.svg';
-  }
-  if (label.includes('firefox')) {
-    return '/img/browsers/firefox.svg';
-  }
-  if (label.includes('safari')) {
-    return '/img/browsers/safari.svg';
-  }
-  if (label.includes('opera')) {
-    return '/img/browsers/opera.svg';
-  }
-  if (label.includes('chrome') || label.includes('chromium')) {
-    return '/img/browsers/chrome.svg';
-  }
-  if (label.includes('internet explorer')) {
-    return '/img/browsers/internetexplorer.svg';
-  }
-
+  if (label.includes('brave')) return 'logos:brave';
+  if (label.includes('edge')) return 'logos:microsoft-edge';
+  if (label.includes('firefox')) return 'logos:firefox';
+  if (label.includes('safari')) return 'logos:safari';
+  if (label.includes('opera')) return 'logos:opera';
+  if (label.includes('chrome') || label.includes('chromium')) return 'logos:chrome';
+  if (label.includes('internet explorer')) return 'logos:internetexplorer';
   return null;
 });
 </script>
@@ -61,17 +49,22 @@ const browserIcon = computed(() => {
 <template>
   <div class="comment-meta" :class="{ 'comment-meta-compact': compact }">
     <span
-      v-if="showBrowser && (browserIcon || browserLabel)"
+      v-if="hasBrowserInfo"
       class="comment-meta-chip comment-meta-browser"
       :title="userAgent || browserText"
     >
-      <img v-if="browserIcon" class="comment-meta-icon" :src="browserIcon" aria-hidden="true" />
+      <Icon
+        v-if="browserIconName"
+        class="comment-meta-icon"
+        :name="browserIconName"
+        aria-hidden="true"
+      />
       <Icon v-else class="comment-meta-icon" name="lucide:monitor" aria-hidden="true" />
       <span class="comment-meta-text">{{ browserText }}</span>
     </span>
-    <span v-if="showCountry" class="comment-meta-chip comment-meta-country" :title="countryText">
+    <span v-if="showCountry && countryText" class="comment-meta-chip comment-meta-country" :title="countryText">
       <Icon class="comment-meta-icon" name="lucide:map-pin" aria-hidden="true" />
-      <span class="comment-meta-text">{{ countryText }}</span>
+      <span class="comment-meta-text">来自: {{ countryText }}</span>
     </span>
   </div>
 </template>
