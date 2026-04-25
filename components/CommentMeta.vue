@@ -33,18 +33,16 @@ const browserText = computed(() => {
 
 const countryText = computed(() => props.countryName?.trim() || '');
 
-// 只在客户端渲染浏览器图标（避免 SSR 加载问题）
-const isClient = process.client;
-const browserIconName = computed(() => {
-  if (!isClient.value) return null;
+// 浏览器图标文件名映射（匹配 public/img/browser-icons/ 下的实际文件名）
+const browserIconFile = computed(() => {
   const label = (props.browserLabel || '').toLowerCase();
-  if (label.includes('brave')) return 'logos:brave';
-  if (label.includes('edge')) return 'logos:microsoft-edge';
-  if (label.includes('firefox')) return 'logos:firefox';
-  if (label.includes('safari')) return 'logos:safari';
-  if (label.includes('opera')) return 'logos:opera';
-  if (label.includes('chrome') || label.includes('chromium')) return 'logos:chrome';
-  if (label.includes('internet explorer')) return 'logos:internetexplorer';
+  if (label.includes('brave')) return 'logos_brave';
+  if (label.includes('edge')) return 'logos_microsoft-edge';
+  if (label.includes('firefox')) return 'logos_firefox';
+  if (label.includes('safari')) return 'logos_safari';
+  if (label.includes('opera')) return 'logos_opera';
+  if (label.includes('chrome') || label.includes('chromium')) return 'logos_chrome';
+  if (label.includes('internet explorer')) return 'logos_internetexplorer';
   return null;
 });
 </script>
@@ -56,18 +54,30 @@ const browserIconName = computed(() => {
       class="comment-meta-chip comment-meta-browser"
       :title="userAgent || browserText"
     >
-      <Icon
-        v-if="browserIconName"
+      <img
+        v-if="browserIconFile"
         class="comment-meta-icon"
-        :name="browserIconName"
+        :src="`/img/browser-icons/${browserIconFile}.svg`"
+        :alt="browserLabel || ''"
         aria-hidden="true"
       />
-      <Icon v-else class="comment-meta-icon" name="lucide:monitor" aria-hidden="true" />
+      <img
+        v-else
+        class="comment-meta-icon"
+        src="/img/icons/lucide_monitor.svg"
+        alt="Unknown browser"
+        aria-hidden="true"
+      />
       <span class="comment-meta-text">{{ browserText }}</span>
     </span>
     <span v-if="showCountry && countryText" class="comment-meta-chip comment-meta-country" :title="countryText">
-      <Icon class="comment-meta-icon" name="lucide:map-pin" aria-hidden="true" />
-      <span class="comment-meta-text">来自: {{ countryText }}</span>
+      <img
+        class="comment-meta-icon"
+        src="/img/icons/lucide_map-pin.svg"
+        alt="Location"
+        aria-hidden="true"
+      />
+      <span class="comment-meta-text">来自：{{ countryText }}</span>
     </span>
   </div>
 </template>
@@ -110,6 +120,16 @@ const browserIconName = computed(() => {
   width: 0.9rem;
   height: 0.9rem;
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem; /* emoji 大小 */
+}
+
+.comment-meta-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .comment-meta-text {

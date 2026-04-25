@@ -9,12 +9,10 @@ export default defineNuxtConfig({
   srcDir: '.',
   modules: ['@nuxt/icon'],
   icon: {
-    // 使用 css 模式，图标打包到客户端 JS（不需要运行时请求）
-    mode: 'css',
-    // 服务端不打包图标（用 CSS 类名，由客户端 JS 填充）
-    serverBundle: false,
-    // 客户端打包用到的图标集合
-    clientBundle: ['lucide', 'logos'],
+    // 使用 SVG 模式（比 CSS 模式更可靠）
+    mode: 'svg',
+    serverBundle: ['lucide'],
+    clientBundle: ['lucide'],
   },
   ssr: true,
   sourcemap: {
