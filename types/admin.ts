@@ -91,6 +91,7 @@ export interface AdminCommentItem {
   content: string;
   status: 'pending' | 'approved' | 'rejected';
   ip: string | null;
+  countryName: string | null;
   userAgent: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;

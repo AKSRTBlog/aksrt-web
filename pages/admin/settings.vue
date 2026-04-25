@@ -84,11 +84,15 @@ const moderationForm = reactive({
   rateLimitGlobalWindowMinutes: 60,
   rateLimitGlobalEmailMax: 15,
   rateLimitGlobalIpMax: 60,
+  geoipEnabled: true,
+  geoipProvider: 'ipapi',
+  geoipApiKey: '',
 })
 
 const moderationKeyStatus = reactive({
   akismetApiKeyConfigured: false,
   aiApiKeyConfigured: false,
+  geoipApiKeyConfigured: false,
 })
 
 const savedCommentCaptchaId = computed(() => {
@@ -177,9 +181,13 @@ async function loadCommentModerationConfig() {
     moderationForm.rateLimitGlobalWindowMinutes = result.rateLimitGlobalWindowMinutes ?? 60
     moderationForm.rateLimitGlobalEmailMax = result.rateLimitGlobalEmailMax ?? 15
     moderationForm.rateLimitGlobalIpMax = result.rateLimitGlobalIpMax ?? 60
+    moderationForm.geoipEnabled = result.geoipEnabled ?? true
+    moderationForm.geoipProvider = result.geoipProvider || 'ipapi'
+    moderationForm.geoipApiKey = ''
 
     moderationKeyStatus.akismetApiKeyConfigured = result.akismetApiKeyConfigured
     moderationKeyStatus.aiApiKeyConfigured = result.aiApiKeyConfigured
+    moderationKeyStatus.geoipApiKeyConfigured = result.geoipApiKeyConfigured
   } catch (currentError) {
     moderationError.value = currentError instanceof Error ? currentError.message : '加载评论审核配置失败'
   } finally {
@@ -223,6 +231,8 @@ async function saveCommentModerationConfig() {
       rateLimitGlobalWindowMinutes: rateLimit.globalWindowMinutes,
       rateLimitGlobalEmailMax: rateLimit.globalEmailMax,
       rateLimitGlobalIpMax: rateLimit.globalIpMax,
+      geoipEnabled: moderationForm.geoipEnabled,
+      geoipProvider: moderationForm.geoipProvider,
     }
 
     if (moderationForm.akismetApiKey.trim()) {
@@ -230,6 +240,9 @@ async function saveCommentModerationConfig() {
     }
     if (moderationForm.aiApiKey.trim()) {
       payload.aiApiKey = moderationForm.aiApiKey.trim()
+    }
+    if (moderationForm.geoipApiKey.trim()) {
+      payload.geoipApiKey = moderationForm.geoipApiKey.trim()
     }
 
     const result = await adminApiFetch<CommentModerationConfig>('/api/v1/admin/site-settings/comment-moderation', {
@@ -239,8 +252,10 @@ async function saveCommentModerationConfig() {
 
     moderationForm.akismetApiKey = ''
     moderationForm.aiApiKey = ''
+    moderationForm.geoipApiKey = ''
     moderationKeyStatus.akismetApiKeyConfigured = result.akismetApiKeyConfigured
     moderationKeyStatus.aiApiKeyConfigured = result.aiApiKeyConfigured
+    moderationKeyStatus.geoipApiKeyConfigured = result.geoipApiKeyConfigured
     moderationSuccessMessage.value = '评论审核配置已保存'
   } catch (currentError) {
     moderationError.value = currentError instanceof Error ? currentError.message : '保存评论审核配置失败'
@@ -831,6 +846,34 @@ onMounted(async () => {
                   class="admin-textarea min-h-36"
                   placeholder="spam keyword&#10;fake casino&#10;恶意引流"
                 />
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-card p-6">
+            <h3 class="text-lg font-semibold text-slate-900">GeoIP</h3>
+            <p class="mt-2 text-xs leading-6 text-slate-500">
+              保存评论时将 IP 解析为国家名称。公开评论只显示国家，不显示原始 IP。
+            </p>
+            <div class="mt-5 grid gap-5 md:grid-cols-2">
+              <label class="md:col-span-2 inline-flex items-center gap-3 text-sm text-slate-700">
+                <input v-model="moderationForm.geoipEnabled" type="checkbox" class="admin-checkbox">
+                启用 IP 国家解析
+              </label>
+
+              <div>
+                <p class="admin-label">解析来源</p>
+                <select v-model="moderationForm.geoipProvider" class="admin-select">
+                  <option value="ipapi">ipapi.co</option>
+                  <option value="ipinfo">ipinfo.io</option>
+                  <option value="ipgeolocation">ipgeolocation.io</option>
+                </select>
+              </div>
+
+              <div>
+                <p class="admin-label">API Token</p>
+                <input v-model="moderationForm.geoipApiKey" type="password" class="admin-input" placeholder="留空则保持当前 Token 不变">
+                <p class="mt-2 text-xs text-slate-500">当前状态：{{ moderationKeyStatus.geoipApiKeyConfigured ? '已配置' : '未配置' }}</p>
               </div>
             </div>
           </section>

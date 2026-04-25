@@ -6,6 +6,13 @@ const workspaceRoot = fileURLToPath(new URL('..', import.meta.url));
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: false },
+  srcDir: '.',
+  modules: ['@nuxt/icon'],
+  icon: {
+    serverBundle: {
+      collections: ['logos', 'lucide'],
+    },
+  },
   ssr: true,
   sourcemap: {
     client: false,

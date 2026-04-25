@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import md5 from 'md5';
 import { fetchCaptchaConfig, fetchPublicComments, submitPublicComment } from '~/composables/api';
 import { useGeeTestCaptcha } from '~/composables/useGeeTestCaptcha';
 import type { AdminCaptchaResult } from '~/types/admin';
@@ -25,6 +26,90 @@ const captchaId = ref<string | null>(null);
 const comments = ref<BlogComment[]>([]);
 const loading = ref(true);
 const error = ref('');
+
+// ========== 1. 快捷键提交 (Ctrl/Cmd + Enter) ==========
+function handleKeyDown(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    handleSubmit();
+  }
+}
+
+// ========== 2. 评论草稿自动保存 (sessionStorage) ==========
+const DRAFT_KEY_PREFIX = 'comment-draft-';
+const draftKey = computed(() => `${DRAFT_KEY_PREFIX}${props.articleSlug}`);
+
+// 页面加载时恢复草稿
+onMounted(() => {
+  const saved = sessionStorage.getItem(draftKey.value);
+  if (saved) {
+    try {
+      const draft = JSON.parse(saved);
+      nickname.value = draft.nickname || '';
+      email.value = draft.email || '';
+      website.value = draft.website || '';
+      content.value = draft.content || '';
+    } catch {
+      // 忽略损坏的草稿数据
+    }
+  }
+  void loadComments();
+});
+
+// 实时保存草稿
+watch([nickname, email, website, content], () => {
+  const draft = {
+    nickname: nickname.value,
+    email: email.value,
+    website: website.value,
+    content: content.value,
+  };
+  sessionStorage.setItem(draftKey.value, JSON.stringify(draft));
+});
+
+// 提交成功后清除草稿
+function clearDraft() {
+  sessionStorage.removeItem(draftKey.value);
+}
+
+// ========== 3. Gravatar 头像预览 ==========
+const gravatarUrl = computed(() => {
+  const trimmedEmail = email.value.trim().toLowerCase();
+  if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    return null;
+  }
+  const hash = md5(trimmedEmail.trim());
+  return `https://www.gravatar.com/avatar/${hash}?s=44&d=mp`;
+});
+
+// ========== 4. 乐观更新相关 ==========
+const optimisticCommentId = ref<string | null>(null);
+const highlightCommentId = ref<string | null>(null);
+
+// ========== 5. 智能粘贴清洗 ==========
+function handlePaste(e: ClipboardEvent) {
+  const pastedText = e.clipboardData?.getData('text/plain') || '';
+  if (!pastedText) return;
+
+  // 自动压缩连续空行为最多两行
+  const cleaned = pastedText.replace(/\n\s*\n\s*\n/g, '\n\n');
+
+  // 如果内容有变化，手动替换
+  if (cleaned !== pastedText) {
+    e.preventDefault();
+    const textarea = e.target as HTMLTextAreaElement;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = content.value.substring(0, start);
+    const after = content.value.substring(end);
+    content.value = before + cleaned + after;
+
+    // 恢复光标位置
+    nextTick(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + cleaned.length;
+    });
+  }
+}
 
 const commentCountLabel = computed(() => `${comments.value.length} ${comments.value.length === 1 ? 'response' : 'responses'}`);
 const contentLength = computed(() => content.value.trim().length);
@@ -83,19 +168,60 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
   submitting.value = true;
   message.value = '';
 
+  // 保存表单值（用于 API 调用）
+  const savedNickname = nickname.value.trim();
+  const savedEmail = email.value.trim();
+  const savedWebsite = website.value.trim() || undefined;
+  const savedContent = content.value.trim();
+
+  // 创建乐观评论（立即显示）
+  const tempId = `temp-${Date.now()}`;
+  const optimistic: BlogComment = {
+    id: tempId,
+    parentId: null,
+    articleSlug: props.articleSlug,
+    nickname: savedNickname,
+    emailHash: '',
+    website: savedWebsite,
+    content: savedContent,
+    avatarUrl: gravatarUrl.value || '',
+    browserLabel: null,
+    osLabel: null,
+    countryName: null,
+    userAgent: null,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    replies: [],
+  };
+
+  // 立即添加到列表顶部
+  optimisticCommentId.value = tempId;
+  comments.value = [optimistic, ...comments.value];
+
+  // 立即清除表单并清除草稿
+  nickname.value = '';
+  email.value = '';
+  website.value = '';
+  content.value = '';
+  clearDraft();
+
   try {
     const result = await submitPublicComment(props.articleSlug, {
-      nickname: nickname.value.trim(),
-      email: email.value.trim(),
-      website: website.value.trim() || undefined,
-      content: content.value.trim(),
+      nickname: savedNickname,
+      email: savedEmail,
+      website: savedWebsite,
+      content: savedContent,
       captcha,
     });
 
-    nickname.value = '';
-    email.value = '';
-    website.value = '';
-    content.value = '';
+    // 移除乐观评论
+    comments.value = comments.value.filter(c => c.id !== tempId);
+    optimisticCommentId.value = null;
+
+    // 重新加载评论列表
+    await loadComments();
+
+    // 设置成功消息
     if (result.status === 'approved') {
       message.value = result.unlockToken
         ? 'Comment approved automatically. Hidden content is unlocked, and your comment is now visible.'
@@ -106,8 +232,31 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
       message.value = 'Comment received. It is waiting for moderation before it appears or unlocks hidden content.';
     }
     emit('submitted', result);
-    await loadComments();
+
+    // 滚动到新评论并高亮
+    nextTick(() => {
+      // 查找新评论（通过昵称和内容匹配）
+      const newComment = comments.value.find(
+        c => c.nickname === savedNickname && c.content === savedContent
+      );
+      if (newComment) {
+        highlightCommentId.value = newComment.id;
+        nextTick(() => {
+          document.getElementById(`comment-${newComment.id}`)?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+        });
+        // 2 秒后取消高亮
+        setTimeout(() => {
+          highlightCommentId.value = null;
+        }, 2000);
+      }
+    });
   } catch (currentError) {
+    // 移除乐观评论（失败时）
+    comments.value = comments.value.filter(c => c.id !== tempId);
+    optimisticCommentId.value = null;
     message.value = currentError instanceof Error ? currentError.message : 'Comment submission failed.';
   } finally {
     submitting.value = false;
@@ -177,14 +326,26 @@ onMounted(async () => {
 
           <label class="block">
             <span class="comment-label">Email</span>
-            <input
-              v-model="email"
-              class="comment-input"
-              autocomplete="email"
-              placeholder="you@example.com"
-              required
-              type="email"
-            >
+            <div class="flex items-center gap-2">
+              <input
+                v-model="email"
+                class="comment-input flex-1"
+                autocomplete="email"
+                placeholder="you@example.com"
+                required
+                type="email"
+              >
+              <img
+                v-if="gravatarUrl"
+                :src="gravatarUrl"
+                alt="Avatar preview"
+                class="gravatar-preview"
+              >
+              <div
+                v-else
+                class="gravatar-placeholder"
+              ></div>
+            </div>
           </label>
 
           <label class="block">
@@ -211,6 +372,8 @@ onMounted(async () => {
               maxlength="2000"
               placeholder="Share your thoughts..."
               required
+              @keydown="handleKeyDown"
+              @paste="handlePaste"
             ></textarea>
           </label>
 
@@ -249,15 +412,31 @@ onMounted(async () => {
       Comments are disabled for this article.
     </div>
 
-    <div v-if="loading" class="rounded-[6px] border border-[var(--blog-border)] bg-white/88 p-5 sm:p-6">
-      <div class="space-y-5">
-        <div v-for="item in 2" :key="item" class="flex gap-4">
-          <div class="h-11 w-11 shrink-0 animate-pulse rounded-full bg-[var(--blog-soft)]" />
+    <div v-if="loading" class="rounded-[6px] border border-[var(--blog-border)] bg-white/90 p-5 sm:p-6 overflow-hidden">
+      <div class="space-y-6">
+        <div v-for="item in 2" :key="item" class="flex gap-4 relative">
+          <!-- 闪光效果层 -->
+          <div class="absolute inset-0 -skeleton-shimmer"></div>
+          
+          <!-- 头像骨架 -->
+          <div class="h-11 w-11 shrink-0 rounded-full bg-[var(--blog-soft)]" />
+          
           <div class="min-w-0 flex-1 space-y-3">
-            <div class="h-4 w-32 animate-pulse rounded bg-[var(--blog-soft)]" />
+            <!-- 昵称和日期骨架 -->
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+              <div class="h-4 w-32 rounded bg-[var(--blog-soft)]" />
+              <!-- Meta chips 骨架 -->
+              <div class="flex gap-1.5">
+                <div class="h-5 w-20 rounded-full bg-[var(--blog-soft)]" />
+                <div class="h-5 w-16 rounded-full bg-[var(--blog-soft)]" />
+              </div>
+            </div>
+            
+            <!-- 内容骨架（匹配真实评论的行数和高度） -->
             <div class="space-y-2">
-              <div class="h-3 w-full animate-pulse rounded bg-[var(--blog-soft)]" />
-              <div class="h-3 w-2/3 animate-pulse rounded bg-[var(--blog-soft)]" />
+              <div class="h-3 w-full rounded bg-[var(--blog-soft)]" />
+              <div class="h-3 w-3/4 rounded bg-[var(--blog-soft)]" />
+              <div class="h-3 w-1/2 rounded bg-[var(--blog-soft)]" />
             </div>
           </div>
         </div>
@@ -272,13 +451,31 @@ onMounted(async () => {
 
     <div v-else-if="comments.length > 0">
       <TransitionGroup name="comment-fade" tag="div" class="space-y-4">
-        <CommentThread :key="'loaded'" :comments="comments" />
+        <div
+          v-for="comment in comments"
+          :key="comment.id"
+          :id="`comment-${comment.id}`"
+          :class="{ 'comment-highlight': highlightCommentId === comment.id }"
+          class="relative"
+        >
+          <div
+            v-if="comment.id === optimisticCommentId"
+            class="absolute -inset-1 rounded-[8px] border-2 border-dashed border-amber-300 bg-amber-50/50 px-2 py-1 text-xs text-amber-600"
+          >
+            Submitting...
+          </div>
+          <CommentThread :comments="[comment]" />
+        </div>
       </TransitionGroup>
     </div>
 
-    <div v-else class="rounded-[6px] border border-dashed border-[var(--blog-border-strong)] bg-white/70 p-8 text-center">
-      <p class="text-sm font-semibold text-[var(--blog-ink)]">No comments yet</p>
-      <p class="mt-2 text-sm text-[var(--blog-subtle)]">Be the first to leave one.</p>
+    <div v-else class="rounded-[6px] border border-dashed border-[var(--blog-border-strong)] bg-white/70 p-10 text-center">
+      <div class="mb-4 text-4xl opacity-40">💬</div>
+      <p class="text-base font-semibold text-[var(--blog-ink)]">暂无评论</p>
+      <p class="mt-2 text-sm leading-6 text-[var(--blog-subtle)]">
+        沙发还在，等一个有见地的评论<br>
+        <span class="text-xs opacity-60">写下你的想法，开始这段对话吧</span>
+      </p>
     </div>
   </section>
 </template>
@@ -297,13 +494,14 @@ onMounted(async () => {
   width: 100%;
   border: 1px solid var(--blog-border);
   border-radius: 6px;
-  background: #ffffff;
+  background: #f8fafc; /* 未聚焦：与背景融合 */
   color: var(--blog-ink);
   outline: none;
   transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background-color 0.18s ease;
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .comment-input {
@@ -323,7 +521,11 @@ onMounted(async () => {
 .comment-input:focus,
 .comment-textarea:focus {
   border-color: var(--blog-accent);
-  box-shadow: 0 0 0 4px rgba(177, 93, 50, 0.1);
+  background: #ffffff; /* 聚焦时变为纯白 */
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.08),
+    0 4px 12px -2px rgba(0, 0, 0, 0.06); /* 极轻的投影，像"浮"起来 */
+  transform: translateY(-1px); /* 微微上浮 */
 }
 
 .comment-input::placeholder,
@@ -360,5 +562,72 @@ onMounted(async () => {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Gravatar 预览头像 */
+.gravatar-preview {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 1px solid var(--blog-border);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* Gravatar 占位符（无预览时） */
+.gravatar-placeholder {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: var(--blog-soft);
+  flex-shrink: 0;
+}
+
+/* 评论高亮动画 */
+@keyframes highlight-fade {
+  0% {
+    background-color: rgba(250, 204, 21, 0.3);
+    box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.2);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.comment-highlight {
+  animation: highlight-fade 2s ease forwards;
+  border-radius: 8px;
+}
+
+/* 骨架屏闪光效果 (Shimmer Effect) */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.8s ease-in-out infinite;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* 骨架屏基础样式优化 */
+.animate-pulse {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
 }
 </style>

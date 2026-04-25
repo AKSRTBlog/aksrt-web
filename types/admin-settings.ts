@@ -118,6 +118,9 @@ export interface CommentModerationConfig {
   rateLimitGlobalWindowMinutes: number
   rateLimitGlobalEmailMax: number
   rateLimitGlobalIpMax: number
+  geoipEnabled: boolean
+  geoipProvider: string
+  geoipApiKeyConfigured: boolean
 }
 
 export interface AdminSiteSettings {

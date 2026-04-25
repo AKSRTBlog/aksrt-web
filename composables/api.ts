@@ -194,6 +194,7 @@ function mapComment(item: PublicCommentItem): BlogComment {
     avatarUrl: item.avatarUrl,
     content: item.content,
     ip: item.ip,
+    countryName: item.countryName,
     userAgent: item.userAgent,
     browserLabel: item.browserLabel || 'Unknown browser',
     osLabel: item.osLabel || 'Unknown OS',
