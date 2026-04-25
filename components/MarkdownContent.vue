@@ -51,7 +51,6 @@ function enhanceCodeBlocks() {
   if (import.meta.server || !props.copyCodeBlocks || !rootRef.value) {
     return;
   }
-
   enhanceMarkdownCodeBlocks(rootRef.value);
 }
 

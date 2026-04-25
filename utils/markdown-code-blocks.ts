@@ -11,12 +11,6 @@ const CHECK_ICON = `
   </svg>
 `;
 
-const ERROR_ICON = `
-  <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-    <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path>
-  </svg>
-`;
-
 const WRAP_ICON_ON = `
   <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
     <path d="M13.23 3.57a.75.75 0 0 1 0 1.06 1.06L4.56 14.36a.75.75 0 0 1-1.06-1.06zM2.75 5.5a.75.75 0 0 0-.75.75v1.5c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-4.5v-1.5a.75.75 0 0 0-.75-.75zm0 4a.75.75 0 0 0-.75.75v1.5c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-4.5v-1.5a.75.75 0 0 0-.75-.75z"></path>
@@ -30,113 +24,86 @@ const WRAP_ICON_OFF = `
 `;
 
 const LANG_DISPLAY_NAMES: Record<string, string> = {
-  abap: 'ABAP',
-  apex: 'Apex',
-  azcli: 'Azure CLI',
-  bat: 'Batch',
-  bicep: 'Bicep',
-  c: 'C',
-  clike: 'C-style',
-  clojure: 'Clojure',
-  coffeescript: 'CoffeeScript',
-  cpp: 'C++',
-  csharp: 'C#',
-  css: 'CSS',
-  dart: 'Dart',
-  dockerfile: 'Dockerfile',
-  ebnf: 'EBNF',
-  elixir: 'Elixir',
-  flow: 'Flow',
-  fs: 'F#',
-  go: 'Go',
-  graphql: 'GraphQL',
-  handlebars: 'Handlebars',
-  hcl: 'HCL',
-  html: 'HTML',
-  ini: 'INI',
-  java: 'Java',
-  javascript: 'JavaScript',
   js: 'JavaScript',
-  json: 'JSON',
-  jssm: 'JSSM',
-  jsx: 'JSX',
-  julia: 'Julia',
-  kotlin: 'Kotlin',
-  latex: 'LaTeX',
-  less: 'LESS',
-  lisp: 'Lisp',
-  lua: 'Lua',
-  m: 'M',
-  makefile: 'Makefile',
-  markdown: 'Markdown',
-  md: 'Markdown',
-  mermaid: 'Mermaid',
-  mizar: 'Mizar',
-  objective: 'Objective-C',
-  objectivec: 'Objective-C',
-  ocaml: 'OCaml',
-  pascal: 'Pascal',
-  perl: 'Perl',
-  php: 'PHP',
-  postiisscript: 'PostScript',
-  powerquery: 'Power Query',
-  powershell: 'PowerShell',
-  pug: 'Pug',
-  python: 'Python',
-  r: 'R',
-  razor: 'Razor',
-  redis: 'Redis',
-  redlock: 'Redlock',
-  rest: 'REST',
-  ruby: 'Ruby',
-  rust: 'Rust',
-  sb: 'SB',
-  scala: 'Scala',
-  scheme: 'Scheme',
-  scss: 'SCSS',
-  sh: 'Shell',
-  shell: 'Shell',
-  sql: 'SQL',
-  st: 'Structured Text',
-  swift: 'Swift',
-  systemverilog: 'SystemVerilog',
-  tcl: 'Tcl',
-  toml: 'TOML',
+  javascript: 'JavaScript',
   ts: 'TypeScript',
   typescript: 'TypeScript',
+  jsx: 'JSX',
   tsx: 'TSX',
-  vb: 'VB.NET',
-  xml: 'XML',
-  xquery: 'XQuery',
+  html: 'HTML',
+  css: 'CSS',
+  scss: 'SCSS',
+  less: 'LESS',
+  json: 'JSON',
+  md: 'Markdown',
+  markdown: 'Markdown',
+  py: 'Python',
+  python: 'Python',
+  java: 'Java',
+  c: 'C',
+  cpp: 'C++',
+  'c++': 'C++',
+  csharp: 'C#',
+  'c#': 'C#',
+  go: 'Go',
+  rust: 'Rust',
+  rs: 'Rust',
+  php: 'PHP',
+  ruby: 'Ruby',
+  rb: 'Ruby',
+  sql: 'SQL',
+  shell: 'Shell',
+  bash: 'Bash',
+  sh: 'Shell',
   yaml: 'YAML',
   yml: 'YAML',
+  xml: 'XML',
+  dockerfile: 'Dockerfile',
+  docker: 'Dockerfile',
+  git: 'Git',
+  diff: 'Diff',
+  lua: 'Lua',
+  r: 'R',
+  swift: 'Swift',
+  kotlin: 'Kotlin',
+  dart: 'Dart',
 };
 
-function getCodeBlockFileName(block: HTMLElement, code: HTMLElement): string | null {
-  const fromData = block.dataset.file ?? code.dataset.file ?? null;
-  if (fromData) return fromData;
-  const fromTitle = (block.title || code.title || '').trim();
-  return fromTitle || null;
+function getLanguageFromClass(className: string): string {
+  const match = className.match(/language-([\w+#]+)/i);
+  if (!match) return '';
+  const lang = match[1].toLowerCase();
+  return LANG_DISPLAY_NAMES[lang] || lang.toUpperCase();
 }
 
-function inferCodeBlockLanguage(code: HTMLElement): string {
-  const match = code.className.match(/language-([\w-]+)/i);
-  if (!match) return 'TEXT';
-  const raw = match[1].toLowerCase();
-  return LANG_DISPLAY_NAMES[raw] ?? raw.replace(/[-_]+/g, ' ').toUpperCase();
+function getFileName(block: HTMLElement, code: HTMLElement): string {
+  return block.dataset.file || code.dataset.file || block.title || code.title || '';
 }
 
-function countCodeLines(code: HTMLElement): number {
+function countLines(code: HTMLElement): number {
   const text = code.textContent || '';
-  if (!text.trim()) return 0;
-  return text.replace(/\n$/, '').split('\n').length;
+  return text ? text.replace(/\n$/, '').split('\n').length : 0;
 }
 
-function setButtonState(button: HTMLButtonElement, label: string, iconMarkup: string, state?: string) {
-  const labelElement = button.querySelector<HTMLElement>('.markdown-copy-button__label');
-  const iconElement = button.querySelector<HTMLElement>('.markdown-copy-button__icon');
-  if (labelElement) labelElement.textContent = label;
-  if (iconElement) iconElement.innerHTML = iconMarkup;
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  textarea.remove();
+  return Promise.resolve();
+}
+
+function setButtonState(button: HTMLButtonElement, label: string, icon: string, state?: string): void {
+  const labelEl = button.querySelector('.markdown-code-label');
+  const iconEl = button.querySelector('.markdown-code-icon');
+  if (labelEl) labelEl.textContent = label;
+  if (iconEl) iconEl.innerHTML = icon;
   if (state) {
     button.dataset.state = state;
   } else {
@@ -144,117 +111,100 @@ function setButtonState(button: HTMLButtonElement, label: string, iconMarkup: st
   }
 }
 
-async function copyTextToClipboard(text: string) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', 'true');
-  textarea.style.position = 'fixed';
-  textarea.style.opacity = '0';
-  textarea.style.pointerEvents = 'none';
-  document.body.appendChild(textarea);
-  textarea.select();
-  try { document.execCommand('copy'); }
-  finally { textarea.remove(); }
-}
+export function enhanceMarkdownCodeBlocks(container: HTMLElement): void {
+  if (!container || typeof document === 'undefined') return;
 
-export function enhanceMarkdownCodeBlocks(root: HTMLElement) {
-  const blocks = root.querySelectorAll<HTMLElement>('pre');
+  const preBlocks = container.querySelectorAll('pre');
+  if (preBlocks.length === 0) return;
 
-  for (const block of blocks) {
-    if (block.dataset.copyEnhanced === 'true') continue;
-    if (block.closest('.markdown-code-block')) {
-      block.dataset.copyEnhanced = 'true';
-      continue;
+  preBlocks.forEach((pre) => {
+    const preEl = pre as HTMLElement;
+
+    if (preEl.dataset.enhanced === 'true') return;
+    if (preEl.closest('.markdown-code-wrapper')) {
+      preEl.dataset.enhanced = 'true';
+      return;
     }
 
-    const code = block.querySelector<HTMLElement>('code');
-    if (!code) continue;
+    const code = preEl.querySelector('code');
+    if (!code) return;
+
+    preEl.dataset.enhanced = 'true';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'markdown-code-wrapper';
 
     const toolbar = document.createElement('div');
     toolbar.className = 'markdown-code-toolbar';
 
-    /* ---- left: dots + file name / language + lines ---- */
-    const meta = document.createElement('div');
-    meta.className = 'markdown-code-meta';
+    const info = document.createElement('div');
+    info.className = 'markdown-code-info';
 
-    const dots = document.createElement('span');
-    dots.className = 'markdown-code-dots';
-    dots.setAttribute('aria-hidden', 'true');
-
-    const fileName = getCodeBlockFileName(block, code);
+    const fileName = getFileName(preEl, code);
     if (fileName) {
       const fileTag = document.createElement('span');
       fileTag.className = 'markdown-code-filename';
       fileTag.textContent = fileName;
-      meta.append(dots, fileTag);
+      info.appendChild(fileTag);
     } else {
-      const language = document.createElement('span');
-      language.className = 'markdown-code-language';
-      language.textContent = inferCodeBlockLanguage(code);
-      meta.append(dots, language);
+      const lang = getLanguageFromClass(code.className);
+      if (lang) {
+        const langTag = document.createElement('span');
+        langTag.className = 'markdown-code-lang';
+        langTag.textContent = lang;
+        info.appendChild(langTag);
+      }
     }
 
-    const lineCount = countCodeLines(code);
-    const lines = document.createElement('span');
-    lines.className = 'markdown-code-lines';
-    lines.textContent = lineCount <= 1 ? '1 line' : `${lineCount} lines`;
-    meta.appendChild(lines);
+    const lineCount = countLines(code as HTMLElement);
+    const linesTag = document.createElement('span');
+    linesTag.className = 'markdown-code-lines';
+    linesTag.textContent = `${lineCount} 行`;
+    info.appendChild(linesTag);
 
-    /* ---- right: wrap toggle + copy ---- */
     const actions = document.createElement('div');
     actions.className = 'markdown-code-actions';
 
+    let isWrapped = false;
     const wrapBtn = document.createElement('button');
     wrapBtn.type = 'button';
-    wrapBtn.className = 'markdown-wrap-button';
-    wrapBtn.setAttribute('aria-label', 'Toggle line wrapping');
-    wrapBtn.innerHTML = `
-      <span class="markdown-wrap-button__icon">${WRAP_ICON_OFF}</span>
-      <span class="markdown-wrap-button__label">Wrap</span>
-    `;
-
-    let isWrapped = false;
+    wrapBtn.className = 'markdown-code-btn markdown-code-wrap';
+    wrapBtn.title = '切换换行';
+    wrapBtn.innerHTML = `<span class="markdown-code-icon">${WRAP_ICON_OFF}</span>`;
     wrapBtn.addEventListener('click', () => {
       isWrapped = !isWrapped;
-      block.style.whiteSpace = isWrapped ? 'pre-wrap' : 'pre';
-      block.style.overflowX = isWrapped ? 'hidden' : 'auto';
-      const iconEl = wrapBtn.querySelector('.markdown-wrap-button__icon');
+      preEl.style.whiteSpace = isWrapped ? 'pre-wrap' : 'pre';
+      preEl.style.overflowX = isWrapped ? 'hidden' : 'auto';
+      const iconEl = wrapBtn.querySelector('.markdown-code-icon');
       if (iconEl) iconEl.innerHTML = isWrapped ? WRAP_ICON_ON : WRAP_ICON_OFF;
       wrapBtn.dataset.active = isWrapped ? 'true' : '';
     });
 
     const copyBtn = document.createElement('button');
     copyBtn.type = 'button';
-    copyBtn.className = 'markdown-copy-button';
-    copyBtn.setAttribute('aria-label', 'Copy code');
-    copyBtn.innerHTML = `
-      <span class="markdown-copy-button__icon">${COPY_ICON}</span>
-      <span class="markdown-copy-button__label">Copy</span>
-    `;
-
+    copyBtn.className = 'markdown-code-btn markdown-code-copy';
+    copyBtn.title = '复制代码';
+    copyBtn.innerHTML = `<span class="markdown-code-icon">${COPY_ICON}</span><span class="markdown-code-label">复制</span>`;
     copyBtn.addEventListener('click', async () => {
       try {
-        await copyTextToClipboard(code.textContent || '');
-        setButtonState(copyBtn, 'Copied!', CHECK_ICON, 'success');
-        copyBtn.classList.add('markdown-copy-button--pop');
-        setTimeout(() => copyBtn.classList.remove('markdown-copy-button--pop'), 400);
+        await copyToClipboard(code.textContent || '');
+        setButtonState(copyBtn, '已复制', CHECK_ICON, 'success');
+        copyBtn.classList.add('markdown-code-copied');
+        setTimeout(() => copyBtn.classList.remove('markdown-code-copied'), 400);
       } catch {
-        setButtonState(copyBtn, 'Failed', ERROR_ICON, 'error');
+        setButtonState(copyBtn, '失败', WRAP_ICON_ON, 'error');
       }
-      setTimeout(() => setButtonState(copyBtn, 'Copy', COPY_ICON), 1500);
+      setTimeout(() => setButtonState(copyBtn, '复制', COPY_ICON), 1500);
     });
 
-    actions.append(wrapBtn, copyBtn);
-    toolbar.append(meta, actions);
+    actions.appendChild(wrapBtn);
+    actions.appendChild(copyBtn);
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'markdown-code-block';
-    block.parentNode?.insertBefore(wrapper, block);
-    wrapper.append(toolbar, block);
-    block.dataset.copyEnhanced = 'true';
-  }
+    toolbar.appendChild(info);
+    toolbar.appendChild(actions);
+
+    preEl.parentNode?.insertBefore(wrapper, preEl);
+    wrapper.appendChild(toolbar);
+    wrapper.appendChild(preEl);
+  });
 }
