@@ -26,6 +26,21 @@ const comments = ref<BlogComment[]>([]);
 const loading = ref(true);
 const error = ref('');
 
+// 回复相关状态
+const replyTo = ref<string | null>(null);
+const replyToComment = computed(() => {
+  if (!replyTo.value) return null;
+  const find = (list: BlogComment[]): BlogComment | null => {
+    for (const c of list) {
+      if (c.id === replyTo.value) return c;
+      const found = find(c.replies);
+      if (found) return found;
+    }
+    return null;
+  };
+  return find(comments.value);
+});
+
 // ========== 1. 快捷键提交 (Ctrl/Cmd + Enter) ==========
 function handleKeyDown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -134,6 +149,19 @@ const messageTone = computed(() => {
   return 'neutral';
 });
 
+function handleReply(commentId: string) {
+  replyTo.value = commentId;
+  // 滚动到评论表单
+  nextTick(() => {
+    const form = document.querySelector('.blog-panel');
+    form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+function cancelReply() {
+  replyTo.value = null;
+}
+
 async function loadComments() {
   loading.value = true;
   error.value = '';
@@ -181,7 +209,7 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
   const tempId = `temp-${Date.now()}`;
   const optimistic: BlogComment = {
     id: tempId,
-    parentId: null,
+    parentId: replyTo.value,
     articleSlug: props.articleSlug,
     nickname: savedNickname,
     emailHash: '',
@@ -208,14 +236,15 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
   content.value = '';
   clearDraft();
 
-  try {
-    const result = await submitPublicComment(props.articleSlug, {
-      nickname: savedNickname,
-      email: savedEmail,
-      website: savedWebsite,
-      content: savedContent,
-      captcha,
-    });
+    try {
+      const result = await submitPublicComment(props.articleSlug, {
+        nickname: savedNickname,
+        email: savedEmail,
+        website: savedWebsite,
+        content: savedContent,
+        parentId: replyTo.value ?? undefined,
+        captcha,
+      });
 
     // 移除乐观评论
     comments.value = comments.value.filter(c => c.id !== tempId);
@@ -311,7 +340,15 @@ onMounted(async () => {
 
     <div v-if="allowComment" class="blog-panel overflow-hidden rounded-[6px]">
       <div class="border-b border-[var(--blog-border)] bg-white px-5 py-4 sm:px-6">
-        <h3 class="text-base font-semibold text-[var(--blog-ink)]">Leave a comment</h3>
+        <h3 class="text-base font-semibold text-[var(--blog-ink)]">
+          {{ replyToComment ? `Reply to ${replyToComment.nickname}` : 'Leave a comment' }}
+        </h3>
+      </div>
+
+      <!-- 回复提示条 -->
+      <div v-if="replyToComment" class="flex items-center justify-between border-b border-[var(--blog-border)] bg-[var(--blog-soft)] px-5 py-2 text-sm text-[var(--blog-muted)]">
+        <span>Replying to <strong>{{ replyToComment.nickname }}</strong></span>
+        <button type="button" class="hover:text-[var(--blog-ink)]" @click="cancelReply">Cancel reply</button>
       </div>
 
       <form class="grid gap-0 lg:grid-cols-[0.9fr_1.3fr]" @submit.prevent="handleSubmit">
@@ -467,7 +504,7 @@ onMounted(async () => {
           >
             Submitting...
           </div>
-          <CommentThread :comments="[comment]" />
+          <CommentThread :comments="[comment]" @reply="handleReply" />
         </div>
       </TransitionGroup>
     </div>

@@ -33,7 +33,10 @@ const browserText = computed(() => {
 
 const countryText = computed(() => props.countryName?.trim() || '');
 
+// 只在客户端渲染浏览器图标（避免 SSR 加载问题）
+const isClient = process.client;
 const browserIconName = computed(() => {
+  if (!isClient.value) return null;
   const label = (props.browserLabel || '').toLowerCase();
   if (label.includes('brave')) return 'logos:brave';
   if (label.includes('edge')) return 'logos:microsoft-edge';
