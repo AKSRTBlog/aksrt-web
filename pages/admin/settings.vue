@@ -1001,7 +1001,7 @@ onMounted(async () => {
                   <button
                     type="button"
                     class="admin-button-secondary whitespace-nowrap"
-                    :disabled="testingAi || !moderationForm.aiApiKey || !moderationForm.aiEnabled"
+                    :disabled="testingAi || !moderationForm.aiApiKey"
                     @click="testAiConnection"
                   >
                     {{ testingAi ? '测试中...' : '测试连接' }}
