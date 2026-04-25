@@ -126,32 +126,95 @@ function getCategoryIconClass(score: number | undefined) {
   return 'bg-rose-100 text-rose-700'
 }
 
-function getCategoryEmoji(category: string | undefined): string {
-  if (!category) return '?'
+// AI 分类 Emoji 图标
+const CATEGORY_ICON_MAP: Record<string, string> = {
+  sexual_violence: '🛡️',
+  child_sexual_abuse: '👥',
+  self_harm: '💔',
+  harassment: '💬',
+  'harassment/threatening': '⚠️',
+  hate: '🚫',
+  'hate/threatening': '🔥',
+  violence: '🔒',
+  'violence/graphic': '⚡',
+  sexual: '🔔',
+  'sexual/minors': '🚨',
+  spam: '📦',
+  fairness: '🧭',
+  medical: '📈',
+  illicit: '🛡️',
+  'illicit/violent': '💣',
+  'illicit/violent/physical': '⚡',
+  'illicit/child': '🛑',
+  'self-harm/instructions': '📋',
+  'self-harm/intent': '😔',
+}
 
-  const catMap: Record<string, string> = {
-    sexual_violence: '\u{1F6AB}',
-    child_sexual_abuse: '\u{1F4BD}',
-    self_harm: '\u{1F64F}',
-    harassment: '\u{1F4E2}',
-    'harassment/threatening': '\u26A0\uFE0F',
-    hate: '\u{1F534}',
-    'hate/threatening': '\u{1F525}',
-    violence: '\u{1F52B}',
-    'violence/graphic': '\uD83D\uDCA5',
-    sexual: '\u{1F51E}',
-    'sexual/minors': '\u{1F6A8}',
-    spam: '\u{1F4E6}',
-    fairness: '\u2696\uFE0F',
-    medical: '\u2695\uFE0F',
+const DEFAULT_CATEGORY_ICON = '🔍'
+
+function getCategoryEmoji(category: string | undefined): string {
+  if (!category) return DEFAULT_CATEGORY_ICON
+
+  const lowerCat = category.toLowerCase()
+
+  // Exact match
+  if (CATEGORY_ICON_MAP[lowerCat] || CATEGORY_ICON_MAP[category]) return CATEGORY_ICON_MAP[lowerCat] || CATEGORY_ICON_MAP[category]
+
+  // Partial match
+  for (const [key, emoji] of Object.entries(CATEGORY_ICON_MAP)) {
+    if (lowerCat.includes(key.toLowerCase()) || lowerCat.includes(key.replace(/\//g, ''))) {
+      return emoji
+    }
   }
 
-  // Try exact match first
-  if (catMap[category]) return catMap[category]
+  // Keyword fallback
+  if (/illicit|非法/.test(lowerCat)) return CATEGORY_ICON_MAP.illicit
+  if (/self.harm|自残/.test(lowerCat)) return CATEGORY_ICON_MAP.self_harm
+  if (/sexual|色情/.test(lowerCat)) return CATEGORY_ICON_MAP.sexual
+  if (/violent|暴力/.test(lowerCat)) return CATEGORY_ICON_MAP.violence
+  if (/child|未成年|儿童/.test(lowerCat)) return CATEGORY_ICON_MAP['sexual/minors']
+  if (/spam|垃圾|广告/.test(lowerCat)) return CATEGORY_ICON_MAP.spam
+  if (/hate|仇恨/.test(lowerCat)) return CATEGORY_ICON_MAP.hate
+  if (/harass|骚扰/.test(lowerCat)) return CATEGORY_ICON_MAP.harassment
 
-  // Try partial match
-  const key = Object.keys(catMap).find(k => category.toLowerCase().includes(k))
-  return key ? catMap[key] : '\U0001F50D'
+  return DEFAULT_CATEGORY_ICON
+}
+
+// AI 分类名称中文翻译
+const CATEGORY_LABEL_MAP: Record<string, string> = {
+  sexual_violence: '性暴力',
+  child_sexual_abuse: '儿童性虐待',
+  self_harm: '自残行为',
+  harassment: '骚扰言论',
+  'harassment/threatening': '威胁性骚扰',
+  hate: '仇恨言论',
+  'hate/threatening': '威胁性仇恨',
+  violence: '暴力内容',
+  'violence/graphic': '血腥暴力画面',
+  sexual: '色情内容',
+  'sexual/minors': '未成年人色情',
+  spam: '垃圾信息',
+  fairness: '公平性问题',
+  medical: '医疗健康相关',
+  illicit: '非法内容',
+  'illicit/violent': '非法暴力',
+  'illicit/violent/physical': '非法肢体暴力',
+  'illicit/child': '非法涉及儿童',
+  'self-harm/instructions': '自残指导',
+  'self-harm/intent': '自残倾向',
+}
+
+function getCategoryLabel(category: string): string {
+  const label = CATEGORY_LABEL_MAP[category] || CATEGORY_LABEL_MAP[category.toLowerCase()]
+  if (label) return label
+
+  for (const [key, translated] of Object.entries(CATEGORY_LABEL_MAP)) {
+    if (category.toLowerCase().includes(key.replace(/\//g, '').toLowerCase())) {
+      return translated
+    }
+  }
+
+  return category
 }
 
 async function handleApprove(comment: typeof selectedComment.value) {
@@ -465,7 +528,7 @@ async function handleDelete(comment: typeof selectedComment.value) {
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                   <!-- Category Icon/Indicator -->
                   <span
-                    class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                    class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-base"
                     :class="getCategoryIconClass(cat.score)"
                   >
                     {{ getCategoryEmoji(cat.category) }}
@@ -474,7 +537,7 @@ async function handleDelete(comment: typeof selectedComment.value) {
                   <!-- Category Info -->
                   <div class="min-w-0 flex-1">
                     <p class="text-sm font-semibold text-slate-800 truncate">
-                      {{ cat.label || cat.category }}
+                      {{ getCategoryLabel(cat.category) }}
                     </p>
                     <p class="text-xs text-slate-500 truncate">
                       原始分值: {{ (cat.score * 100).toFixed(1) }}% | 权重: {{ cat.weight.toFixed(1) }}x
