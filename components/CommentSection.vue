@@ -41,6 +41,9 @@ const replyToComment = computed(() => {
   return find(comments.value);
 });
 
+// 留言表单引用（用于滚动定位）
+const commentFormRef = ref<HTMLElement | null>(null);
+
 // ========== 1. 快捷键提交 (Ctrl/Cmd + Enter) ==========
 function handleKeyDown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -151,10 +154,12 @@ const messageTone = computed(() => {
 
 function handleReply(commentId: string) {
   replyTo.value = commentId;
-  // 滚动到评论表单
+  // 滚动到评论表单（使用 ref 精确定位）
   nextTick(() => {
-    const form = document.querySelector('.blog-panel');
-    form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    commentFormRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 聚焦到内容输入框
+    const textarea = commentFormRef.value?.querySelector('textarea');
+    textarea?.focus();
   });
 }
 
@@ -225,16 +230,32 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
     replies: [],
   };
 
-  // 立即添加到列表顶部
+  // 立即添加到正确的位置（回复时插入父评论的 replies，否则插顶部）
   optimisticCommentId.value = tempId;
-  comments.value = [optimistic, ...comments.value];
+  if (replyTo.value) {
+    // 找到父评论，把回复插入其 replies 数组
+    const insertReply = (list: BlogComment[]): boolean => {
+      for (const c of list) {
+        if (c.id === replyTo.value) {
+          c.replies.push(optimistic);
+          return true;
+        }
+        if (insertReply(c.replies)) return true;
+      }
+      return false;
+    };
+    insertReply(comments.value);
+  } else {
+    comments.value = [optimistic, ...comments.value];
+  }
 
-  // 立即清除表单并清除草稿
-  nickname.value = '';
-  email.value = '';
-  website.value = '';
-  content.value = '';
-  clearDraft();
+    // 立即清除表单并清除草稿
+    nickname.value = '';
+    email.value = '';
+    website.value = '';
+    content.value = '';
+    clearDraft();
+    replyTo.value = null; // 重置回复状态
 
     try {
       const result = await submitPublicComment(props.articleSlug, {
@@ -246,8 +267,13 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
         captcha,
       });
 
-    // 移除乐观评论
-    comments.value = comments.value.filter(c => c.id !== tempId);
+    // 移除乐观评论（从正确的位置）
+    const removeOptimistic = (list: BlogComment[]): BlogComment[] =>
+      list.filter(c => c.id !== tempId).map(c => ({
+        ...c,
+        replies: removeOptimistic(c.replies),
+      }));
+    comments.value = removeOptimistic(comments.value);
     optimisticCommentId.value = null;
 
     // 重新加载评论列表
@@ -286,8 +312,13 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
       }
     });
   } catch (currentError) {
-    // 移除乐观评论（失败时）
-    comments.value = comments.value.filter(c => c.id !== tempId);
+    // 移除乐观评论（失败时，从正确的位置）
+    const removeOptimistic = (list: BlogComment[]): BlogComment[] =>
+      list.filter(c => c.id !== tempId).map(c => ({
+        ...c,
+        replies: removeOptimistic(c.replies),
+      }));
+    comments.value = removeOptimistic(comments.value);
     optimisticCommentId.value = null;
     message.value = currentError instanceof Error ? currentError.message : 'Comment submission failed.';
   } finally {
@@ -338,7 +369,7 @@ onMounted(async () => {
       </span>
     </div>
 
-    <div v-if="allowComment" class="blog-panel overflow-hidden rounded-[6px]">
+    <div v-if="allowComment" ref="commentFormRef" class="blog-panel overflow-hidden rounded-[6px]">
       <div class="border-b border-[var(--blog-border)] bg-white px-5 py-4 sm:px-6">
         <h3 class="text-base font-semibold text-[var(--blog-ink)]">
           {{ replyToComment ? `Reply to ${replyToComment.nickname}` : 'Leave a comment' }}
