@@ -74,18 +74,78 @@ function emitValue(value: string) {
   emit('update:modelValue', value);
 }
 
+/** 待恢复的滚动位置（用于防止 focus() 导致页面跳动） */
+let pendingScrollRestore: { x: number; y: number; container: HTMLElement | null; scrollTop: number } | null = null;
+
 /**
- * 同步设置 textarea 的值和光标位置。
- * 关键点：直接修改 DOM .value 属性是同步的，
- * 不需要等待 v-model / Vue 的异步渲染周期，
- * 所以 setSelectionRange 能立即工作。
+ * 同步设置 textarea 的值和光标位置，同时保持页面不跳动。
+ *
+ * 实现策略：
+ *   1. 直接修改 DOM .value（同步生效，立即可设光标）
+ *   2. 用 requestAnimationFrame 恢复滚动位置（抵消 focus() 的副作用）
+ *   3. 用 nextTick + rAF 二次校验（防 v-model 回写覆盖光标）
  */
 function syncSetTextarea(value: string, selStart: number, selEnd: number) {
   const ta = textareaRef.value;
   if (!ta) return;
+
+  // ── 保存滚动位置 ──
+  const winScrollX = window.scrollX;
+  const winScrollY = window.scrollY;
+  let containerScrollTop = 0;
+  const scrollContainer = findScrollableAncestor(ta);
+  if (scrollContainer && scrollContainer !== document.body && scrollContainer !== document.documentElement) {
+    containerScrollTop = scrollContainer.scrollTop;
+  }
+  pendingScrollRestore = { x: winScrollX, y: winScrollY, container: scrollContainer, scrollTop: containerScrollTop };
+
+  // ── 同步操作 DOM ──
   ta.value = value;
   ta.focus();
   ta.setSelectionRange(selStart, selEnd);
+
+  // ── 恢复滚动（rAF 确保在浏览器布局之后）──
+  restoreScrollPosition();
+
+  // ── 防御 v-model 覆盖：Vue 下一 tick 可能重写 .value，需重新设光标 ──
+  nextTick(() => {
+    if (!textareaRef.value) return;
+    // 如果 v-model 回写的值和我们预期的一致，只需确认光标还在
+    if (textareaRef.value.value === value) {
+      // 值没变，但某些情况下 setSelectionRange 会被清零，重新设一次
+      const { selectionStart: ss, selectionEnd: se } = textareaRef.value;
+      if (ss !== selStart || se !== selEnd) {
+        textareaRef.value.setSelectionRange(selStart, selEnd);
+      }
+      restoreScrollPosition();
+    }
+    // 如果值被 watcher/middleware 变换了（极少见），这里不强制覆盖，
+    // 因为那说明父组件有业务逻辑需要不同值，强行改回会导致数据不一致
+  });
+}
+
+/** 执行挂起的滚动恢复 */
+function restoreScrollPosition() {
+  if (!pendingScrollRestore) return;
+  const { x, y, container, scrollTop } = pendingScrollRestore;
+  requestAnimationFrame(() => {
+    if (container && container !== document.body && container !== document.documentElement) {
+      container.scrollTop = scrollTop;
+    }
+    window.scrollTo(x, y);
+    // 二次确认（部分浏览器/WebView 需要）
+    requestAnimationFrame(() => window.scrollTo(x, y));
+  });
+  pendingScrollRestore = null;
+}
+
+/** 查找 textarea 最近的可滚动祖先容器 */
+function findScrollableAncestor(el: HTMLElement | null): HTMLElement | null {
+  while (el && el !== document.body) {
+    if (el.scrollHeight > el.clientHeight) return el;
+    el = el.parentElement;
+  }
+  return null;
 }
 
 function applyInsertion(

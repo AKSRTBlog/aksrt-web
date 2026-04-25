@@ -120,10 +120,6 @@ const browserIconFile = computed(() => {
   width: 0.9rem;
   height: 0.9rem;
   flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem; /* emoji 大小 */
 }
 
 .comment-meta-icon img {

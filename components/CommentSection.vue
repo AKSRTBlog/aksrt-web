@@ -255,17 +255,22 @@ async function performSubmit(captcha?: AdminCaptchaResult) {
     website.value = '';
     content.value = '';
     clearDraft();
-    replyTo.value = null; // 重置回复状态
+    // 注意：不要在这里清空 replyTo，API 调用还需要用它传 parentId
 
     try {
+      // 在调用前保存 parentId（因为下面会清空 replyTo）
+      const currentParentId = replyTo.value;
       const result = await submitPublicComment(props.articleSlug, {
         nickname: savedNickname,
         email: savedEmail,
         website: savedWebsite,
         content: savedContent,
-        parentId: replyTo.value ?? undefined,
+        parentId: currentParentId ?? undefined,
         captcha,
       });
+
+      // 提交成功后才重置回复状态
+      replyTo.value = null;
 
     // 移除乐观评论（从正确的位置）
     const removeOptimistic = (list: BlogComment[]): BlogComment[] =>
