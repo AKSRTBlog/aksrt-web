@@ -216,15 +216,15 @@ async function handleReject(comment: AdminCommentItem | null) {
             {{ allVisibleSelected ? '取消本页全选' : '本页全选' }}
           </button>
           <button class="admin-button-primary min-h-11" :disabled="loading || selectedCount === 0 || busyId === 'bulk'" type="button" @click="runBulkAction('approved')">
-            <Icon name="fa6-solid-check" class="h-4 w-4" />
+            <img src="/img/icons/check-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
             批量通过
           </button>
           <button class="admin-button-secondary min-h-11" :disabled="loading || selectedCount === 0 || busyId === 'bulk'" type="button" @click="runBulkAction('rejected')">
-            <Icon name="fa6-solid-xmark" class="h-4 w-4" />
+            <img src="/img/icons/xmark-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
             批量驳回
           </button>
           <button class="admin-button-danger min-h-11" :disabled="loading || selectedCount === 0 || busyId === 'bulk'" type="button" @click="runBulkAction('delete')">
-            <Icon name="fa6-solid-trash" class="h-4 w-4" />
+            <img src="/img/icons/trash-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
             批量删除
           </button>
         </div>
@@ -300,15 +300,15 @@ async function handleReject(comment: AdminCommentItem | null) {
 
           <div class="flex flex-wrap items-center gap-2 lg:flex-col lg:items-stretch lg:justify-center">
             <button class="admin-button-secondary min-h-11" type="button" @click="openReview(comment)">
-              <Icon name="fa6-solid-magnifying-glass" class="h-4 w-4" />
+              <img src="/img/icons/magnifying-glass-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
               审核
             </button>
             <button class="admin-button-danger min-h-11" :disabled="busyId === comment.id || busyId === 'bulk'" type="button" @click="handleReject(comment)">
-              <Icon name="fa6-solid-xmark" class="h-4 w-4" />
+              <img src="/img/icons/xmark-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
               驳回
             </button>
             <button class="admin-button-primary min-h-11" :disabled="busyId === comment.id || busyId === 'bulk'" type="button" @click="handleApprove(comment)">
-              <Icon name="fa6-solid-check" class="h-4 w-4" />
+              <img src="/img/icons/check-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
               通过
             </button>
           </div>
@@ -337,7 +337,7 @@ async function handleReject(comment: AdminCommentItem | null) {
               </p>
             </div>
             <button class="admin-button-secondary h-10 w-10 flex-none p-0" type="button" aria-label="关闭弹窗" @click="closeReview">
-              <Icon name="fa6-solid-xmark" class="h-4 w-4" />
+              <img src="/img/icons/circle-xmark-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
             </button>
           </header>
 
@@ -419,7 +419,7 @@ async function handleReject(comment: AdminCommentItem | null) {
                 :disabled="!reviewCommentItem.moderationAiCategories?.length"
                 @click="categoryDetailOpen = true"
               >
-                <Icon name="fa6-solid-list" class="h-4 w-4" />
+                <img src="/img/icons/list-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
                 查看分类详情
               </button>
             </div>
@@ -427,11 +427,11 @@ async function handleReject(comment: AdminCommentItem | null) {
 
           <footer class="grid gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:grid-cols-3">
             <button class="admin-button-primary min-h-11" :disabled="busyId === reviewCommentItem.id || busyId === 'bulk'" type="button" @click="handleApprove(reviewCommentItem)">
-              <Icon name="fa6-solid-check" class="h-4 w-4" />
+              <img src="/img/icons/check-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
               通过
             </button>
             <button class="admin-button-danger min-h-11" :disabled="busyId === reviewCommentItem.id || busyId === 'bulk'" type="button" @click="handleReject(reviewCommentItem)">
-              <Icon name="fa6-solid-xmark" class="h-4 w-4" />
+              <img src="/img/icons/xmark-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
               驳回
             </button>
             <button class="admin-button-secondary min-h-11" type="button" @click="closeReview">
@@ -448,7 +448,7 @@ async function handleReject(comment: AdminCommentItem | null) {
               AI 分类详情
             </p>
             <button class="admin-button-secondary h-10 w-10 p-0" type="button" aria-label="关闭分类详情" @click="categoryDetailOpen = false">
-              <Icon name="fa6-solid-xmark" class="h-4 w-4" />
+              <img src="/img/icons/circle-xmark-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
             </button>
           </header>
 
