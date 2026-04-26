@@ -13,37 +13,6 @@ import { useAdminSession } from '~/composables/useAdminSession'
 const route = useRoute()
 const mobileOpen = ref(false)
 
-/**
- * 锁定 body 滚动（防止弹窗打开时侧栏位置偏移）
- * 使用 padding-right 补偿滚动条宽度避免布局抖动
- */
-function lockBodyScroll() {
-  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-  document.body.style.overflow = 'hidden'
-  if (scrollbarWidth > 0) {
-    document.body.style.paddingRight = `${scrollbarWidth}px`
-  }
-}
-
-/** 解除 body 滚动锁定 */
-function unlockBodyScroll() {
-  document.body.style.overflow = ''
-  document.body.style.paddingRight = ''
-}
-
-// 监听所有 admin-modal-overlay 的显示/隐藏
-watchEffect(() => {
-  // 检查页面上是否存在可见的模态框
-  nextTick(() => {
-    const hasModal = !!document.querySelector('.admin-modal-overlay')
-    if (hasModal) {
-      lockBodyScroll()
-    } else {
-      unlockBodyScroll()
-    }
-  })
-})
-
 const { hydrateSession, profile, logout, refreshProfile } = useAdminSession()
 
 const currentTitle = computed(() => getAdminRouteTitle(route.path))
@@ -92,9 +61,9 @@ useHead({
   <div class="min-h-screen bg-[var(--admin-bg)] text-slate-900">
     <div class="flex min-h-screen items-start">
       <aside
-        class="admin-sidebar-crisp relative z-30 hidden min-h-screen w-[244px] shrink-0 self-stretch bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 lg:block"
+        class="admin-sidebar-crisp fixed inset-y-0 left-0 z-30 hidden w-[244px] bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 lg:block"
       >
-        <div class="sticky top-0 flex h-screen flex-col overflow-hidden">
+        <div class="flex h-full flex-col overflow-hidden">
         <div class="border-b border-white/15 px-3 py-3">
           <div class="flex items-center gap-2.5">
             <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500 text-sm font-bold text-white">
@@ -237,7 +206,7 @@ useHead({
         </aside>
       </div>
 
-      <div class="relative z-0 min-w-0 flex flex-1 flex-col overflow-hidden">
+      <div class="relative z-0 min-w-0 ml-[244px] flex flex-1 flex-col overflow-hidden">
         <header class="sticky top-0 z-20 border-b border-[var(--admin-border)] bg-white/90 backdrop-blur">
           <div class="flex h-16 items-center justify-between px-4 sm:px-6">
             <div class="flex items-center gap-3">
