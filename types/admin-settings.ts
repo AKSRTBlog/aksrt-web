@@ -10,6 +10,7 @@ export interface NavigationItem {
   id: string
   label: string
   href: string
+  iconUrl?: string | null
   sortOrder: number
   enabled: boolean
 }

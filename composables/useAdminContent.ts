@@ -73,6 +73,7 @@ export function useAdminContent() {
         : `nav-${Date.now()}`,
       label: '',
       href: '',
+      iconUrl: null,
       sortOrder: 0,
       enabled: true,
     }
@@ -126,7 +127,7 @@ export function useAdminContent() {
           id: item.id,
           label: item.label.trim(),
           href: item.href.trim(),
-          iconUrl: item.iconUrl ?? null,
+          iconUrl: item.iconUrl?.trim() ? item.iconUrl.trim() : null,
           sortOrder: index,
           enabled: item.enabled,
         }))

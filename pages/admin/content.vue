@@ -37,6 +37,20 @@ const {
 type Tab = 'navigation' | 'categories' | 'tags'
 const activeTab = ref<Tab>('navigation')
 
+const fontAwesomeIconOptions = [
+  'fa6-solid:house',
+  'fa6-solid:newspaper',
+  'fa6-solid:box-archive',
+  'fa6-solid:magnifying-glass',
+  'fa6-solid:folder-open',
+  'fa6-solid:tags',
+  'fa6-solid:user',
+  'fa6-solid:link',
+  'fa6-regular:file-lines',
+  'fa6-regular:heart',
+  'fa6-brands:github',
+]
+
 // 快速添加表单
 const newCategory = ref({
   name: '',
@@ -116,6 +130,10 @@ function handleTagNameChange() {
     <div v-if="successMessage" class="rounded-[4px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
       {{ successMessage }}
     </div>
+
+    <datalist id="font-awesome-navigation-icons">
+      <option v-for="iconName in fontAwesomeIconOptions" :key="iconName" :value="iconName" />
+    </datalist>
 
     <!-- 加载状态 -->
     <div v-if="loading" class="admin-card p-6 text-center text-sm text-slate-500">
@@ -238,7 +256,7 @@ function handleTagNameChange() {
                 </div>
 
                 <!-- 表单字段 -->
-                <div class="grid flex-1 gap-3 md:grid-cols-[1fr_1.5fr_auto]">
+                <div class="grid flex-1 gap-3 md:grid-cols-[1fr_1.3fr_1fr_auto]">
                   <input
                     v-model="item.label"
                     class="admin-input"
@@ -249,6 +267,21 @@ function handleTagNameChange() {
                     class="admin-input"
                     placeholder="链接地址（如：/articles）"
                   >
+                  <div class="relative">
+                    <input
+                      v-model="item.iconUrl"
+                      class="admin-input pr-10"
+                      list="font-awesome-navigation-icons"
+                      placeholder="FA6 图标，如 fa6-solid:house"
+                    >
+                    <span
+                      v-if="item.iconUrl?.startsWith('fa6-')"
+                      class="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 text-slate-500"
+                      aria-hidden="true"
+                    >
+                      <Icon :name="item.iconUrl" class="h-4 w-4" />
+                    </span>
+                  </div>
                   <div class="flex items-center gap-3">
                     <!-- 启用开关 -->
                     <button

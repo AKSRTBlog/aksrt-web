@@ -9,6 +9,11 @@ const props = defineProps<{
 const navigationItems = computed(() =>
   (props.siteSettings?.navigationItems ?? []).filter((item) => item.enabled),
 );
+
+function resolveNavigationIcon(iconName?: string | null) {
+  const value = iconName?.trim();
+  return value && value.startsWith('fa6-') ? value : '';
+}
 </script>
 
 <template>
@@ -52,7 +57,16 @@ const navigationItems = computed(() =>
               :to="item.href"
               class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-[var(--blog-muted)] transition hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
             >
-              <span>{{ item.label }}</span>
+              <span class="flex min-w-0 items-center gap-3">
+                <span
+                  v-if="resolveNavigationIcon(item.iconUrl)"
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] bg-white text-[var(--blog-accent)] shadow-sm ring-1 ring-[var(--blog-border)]"
+                  aria-hidden="true"
+                >
+                  <Icon :name="resolveNavigationIcon(item.iconUrl)" class="h-3.5 w-3.5" />
+                </span>
+                <span class="truncate">{{ item.label }}</span>
+              </span>
               <span class="text-[10px] uppercase tracking-[0.22em] opacity-60">Open</span>
             </NuxtLink>
           </div>
