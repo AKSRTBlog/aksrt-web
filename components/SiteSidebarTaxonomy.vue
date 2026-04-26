@@ -88,6 +88,7 @@ function tagClass(count: number) {
         <NuxtLink
           v-for="c in visibleCategories" :key="c.id"
           :to="`/categories/${c.slug}`"
+          exact
           exact-active-class="bg-blue-50 text-blue-600 font-semibold"
           class="flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors hover:bg-blue-50"
         >
@@ -107,6 +108,7 @@ function tagClass(count: number) {
         <NuxtLink
           v-for="t in visibleTags" :key="t.id"
           :to="`/tags/${t.slug}`"
+          exact
           exact-active-class="border-blue-600 bg-blue-600 text-white font-semibold"
           class="rounded-full border border-[var(--blog-border)] bg-gray-100 px-3 py-1.5 text-sm transition-colors hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)]"
           :title="`${t.name}: ${t.count} 篇`"

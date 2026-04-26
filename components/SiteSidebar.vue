@@ -10,21 +10,34 @@ const navigationItems = computed(() =>
   (props.siteSettings?.navigationItems ?? []).filter((item) => item.enabled),
 );
 
+/**
+ * 将数据库存储的图标名统一转换为 Nuxt Icon 可用的格式
+ * 支持：
+ *   fa6-solid-home        → 原样返回
+ *   lucide:home          → 原样返回
+ *   fa-solid fa-circle-user → fa6-solid-circle-user
+ *   fa-brands github     → fa6-brands-github
+ *   house                 → lucide:house
+ */
 function resolveNavigationIcon(iconName?: string | null) {
-  const value = iconName?.trim();
-  if (!value) return '';
+  const raw = iconName?.trim();
+  if (!raw) return '';
 
-  // 已是 Nuxt Icon 格式（fa6-xxx 或 lucide:xxx 等），直接返回
-  if (value.startsWith('fa6-') || value.includes(':')) return value;
+  // 已是 Nuxt Icon 格式，直接返回
+  if (raw.startsWith('fa6-') || raw.includes(':')) return raw;
 
-  // 传统 FA 格式：fa-solid house / fa-regular envelope / fa-brands github
-  const faMatch = value.match(/^fa-(solid|regular|brands|duotone|light|thin)\s+(.+)$/i);
-  if (faMatch) {
-    return `fa6-${faMatch[1].toLowerCase()}-${faMatch[2].trim().toLowerCase().replace(/\s+/g, '-')}`;
+  // 传统 FA：按空格拆分，支持两段/三段
+  // fa-solid fa-circle-user  → ['fa-solid', 'fa-circle-user']
+  const parts = raw.split(/\s+/);
+  if (parts[0]?.startsWith('fa-')) {
+    // parts = ['fa-solid', 'fa-circle-user']
+    // 去掉每个 part 的 "fa-" 前缀，再用 "-" 连接
+    const cleaned = parts.map(p => p.replace(/^fa-/, ''));
+    return `fa6-${cleaned.join('-').toLowerCase()}`;
   }
 
-  // 纯名称，尝试作为 lucide 图标
-  return `lucide:${value.toLowerCase()}`;
+  // 纯名称 → 当作 lucide 图标
+  return `lucide:${raw.toLowerCase()}`;
 }
 </script>
 
@@ -47,7 +60,7 @@ function resolveNavigationIcon(iconName?: string | null) {
           {{ (siteSettings?.siteTitle || 'Blog').slice(0, 1).toUpperCase() }}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-[15px] font-semibold leading-tight text-[var(--blog-ink)]">{{ siteSettings?.siteTitle || 'Blog' }}</p>
+          <p class="truncate text-[15px] font-bold leading-tight text-[var(--blog-ink)]">{{ siteSettings?.siteTitle || 'Blog' }}</p>
         </div>
       </NuxtLink>
     </div>
@@ -65,7 +78,7 @@ function resolveNavigationIcon(iconName?: string | null) {
           :key="item.id"
           :to="item.href"
           exact
-          active-class="bg-blue-50 text-blue-600 font-semibold"
+          exact-active-class="bg-blue-50 text-blue-600 font-bold"
           class="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-[var(--blog-muted)] transition-colors hover:bg-blue-50 hover:text-blue-600"
         >
           <span
