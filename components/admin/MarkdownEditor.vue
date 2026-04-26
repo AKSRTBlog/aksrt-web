@@ -37,6 +37,11 @@ interface FoldNode {
   language?: string;
 }
 
+interface VisibleFoldRow {
+  node: FoldNode;
+  depth: number;
+}
+
 const props = withDefaults(
   defineProps<{
     modelValue: string;
@@ -87,6 +92,7 @@ const foldViewEnabled = ref(false);
 const collapsedFoldIds = ref<string[]>([]);
 const foldTree = computed(() => buildMarkdownFoldTree(props.modelValue));
 const foldableNodeIds = computed(() => collectFoldableNodeIds(foldTree.value));
+const visibleFoldRows = computed(() => flattenVisibleFoldRows(foldTree.value));
 
 function emitValue(value: string) {
   emit('update:modelValue', value);
@@ -121,6 +127,22 @@ function createTextNode(lines: string[], startLine: number): FoldNode | null {
   });
 }
 
+function createCodeNode(lines: string[], startLine: number, language: string): FoldNode {
+  const codeLineCount = Math.max(lines.length - 2, 0);
+  const summary = `${language || '代码块'} · ${codeLineCount} 行`;
+
+  return createFoldNode({
+    id: makeFoldId('code', startLine, summary),
+    type: 'code',
+    level: 7,
+    summary,
+    markdown: lines.join('\n'),
+    startLine,
+    endLine: startLine + lines.length - 1,
+    language,
+  });
+}
+
 function buildMarkdownFoldTree(source: string): FoldNode[] {
   const lines = source.split(/\r?\n/);
   const root: FoldNode = createFoldNode({
@@ -134,13 +156,65 @@ function buildMarkdownFoldTree(source: string): FoldNode[] {
   });
   const headingStack: FoldNode[] = [root];
 
+  function currentParent() {
+    return headingStack[headingStack.length - 1]!;
+  }
+
+  function attachNode(node: FoldNode) {
+    currentParent().children.push(node);
+  }
+
   let index = 0;
   while (index < lines.length) {
     const line = lines[index] ?? '';
     const headingMatch = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
 
-    if (!headingMatch) {
+    if (/^\s*$/.test(line)) {
       index += 1;
+      continue;
+    }
+
+    const fenceMatch = /^```([\w-]*)\s*$/.exec(line);
+    if (fenceMatch) {
+      const codeStart = index;
+      const codeLines = [line];
+      index += 1;
+
+      while (index < lines.length) {
+        const nextLine = lines[index] ?? '';
+        codeLines.push(nextLine);
+        index += 1;
+        if (/^```\s*$/.test(nextLine)) {
+          break;
+        }
+      }
+
+      attachNode(createCodeNode(codeLines, codeStart + 1, fenceMatch[1] ?? ''));
+      continue;
+    }
+
+    if (!headingMatch) {
+      const textStart = index;
+      const textLines: string[] = [];
+
+      while (index < lines.length) {
+        const nextLine = lines[index] ?? '';
+        if (/^(#{1,6})\s+(.+?)\s*$/.test(nextLine) || /^```([\w-]*)\s*$/.test(nextLine)) {
+          break;
+        }
+
+        textLines.push(nextLine);
+        index += 1;
+
+        if (/^\s*$/.test(nextLine) && textLines.some(item => item.trim())) {
+          break;
+        }
+      }
+
+      const textNode = createTextNode(textLines, textStart + 1);
+      if (textNode) {
+        attachNode(textNode);
+      }
       continue;
     }
 
@@ -160,7 +234,7 @@ function buildMarkdownFoldTree(source: string): FoldNode[] {
       headingStack.pop();
     }
 
-    headingStack[headingStack.length - 1]!.children.push(node);
+    attachNode(node);
     headingStack.push(node);
     index += 1;
   }
@@ -173,6 +247,19 @@ function collectFoldableNodeIds(nodes: FoldNode[]): string[] {
     node.id,
     ...collectFoldableNodeIds(node.children),
   ]);
+}
+
+function flattenVisibleFoldRows(nodes: FoldNode[], depth = 0): VisibleFoldRow[] {
+  const rows: VisibleFoldRow[] = [];
+
+  for (const node of nodes) {
+    rows.push({ node, depth });
+    if (!isFoldNodeCollapsed(node)) {
+      rows.push(...flattenVisibleFoldRows(node.children, depth + 1));
+    }
+  }
+
+  return rows;
 }
 
 function isFoldNodeCollapsed(node: FoldNode) {
@@ -191,6 +278,10 @@ function collapseAllFoldNodes() {
 
 function expandAllFoldNodes() {
   collapsedFoldIds.value = [];
+}
+
+function renderFoldNodeHtml(node: FoldNode) {
+  return renderMarkdown(node.markdown);
 }
 
 watch(foldViewEnabled, (enabled) => {
@@ -491,34 +582,36 @@ watch(
           </div>
 
           <div v-if="foldTree.length" class="admin-fold-tree">
-            <template v-for="node in foldTree" :key="node.id">
-              <div class="admin-fold-node" :style="{ '--fold-depth': String(Math.max(node.level - 1, 0)) }">
-                <button class="admin-fold-row" type="button" @click="toggleFoldNode(node)">
-                  <Icon :name="isFoldNodeCollapsed(node) ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="admin-fold-icon" />
-                  <span class="admin-fold-heading" :class="`admin-fold-heading-${Math.min(node.level, 6)}`">
-                    {{ node.summary }}
-                  </span>
-                  <span class="admin-fold-lines">L{{ node.startLine }}</span>
-                </button>
-                <div v-if="!isFoldNodeCollapsed(node)" class="admin-fold-children">
-                  <template v-for="child in node.children" :key="child.id">
-                    <div class="admin-fold-node" :style="{ '--fold-depth': String(Math.max(child.level - 1, 0)) }">
-                      <button class="admin-fold-row" type="button" @click="toggleFoldNode(child)">
-                        <Icon :name="isFoldNodeCollapsed(child) ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="admin-fold-icon" />
-                        <span class="admin-fold-heading" :class="`admin-fold-heading-${Math.min(child.level, 6)}`">
-                          {{ child.summary }}
-                        </span>
-                        <span class="admin-fold-lines">L{{ child.startLine }}</span>
-                      </button>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
+            <div
+              v-for="row in visibleFoldRows"
+              :key="row.node.id"
+              class="admin-fold-node"
+              :style="{ '--fold-depth': String(row.depth) }"
+            >
+              <button class="admin-fold-row" type="button" @click="toggleFoldNode(row.node)">
+                <Icon :name="isFoldNodeCollapsed(row.node) ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="admin-fold-icon" />
+                <span
+                  class="admin-fold-heading"
+                  :class="[
+                    row.node.type === 'heading' ? `admin-fold-heading-${Math.min(row.node.level, 6)}` : '',
+                    `admin-fold-${row.node.type}`,
+                  ]"
+                >
+                  {{ row.node.summary }}
+                </span>
+                <span class="admin-fold-lines">L{{ row.node.startLine }}</span>
+              </button>
+
+              <div
+                v-if="!isFoldNodeCollapsed(row.node) && row.node.type !== 'heading'"
+                class="admin-fold-content"
+                v-html="renderFoldNodeHtml(row.node)"
+              />
+            </div>
           </div>
 
           <div v-else class="flex min-h-[480px] items-center justify-center text-sm text-slate-400">
-            暂无可折叠标题
+            暂无可折叠内容
           </div>
         </div>
         <textarea
@@ -701,7 +794,7 @@ watch(
 }
 
 .admin-fold-node {
-  margin-left: calc(var(--fold-depth, 0) * 0.85rem);
+  margin-left: calc(var(--fold-depth, 0) * 1rem);
 }
 
 .admin-fold-row {
@@ -742,6 +835,20 @@ watch(
   white-space: nowrap;
 }
 
+.admin-fold-code,
+.admin-fold-text {
+  color: #475569;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.admin-fold-code::before {
+  content: '```';
+  margin-right: 0.35rem;
+  color: #2563eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 .admin-fold-heading-1 {
   font-size: 1.08rem;
   font-weight: 800;
@@ -775,6 +882,36 @@ watch(
 .admin-fold-children {
   overflow: hidden;
   animation: fold-slide-in 0.18s ease-out;
+}
+
+.admin-fold-content {
+  margin: 0.15rem 0 0.75rem 2.35rem;
+  overflow: hidden;
+  border-left: 2px solid rgba(37, 99, 235, 0.14);
+  padding: 0.25rem 0 0.25rem 0.85rem;
+  color: #475569;
+  animation: fold-slide-in 0.18s ease-out;
+}
+
+.admin-fold-content :deep(p) {
+  margin: 0.45rem 0;
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+
+.admin-fold-content :deep(pre) {
+  margin: 0.45rem 0;
+  overflow-x: auto;
+  border-radius: 0.85rem;
+  background: #0f172a;
+  padding: 0.9rem;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.admin-fold-content :deep(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @keyframes fold-slide-in {
