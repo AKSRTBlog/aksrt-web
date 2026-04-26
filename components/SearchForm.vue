@@ -26,16 +26,16 @@ function handleSubmit() {
 
 <template>
   <form
-    :class="`flex w-full items-center gap-3 rounded-[4px] border border-[var(--blog-border)] bg-white/92 px-4 py-3 shadow-[0_18px_45px_rgba(15,23,42,0.06)] ${className}`.trim()"
+    :class="`flex w-full items-center gap-3 rounded-xl border border-[var(--blog-border)] bg-white/92 px-3.5 py-2.5 ${className}`.trim()"
     @submit.prevent="handleSubmit"
   >
-    <span class="text-[var(--blog-muted)]">Q</span>
+    <Icon name="lucide:search" class="h-4 w-4 shrink-0 text-[var(--blog-subtle)]" />
     <input
       v-model="keyword"
       class="w-full bg-transparent text-sm text-[var(--blog-ink)] outline-none placeholder:text-[var(--blog-subtle)]"
       type="search"
       :placeholder="placeholder"
     >
-    <button class="blog-button-primary shrink-0" type="submit">Search</button>
+    <kbd class="hidden sm:inline-flex shrink-0 select-none rounded-md border border-[var(--blog-border)] bg-[var(--blog-soft)] px-1.5 py-0.5 text-[10px] font-medium tabular-nums leading-none text-[var(--blog-subtle)]">⌘K</kbd>
   </form>
 </template>

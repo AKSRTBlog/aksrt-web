@@ -12,68 +12,76 @@ const navigationItems = computed(() =>
 
 function resolveNavigationIcon(iconName?: string | null) {
   const value = iconName?.trim();
-  return value && value.startsWith('fa6-') ? value : '';
+  if (!value) return '';
+
+  // 已是 Nuxt Icon 格式（fa6-xxx 或 lucide:xxx 等），直接返回
+  if (value.startsWith('fa6-') || value.includes(':')) return value;
+
+  // 传统 FA 格式：fa-solid house / fa-regular envelope / fa-brands github
+  const faMatch = value.match(/^fa-(solid|regular|brands|duotone|light|thin)\s+(.+)$/i);
+  if (faMatch) {
+    return `fa6-${faMatch[1].toLowerCase()}-${faMatch[2].trim().toLowerCase().replace(/\s+/g, '-')}`;
+  }
+
+  // 纯名称，尝试作为 lucide 图标
+  return `lucide:${value.toLowerCase()}`;
 }
 </script>
 
 <template>
-  <aside class="blog-rail hidden w-[300px] shrink-0 flex-col self-start lg:sticky lg:top-4 lg:flex">
-    <div class="border-b border-[var(--blog-border)] px-6 py-6">
+  <aside class="blog-rail hidden w-[280px] shrink-0 flex-col self-start lg:sticky lg:top-4 lg:flex">
+    <!-- Logo + 站点信息 -->
+    <div class="border-b border-[var(--blog-border)] px-5 py-6">
       <NuxtLink class="flex items-center gap-3" to="/">
         <AppImage
           v-if="siteSettings?.logoUrl"
           :src="siteSettings.logoUrl"
           :alt="siteSettings.siteTitle"
-          class="h-12 w-12 rounded-[1.25rem] object-cover"
+          class="h-11 w-11 shrink-0 rounded-[1rem] object-cover"
           loading="eager"
         />
         <div
           v-else
-          class="flex h-12 w-12 items-center justify-center rounded-[1.25rem] bg-[var(--blog-ink)] text-sm font-semibold text-white"
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[var(--blog-ink)] text-base font-bold text-white"
         >
-          {{ (siteSettings?.siteTitle || 'Blog').slice(0, 2).toUpperCase() }}
+          {{ (siteSettings?.siteTitle || 'Blog').slice(0, 1).toUpperCase() }}
         </div>
-        <div class="min-w-0">
-          <p class="truncate text-sm font-semibold tracking-[0.18em] text-[var(--blog-ink)]">{{ siteSettings?.siteTitle || 'Blog' }}</p>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-[15px] font-semibold leading-tight text-[var(--blog-ink)]">{{ siteSettings?.siteTitle || 'Blog' }}</p>
         </div>
       </NuxtLink>
     </div>
 
-    <div class="px-5 py-5">
-      <div class="space-y-6">
-        <div>
-          <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--blog-subtle)]">Search</p>
-          <div class="mt-3">
-            <SearchForm class-name="rounded-[4px] bg-[var(--blog-soft)] px-3 py-2 shadow-none" />
-          </div>
-        </div>
-
-        <div>
-          <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--blog-subtle)]">Menu</p>
-          <div class="mt-3 space-y-1">
-            <NuxtLink
-              v-for="item in navigationItems"
-              :key="item.id"
-              :to="item.href"
-              class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-[var(--blog-muted)] transition hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
-            >
-              <span class="flex min-w-0 items-center gap-3">
-                <span
-                  v-if="resolveNavigationIcon(item.iconUrl)"
-                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] bg-white text-[var(--blog-accent)] shadow-sm ring-1 ring-[var(--blog-border)]"
-                  aria-hidden="true"
-                >
-                  <Icon :name="resolveNavigationIcon(item.iconUrl)" class="h-3.5 w-3.5" />
-                </span>
-                <span class="truncate">{{ item.label }}</span>
-              </span>
-              <span class="text-[10px] uppercase tracking-[0.22em] opacity-60">Open</span>
-            </NuxtLink>
-          </div>
-        </div>
-
-        <SiteSidebarTaxonomy />
+    <div class="px-4 py-5 space-y-7">
+      <!-- 搜索 -->
+      <div>
+        <SearchForm class-name="rounded-xl bg-[var(--blog-soft)] px-3.5 py-2.5 shadow-none text-sm" />
       </div>
+
+      <!-- 导航菜单 -->
+      <nav class="space-y-0.5">
+        <NuxtLink
+          v-for="item in navigationItems"
+          :key="item.id"
+          :to="item.href"
+          exact
+          active-class="bg-[var(--blog-accent)]/8 text-[var(--blog-accent)] font-semibold"
+          class="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-[var(--blog-muted)] transition-colors hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
+        >
+          <span
+            v-if="resolveNavigationIcon(item.iconUrl)"
+            class="flex h-[18px] w-[18px] shrink-0 items-center justify-center"
+            aria-hidden="true"
+          >
+            <Icon :name="resolveNavigationIcon(item.iconUrl)" class="h-[18px] w-[18px]" />
+          </span>
+          <Icon v-else name="lucide:file-text" class="h-[18px] w-[18px] shrink-0 opacity-40" />
+          <span>{{ item.label }}</span>
+        </NuxtLink>
+      </nav>
+
+      <!-- 分类 & 标签 -->
+      <SiteSidebarTaxonomy />
     </div>
   </aside>
 </template>
