@@ -49,7 +49,7 @@ const visibleCategories = computed(() => categoriesExpanded.value ? categories.v
 const visibleTags = computed(() => tagsExpanded.value ? tags.value : tags.value.slice(0, TAG_LIMIT));
 
 function isHotCategory(count: number) { return count >= maxCategoryCount.value; }
-function isActiveLink(href: string) { return currentPath.value === href; }
+function isActiveLink(url: string) { return currentPath.value === url; }
 
 function tagWeight(count: number) {
   if (maxTagCount.value <= 1) return 0;
@@ -88,15 +88,10 @@ function tagClass(count: number) {
         <NuxtLink
           v-for="c in visibleCategories" :key="c.id"
           :to="`/categories/${c.slug}`"
-          :class="[
-            'flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors',
-            isActiveLink(`/categories/${c.slug}`)
-              ? 'bg-blue-50 text-blue-600 font-semibold'
-              : isHotCategory(c.count) ? 'text-[var(--blog-ink)] font-semibold hover:bg-blue-50' : 'text-[var(--blog-muted)] hover:bg-blue-50'
-          ]"
-          exact
+          exact-active-class="bg-blue-50 text-blue-600 font-semibold"
+          class="flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors hover:bg-blue-50"
         >
-          <span class="truncate">{{ c.name }}</span>
+          <span class="truncate" :class="isActiveLink(`/categories/${c.slug}`) ? 'font-semibold text-[var(--blog-ink)]' : 'text-[var(--blog-muted)]'">{{ c.name }}</span>
           <span class="shrink-0 ml-3 tabular-nums text-xs text-[var(--blog-subtle)]">{{ c.count }}</span>
         </NuxtLink>
       </div>
@@ -112,14 +107,9 @@ function tagClass(count: number) {
         <NuxtLink
           v-for="t in visibleTags" :key="t.id"
           :to="`/tags/${t.slug}`"
-          :class="[
-            'rounded-full border border-[var(--blog-border)] bg-gray-100 px-3 py-1.5 text-sm transition-colors',
-            isActiveLink(`/tags/${t.slug}`)
-              ? 'border-blue-600 bg-blue-600 text-white font-semibold'
-              : tagClass(t.count)
-          ]"
+          exact-active-class="border-blue-600 bg-blue-600 text-white font-semibold"
+          class="rounded-full border border-[var(--blog-border)] bg-gray-100 px-3 py-1.5 text-sm transition-colors hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)]"
           :title="`${t.name}: ${t.count} 篇`"
-          exact
         >{{ t.name }}</NuxtLink>
       </div>
       <button v-if="tags.length > TAG_LIMIT" type="button"
