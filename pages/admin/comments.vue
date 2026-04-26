@@ -300,7 +300,7 @@ async function handleReject(comment: AdminCommentItem | null) {
 
           <div class="flex flex-wrap items-center gap-2 lg:flex-col lg:items-stretch lg:justify-center">
             <button class="admin-button-secondary min-h-11" type="button" @click="openReview(comment)">
-              <Icon name="fa6-solid-magnifying-glass-plus" class="h-4 w-4" />
+              <Icon name="fa6-solid-magnifying-glass" class="h-4 w-4" />
               审核
             </button>
             <button class="admin-button-danger min-h-11" :disabled="busyId === comment.id || busyId === 'bulk'" type="button" @click="handleReject(comment)">
