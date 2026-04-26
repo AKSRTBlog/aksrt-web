@@ -239,7 +239,9 @@ function formatAkismetJson(raw: string | null): string {
   } catch {
     return raw
   }
-}(comment: AdminCommentItem | null) {
+}
+
+async function handleReject(comment: AdminCommentItem | null) {
   if (!comment) return
   const updated = await reviewComment(comment.id, 'rejected', '内容不符合发布规则')
   if (updated && reviewCommentItem.value?.id === comment.id) {
