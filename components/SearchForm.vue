@@ -5,18 +5,13 @@ const props = withDefaults(defineProps<{
   className?: string;
 }>(), {
   initialValue: '',
-  placeholder: 'Search articles, tags, or topics',
+  placeholder: '搜索文章...',
   className: '',
 });
 
 const keyword = ref(props.initialValue);
 
-watch(
-  () => props.initialValue,
-  (value) => {
-    keyword.value = value;
-  },
-);
+watch(() => props.initialValue, (value) => { keyword.value = value; });
 
 function handleSubmit() {
   const value = keyword.value.trim();
@@ -26,16 +21,19 @@ function handleSubmit() {
 
 <template>
   <form
-    :class="`flex w-full items-center gap-3 rounded-xl border border-[var(--blog-border)] bg-white/92 px-3.5 py-2.5 ${className}`.trim()"
+    :class="[
+      'flex w-full items-center gap-3 rounded-xl border border-[var(--blog-border)]/60 bg-[#f9f9fb] px-3.5 py-2.5 shadow-inner',
+      className
+    ]"
     @submit.prevent="handleSubmit"
   >
-    <Icon name="lucide:search" class="h-4 w-4 shrink-0 text-[var(--blog-subtle)]" />
+    <Icon name="lucide:search" class="h-4 w-4 shrink-0 text-gray-400" />
     <input
       v-model="keyword"
       class="w-full bg-transparent text-sm text-[var(--blog-ink)] outline-none placeholder:text-[var(--blog-subtle)]"
       type="search"
       :placeholder="placeholder"
-    >
-    <kbd class="hidden sm:inline-flex shrink-0 select-none rounded-md border border-[var(--blog-border)] bg-[var(--blog-soft)] px-1.5 py-0.5 text-[10px] font-medium tabular-nums leading-none text-[var(--blog-subtle)]">⌘K</kbd>
+    />
+    <kbd class="hidden sm:inline-flex shrink-0 select-none rounded-md border border-[var(--blog-border)]/60 bg-[#f9f9fb] px-1.5 py-0.5 text-[10px] font-medium tabular-nums leading-none text-[var(--blog-subtle)]">⌘K</kbd>
   </form>
 </template>
