@@ -229,6 +229,7 @@ export interface ContributionData {
 
 export interface ArchiveMonthGroup {
   month: string;
+  monthKey: string;
   items: BlogArticleSummary[];
 }
 

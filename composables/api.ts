@@ -220,6 +220,13 @@ export function formatLongDate(date: string) {
   });
 }
 
+export function formatArchiveDate(date: string) {
+  return new Date(date).toLocaleDateString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
 export function sortArticles(list: BlogArticleSummary[], sort: ArticleSort = 'latest') {
   const next = [...list];
 
@@ -323,19 +330,25 @@ export function buildArchiveGroups(articles: BlogArticleSummary[]): ArchiveYearG
 
   for (const article of articles) {
     const date = new Date(article.publishedAt);
+    if (Number.isNaN(date.getTime())) {
+      continue;
+    }
+
     const year = String(date.getFullYear());
+    const monthKey = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     const month = date.toLocaleDateString('zh-CN', { month: 'long' });
+    const groupKey = `${monthKey}|${month}`;
 
     if (!grouped.has(year)) {
       grouped.set(year, new Map());
     }
 
     const yearGroup = grouped.get(year)!;
-    if (!yearGroup.has(month)) {
-      yearGroup.set(month, []);
+    if (!yearGroup.has(groupKey)) {
+      yearGroup.set(groupKey, []);
     }
 
-    yearGroup.get(month)!.push(article);
+    yearGroup.get(groupKey)!.push(article);
   }
 
   return [...grouped.entries()]
@@ -343,10 +356,16 @@ export function buildArchiveGroups(articles: BlogArticleSummary[]): ArchiveYearG
     .map(([year, months]) => ({
       year,
       total: [...months.values()].flat().length,
-      months: [...months.entries()].map(([month, items]) => ({
-        month,
-        items: items.sort((left, right) => new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime()),
-      })),
+      months: [...months.entries()]
+        .map(([groupKey, items]) => {
+          const [monthKey, month] = groupKey.split('|');
+          return {
+            month,
+            monthKey,
+            items: [...items].sort((left, right) => new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime()),
+          };
+        })
+        .sort((left, right) => right.monthKey.localeCompare(left.monthKey)),
     }));
 }
 
