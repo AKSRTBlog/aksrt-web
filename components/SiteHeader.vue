@@ -12,6 +12,11 @@ const navigationItems = computed(() =>
   (props.siteSettings?.navigationItems ?? []).filter((item) => item.enabled),
 );
 
+function resolveNavigationIcon(iconName?: string | null) {
+  const value = iconName?.trim();
+  return value && value.startsWith('fa6-') ? value : '';
+}
+
 // 路由变化时自动关闭菜单
 watch(() => useRoute().fullPath, () => {
   if (mobileOpen.value) {
@@ -65,19 +70,24 @@ watch(() => useRoute().fullPath, () => {
     <Transition name="menu-slide">
       <nav
         v-show="mobileOpen"
-        class="absolute left-0 right-0 top-full border-t border-[var(--blog-border)] bg-white/95 px-6 py-4 shadow-lg backdrop-blur-xl"
+        class="absolute left-0 right-0 top-full max-h-[calc(100vh-76px)] overflow-y-auto border-t border-[var(--blog-border)] bg-white/95 px-6 py-4 shadow-lg backdrop-blur-xl"
       >
         <div class="space-y-1">
           <NuxtLink
             v-for="(item, index) in navigationItems"
             :key="item.id"
             :to="item.href"
-            class="animate-menu-item block rounded-2xl px-4 py-3 text-sm font-medium text-[var(--blog-muted)] hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
+            class="animate-menu-item flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[var(--blog-muted)] hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
             :style="{ animationDelay: `${80 + index * 50}ms` }"
             @click="mobileOpen = false"
           >
-            {{ item.label }}
+            <Icon v-if="resolveNavigationIcon(item.iconUrl)" :name="resolveNavigationIcon(item.iconUrl)" class="h-4 w-4 shrink-0 text-[var(--blog-accent)]" />
+            <span>{{ item.label }}</span>
           </NuxtLink>
+        </div>
+
+        <div class="mt-5 border-t border-[var(--blog-border)] pt-5">
+          <SiteSidebarTaxonomy />
         </div>
       </nav>
     </Transition>
