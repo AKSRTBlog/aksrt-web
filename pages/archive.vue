@@ -26,6 +26,7 @@ const error = computed(() => archiveError.value?.message || '');
 const totalArticles = computed(() => articles.value.length);
 const totalYears = computed(() => archiveGroups.value.length);
 const latestArticle = computed(() => articles.value[0] ?? null);
+const expandedYears = ref<Set<string>>(new Set());
 
 const archiveCanonicalUrl = computed(() => {
   const base = siteSettings.value?.seo?.canonicalUrl?.replace(/\/+$/, '') || '';
@@ -35,6 +36,31 @@ const archiveCanonicalUrl = computed(() => {
 function retryArchive() {
   return refreshArchive();
 }
+
+function isYearExpanded(year: string) {
+  return expandedYears.value.has(year);
+}
+
+function toggleYear(year: string) {
+  const next = new Set(expandedYears.value);
+  if (next.has(year)) {
+    next.delete(year);
+  } else {
+    next.add(year);
+  }
+  expandedYears.value = next;
+}
+
+watch(
+  archiveGroups,
+  (groups) => {
+    if (!groups.length || expandedYears.value.size > 0) {
+      return;
+    }
+    expandedYears.value = new Set([groups[0].year]);
+  },
+  { immediate: true },
+);
 
 useSeoMeta({
   title: '文章归档',
@@ -98,6 +124,22 @@ useHead(() => ({
           </div>
         </header>
 
+        <nav
+          v-if="archiveGroups.length > 0"
+          aria-label="归档年份导航"
+          class="blog-panel flex gap-2 overflow-x-auto p-3"
+        >
+          <a
+            v-for="yearGroup in archiveGroups"
+            :key="`nav-${yearGroup.year}`"
+            :href="`#archive-year-${yearGroup.year}`"
+            class="shrink-0 rounded-[4px] border border-[var(--blog-border)] px-4 py-2 text-sm font-semibold text-[var(--blog-muted)] transition hover:border-[var(--blog-accent)] hover:text-[var(--blog-ink)]"
+          >
+            {{ yearGroup.year }}
+            <span class="ml-1 text-xs font-normal text-[var(--blog-subtle)]">{{ yearGroup.total }}</span>
+          </a>
+        </nav>
+
         <div v-if="loading" class="space-y-8">
           <div v-for="yi in 2" :key="`y-skel-${yi}`" class="blog-panel p-6 sm:p-8">
             <div class="mb-8 flex items-end justify-between gap-4">
@@ -138,18 +180,48 @@ useHead(() => ({
         />
 
         <TransitionGroup v-else name="archive-fade" tag="div" appear class="space-y-6">
-          <div v-for="yearGroup in archiveGroups" :key="yearGroup.year" class="blog-panel p-6 sm:p-8">
-            <div class="flex items-end justify-between gap-4">
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--blog-subtle)]">Year</p>
-                <h2 class="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">
-                  {{ yearGroup.year }}
-                </h2>
+          <div
+            v-for="yearGroup in archiveGroups"
+            :id="`archive-year-${yearGroup.year}`"
+            :key="yearGroup.year"
+            class="blog-panel scroll-mt-6 p-6 sm:p-8"
+          >
+            <div class="flex items-center justify-between gap-4">
+              <button
+                class="group flex min-w-0 items-center gap-3 text-left"
+                type="button"
+                :aria-expanded="isYearExpanded(yearGroup.year)"
+                :aria-controls="`archive-year-content-${yearGroup.year}`"
+                @click="toggleYear(yearGroup.year)"
+              >
+                <span
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] border border-[var(--blog-border)] text-sm text-[var(--blog-muted)] transition group-hover:border-[var(--blog-accent)] group-hover:text-[var(--blog-ink)]"
+                  :class="isYearExpanded(yearGroup.year) ? 'rotate-90' : ''"
+                  aria-hidden="true"
+                >
+                  >
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-xs font-semibold uppercase tracking-[0.22em] text-[var(--blog-subtle)]">Year</span>
+                  <span class="mt-2 block text-3xl font-semibold tracking-[-0.03em] text-[var(--blog-ink)]">
+                    {{ yearGroup.year }}
+                  </span>
+                </span>
+              </button>
+
+              <div class="shrink-0 text-right">
+                <p class="text-sm text-[var(--blog-subtle)]">{{ yearGroup.total }} 篇文章</p>
+                <button class="mt-2 text-xs font-semibold text-[var(--blog-accent)]" type="button" @click="toggleYear(yearGroup.year)">
+                  {{ isYearExpanded(yearGroup.year) ? '收起' : '展开' }}
+                </button>
               </div>
-              <p class="text-sm text-[var(--blog-subtle)]">{{ yearGroup.total }} 篇文章</p>
             </div>
 
-            <div class="mt-8 space-y-6">
+            <div
+              v-show="isYearExpanded(yearGroup.year)"
+              :id="`archive-year-content-${yearGroup.year}`"
+              class="mt-8 space-y-6"
+            >
               <div v-for="monthGroup in yearGroup.months" :key="monthGroup.monthKey">
                 <div class="flex items-center justify-between gap-3">
                   <h3 class="text-lg font-semibold text-[var(--blog-ink)]">{{ monthGroup.month }}</h3>
