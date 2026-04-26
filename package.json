@@ -15,6 +15,7 @@
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
     "@iconify-json/lucide": "^1.2.103",
     "@nuxt/icon": "^2.2.1",
     "marked": "^15.0.6",

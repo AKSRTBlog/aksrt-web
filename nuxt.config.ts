@@ -25,7 +25,12 @@ export default defineNuxtConfig({
   experimental: {
     appManifest: false,
   },
-  css: ['~/assets/css/main.css', '~/assets/css/admin.css'],
+  css: [
+    '~/assets/css/main.css',
+    '~/assets/css/admin.css',
+    // FontAwesome 6 免费版（已安装到 node_modules）
+    'node_modules/@fortawesome/fontawesome-free/css/all.min.css',
+  ],
   vite: {
     css: {
       devSourcemap: false,
@@ -53,8 +58,6 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&display=swap' },
-        // FontAwesome 6 CSS (用于 icon mode='css')
-        { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css', integrity: 'sha512-DTOQO9RW3CHCoKbIbs/0dRjP7m6FqVU3XvC+L/RaFYlDPGq6W+M/9N+5H8f8B+qH1wJYBMSMKM5e8SIE5u', crossorigin: 'anonymous' },
       ],
     },
   },
