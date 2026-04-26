@@ -37,6 +37,7 @@ const expandedCommentIds = ref<string[]>([])
 const reviewCommentItem = ref<AdminCommentItem | null>(null)
 const reviewContentExpanded = ref(false)
 const categoryDetailOpen = ref(false)
+const akismetExpanded = ref(false)
 
 const allVisibleSelected = computed(() =>
   items.value.length > 0 && items.value.every(item => selectedIds.value.includes(item.id)),
@@ -157,7 +158,90 @@ async function handleApprove(comment: AdminCommentItem | null) {
   }
 }
 
-async function handleReject(comment: AdminCommentItem | null) {
+const akismetExpanded = ref(false)
+
+/**
+ * 解析 Akismet 原始 JSON 数据
+ */
+function parseAkismetRaw(raw: string | null): Record<string, unknown> | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    // Akismet 可能返回对象或字符串
+    if (typeof parsed === 'object') return parsed
+    return { raw }
+  } catch {
+    return { raw }
+  }
+}
+
+function getAkismetData(comment: AdminCommentItem) {
+  return parseAkismetRaw(comment.moderationAkismetRaw)
+}
+
+/** 获取 Akismet 判断状态（spam/ham） */
+interface AkismetStatus {
+  label: string
+  class: string
+}
+function getAkismetStatus(comment: AdminCommentItem): AkismetStatus {
+  const data = getAkismetData(comment)
+  if (!data) return { label: '', class: '' }
+
+  // Akismet 返回 true 表示 spam
+  if (data === true || data?.spam === true) {
+    return { label: '垃圾', class: 'bg-rose-100 text-rose-700' }
+  }
+  if (data === false || data?.ham === true) {
+    return { label: '正常', class: 'bg-emerald-100 text-emerald-700' }
+  }
+  // 检查 spam_score
+  if (typeof data?.spam_score === 'number' && data.spam_score > 0) {
+    return { label: '垃圾', class: 'bg-rose-100 text-rose-700' }
+  }
+  if (typeof data?.spam_score === 'number' && data.spam_score <= 0) {
+    return { label: '正常', class: 'bg-emerald-100 text-em700' }
+  }
+
+  return { label: '未识别', class: 'bg-slate-100 text-slate-600' }
+}
+
+/** 获取 Akismet 垃圾评分（0-100，越高越危险） */
+function getAkismetSpamScore(comment: AdminCommentItem): number | null {
+  const data = getAkismetData(comment)
+  if (!data) return null
+
+  if (typeof data.spam_score === 'number') return Math.round(data.spam_score)
+  if (data.spam === true) return 99
+  if (data.spam === false) return 0
+
+  return null
+}
+
+/** 获取 Akismet 信任评分（0-100，越高越可信） */
+function getAkismetTrustScore(comment: AdminCommentItem): number | null {
+  const score = getAkismetSpamScore(comment)
+  if (score === null) return null
+  return 100 - score
+}
+
+/** 获取垃圾评分对应的进度条样式 */
+function getAkismetSpamScoreClass(score: number): string {
+  if (score >= 80) return 'bg-rose-500'
+  if (score >= 50) return 'bg-amber-400'
+  return 'bg-emerald-500'
+}
+
+/** 格式化 Akismet JSON 为可读字符串 */
+function formatAkismetJson(raw: string | null): string {
+  if (!raw) return ''
+  try {
+    const obj = JSON.parse(raw)
+    return JSON.stringify(obj, null, 2)
+  } catch {
+    return raw
+  }
+}(comment: AdminCommentItem | null) {
   if (!comment) return
   const updated = await reviewComment(comment.id, 'rejected', '内容不符合发布规则')
   if (updated && reviewCommentItem.value?.id === comment.id) {
@@ -398,6 +482,7 @@ async function handleReject(comment: AdminCommentItem | null) {
               />
             </div>
 
+            <!-- ========== AI 风险指数（内置）========== -->
             <div class="mt-4 rounded-lg border border-blue-100 bg-blue-50/70 p-4">
               <div class="flex items-center justify-between gap-3">
                 <div>
@@ -423,6 +508,49 @@ async function handleReject(comment: AdminCommentItem | null) {
                 查看分类详情
               </button>
             </div>
+
+            <!-- ========== Akismet 反垃圾判断结果 ========== -->
+            <template v-if="reviewCommentItem.moderationAkismetRaw">
+              <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50/30 p-4">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                  <p class="text-sm font-bold text-amber-900 flex items-center gap-2">
+                    <span>🛡️ Akismet 反垃圾</span>
+                    <span v-if="getAkismetStatus(reviewCommentItem).label" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold" :class="getAkismetStatus(reviewCommentItem).class">
+                      {{ getAkismetStatus(reviewCommentItem).label }}
+                    </span>
+                  </p>
+                  <!-- 展开/折叠按钮 -->
+                  <button
+                    type="button"
+                    class="text-[10px] font-medium text-amber-700 hover:text-amber-900 transition-colors"
+                    @click="akismetExpanded = !akismetExpanded"
+                  >
+                    {{ akismetExpanded ? '收起' : '展开原始数据' }}
+                  </button>
+                </div>
+
+                <!-- Akismet 解析结果摘要 -->
+                <div class="space-y-2 text-xs leading-relaxed text-amber-950">
+                  <p v-if="getAkismetSpamScore(reviewCommentItem) !== null">
+                    垃圾评分：<strong>{{ getAkismetSpamScore(reviewCommentItem) }}</strong>/100
+                    <span class="ml-2 inline-block h-2 w-24 align-middle rounded-full bg-white/60 ring-1 ring-amber-300">
+                      <span class="block h-full rounded-full transition-all" :class="getAkismetSpamScoreClass(getAkismetSpamScore(reviewCommentItem))" :style="{ width: `${Math.min(100, getAkismetSpamScore(reviewCommentItem) || 0)}%` }"></span>
+                    </span>
+                  </p>
+                  <p v-if="getAkismetTrustScore(reviewCommentItem) !== null">
+                    信任评分：<strong>{{ getAkismetTrustScore(reviewCommentItem) }}</strong>/100
+                    <span class="ml-2 inline-flex items-center rounded-full px-1.5 py-0.5 bg-emerald-100 text-emerald-700">{{ Math.round(getAkismetTrustScore(reviewCommentItem) || 0) }}</span>
+                  </p>
+                </div>
+
+                <!-- 原始 JSON 数据 -->
+                <pre
+                  v-show="akismetExpanded"
+                  class="mt-3 max-h-48 cursor-text overflow-auto rounded-md bg-black/5 p-3 font-mono text-[10px] text-amber-400 break-all select-text whitespace-pre-wrap"
+                >{{ formatAkismetJson(reviewCommentItem.moderationAkismetRaw) }}</pre>
+              </div>
+            </div>
+            </template>
           </div>
 
           <footer class="grid gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:grid-cols-3">
