@@ -72,17 +72,14 @@ function resolveNavigationIcon(iconName?: string | null) {
             v-else
             class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--blog-ink)] to-[var(--blog-ink)]/80 text-base font-black text-white shadow-sm"
           >
-            {{ (siteSettings?.siteTitle || 'Blog').slice(0, 2).toUpperCase() }}
+            {{ (siteSettings?.siteTitle).slice(0, 2).toUpperCase() }}
           </div>
         </div>
 
         <!-- 站点名 -->
         <div class="min-w-0">
           <p class="truncate text-[15px] font-black leading-tight tracking-tight text-[var(--blog-ink)]">
-            {{ siteSettings?.siteTitle || 'Blog' }}
-          </p>
-          <p class="mt-0.5 truncate text-[11px] leading-tight text-[var(--blog-subtle)]">
-            {{ siteSettings?.footerInfo || '记录·分享·成长' }}
+            {{ siteSettings?.siteTitle}}
           </p>
         </div>
       </NuxtLink>
