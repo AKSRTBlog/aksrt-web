@@ -28,8 +28,8 @@ export default defineNuxtConfig({
   css: [
     '~/assets/css/main.css',
     '~/assets/css/admin.css',
-    // FontAwesome 6 免费版（已安装到 node_modules）
-    'node_modules/@fortawesome/fontawesome-free/css/all.min.css',
+    // FontAwesome 6 免费版（复制到本地，避免 Vite 解析 node_modules 路径失败）
+    '~/assets/css/fontawesome.min.css',
   ],
   vite: {
     css: {
