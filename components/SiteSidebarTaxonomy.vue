@@ -9,15 +9,10 @@ import {
 const CATEGORY_LIMIT = 6;
 const TAG_LIMIT = 14;
 
-const categoriesExpanded = ref(false);
 const route = useRoute();
 const currentPath = computed(() => route.path);
+const categoriesExpanded = ref(false);
 const tagsExpanded = ref(false);
-
-/** 判断链接是否精确匹配当前路径 */
-function isActiveLink(href: string) {
-  return currentPath.value === href;
-}
 
 const {
   data: taxonomyData,
@@ -28,16 +23,12 @@ const {
     fetchAllPublicArticles(),
     fetchPublicCategories(),
   ]);
-
   return {
     articles: articleResult ?? [],
     publicCategories: categoryResult ?? [],
   };
 }, {
-  default: () => ({
-    articles: [],
-    publicCategories: [],
-  }),
+  default: () => ({ articles: [], publicCategories: [] }),
 });
 
 usePublicLiveReload(() => refresh());
@@ -57,25 +48,18 @@ const maxTagCount = computed(() => Math.max(1, ...tags.value.map((item) => item.
 const visibleCategories = computed(() => categoriesExpanded.value ? categories.value : categories.value.slice(0, CATEGORY_LIMIT));
 const visibleTags = computed(() => tagsExpanded.value ? tags.value : tags.value.slice(0, TAG_LIMIT));
 
-function isHotCategory(count: number) {
-  return count >= maxCategoryCount.value;
-}
+function isHotCategory(count: number) { return count >= maxCategoryCount.value; }
+function isActiveLink(href: string) { return currentPath.value === href; }
 
 function tagWeight(count: number) {
-  if (maxTagCount.value <= 1) {
-    return 0;
-  }
+  if (maxTagCount.value <= 1) return 0;
   return Math.min(1, count / maxTagCount.value);
 }
 
 function tagClass(count: number) {
   const weight = tagWeight(count);
-  if (weight >= 0.75) {
-    return 'border-[var(--blog-accent)] bg-[var(--blog-accent)]/8 text-[var(--blog-ink)]';
-  }
-  if (weight >= 0.45) {
-    return 'bg-[var(--blog-soft)] text-[var(--blog-ink)]';
-  }
+  if (weight >= 0.75) return 'border border-blue-600 bg-blue-50 text-blue-600';
+  if (weight >= 0.45) return 'bg-gray-100 text-[var(--blog-ink)]';
   return 'text-[var(--blog-muted)]';
 }
 </script>
@@ -85,78 +69,62 @@ function tagClass(count: number) {
     <div class="space-y-3">
       <div class="h-3.5 w-14 animate-pulse rounded-md bg-[var(--blog-soft)]" />
       <div class="space-y-2">
-        <div v-for="index in 4" :key="`cat-skeleton-${index}`" class="h-8 animate-pulse rounded-lg bg-[var(--blog-soft)]" />
+        <div v-for="i in 4" :key="'cat-'+i" class="h-8 animate-pulse rounded-lg bg-[var(--blog-soft)]" />
       </div>
     </div>
     <div class="space-y-3">
       <div class="h-3.5 w-12 animate-pulse rounded-md bg-[var(--blog-soft)]" />
       <div class="flex flex-wrap gap-1.5">
-        <div v-for="index in 8" :key="`tag-skeleton-${index}`" class="h-7 w-16 animate-pulse rounded-full bg-[var(--blog-soft)]" />
+        <div v-for="i in 8" :key="'tag-'+i" class="h-7 w-16 animate-pulse rounded-full bg-[var(--blog-soft)]" />
       </div>
     </div>
   </div>
 
   <div v-else-if="categories.length || tags.length" class="space-y-7">
     <!-- 分类列表 -->
-    <section v-if="categories.length" aria-labelledby="sidebar-categories-title">
-      <p id="sidebar-categories-title" class="text-xs font-bold text-[var(--blog-ink)]">分类</p>
+    <section v-if="categories.length">
+      <p class="text-xs font-bold text-[var(--blog-ink)]">分类</p>
       <div class="mt-3 space-y-0.5">
         <NuxtLink
-          v-for="category in visibleCategories"
-          :key="category.id"
-          :to="`/categories/${category.slug}`"
-          exact
+          v-for="c in visibleCategories" :key="c.id"
+          :to="`/categories/${c.slug}`"
           :class="[
-            'flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors hover:bg-[var(--blog-soft)]',
-            isActiveLink(`/categories/${category.slug}`)
-              ? 'bg-[var(--blog-accent)]/8 text-[var(--blog-accent)] font-semibold'
-              : isHotCategory(category.count) ? 'text-[var(--blog-ink)] font-medium' : 'text-[var(--blog-muted)]'
+            'flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors',
+            isActiveLink(`/categories/${c.slug}`)
+              ? 'bg-blue-50 text-blue-600 font-semibold'
+              : isHotCategory(c.count) ? 'text-[var(--blog-ink)] font-semibold hover:bg-blue-50' : 'text-[var(--blog-muted)] hover:bg-blue-50'
           ]"
+          exact
         >
-          <span class="truncate">{{ category.name }}</span>
-          <span class="shrink-0 ml-3 tabular-nums text-xs text-[var(--blog-subtle)]">{{ category.count }}</span>
+          <span class="truncate">{{ c.name }}</span>
+          <span class="shrink-0 ml-3 tabular-nums text-xs text-[var(--blog-subtle)]">{{ c.count }}</span>
         </NuxtLink>
       </div>
-      <button
-        v-if="categories.length > CATEGORY_LIMIT"
-        class="mt-2 text-xs text-[var(--blog-subtle)] transition-colors hover:text-[var(--blog-accent)]"
-        type="button"
-        :aria-expanded="categoriesExpanded"
-        @click="categoriesExpanded = !categoriesExpanded"
-      >
-        更多
-      </button>
+      <button v-if="categories.length > CATEGORY_LIMIT" type="button"
+        class="mt-1 text-xs text-[var(--blog-subtle)] hover:text-blue-600"
+        @click="categoriesExpanded = !categoriesExpanded">更多</button>
     </section>
 
     <!-- 标签云 -->
-    <section v-if="tags.length" aria-labelledby="sidebar-tags-title">
-      <p id="sidebar-tags-title" class="text-xs font-bold text-[var(--blog-ink)]">标签云</p>
+    <section v-if="tags.length">
+      <p class="text-xs font-bold text-[var(--blog-ink)]">标签云</p>
       <div class="mt-3 flex flex-wrap gap-1.5">
         <NuxtLink
-          v-for="tag in visibleTags"
-          :key="tag.id"
-          :to="`/tags/${tag.slug}`"
-          exact
+          v-for="t in visibleTags" :key="t.id"
+          :to="`/tags/${t.slug}`"
           :class="[
-            'rounded-full border border-[var(--blog-border)] px-3 py-1.5 text-sm transition-colors hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]',
-            isActiveLink(`/tags/${tag.slug}`)
-              ? 'border-[var(--blog-accent)] bg-[var(--blog-accent)]/8 text-[var(--blog-accent)] font-semibold'
-              : tagClass(tag.count)
+            'rounded-full border border-[var(--blog-border)] bg-gray-100 px-3 py-1.5 text-sm transition-colors',
+            isActiveLink(`/tags/${t.slug}`)
+              ? 'border-blue-600 bg-blue-600 text-white font-semibold'
+              : tagClass(t.count)
           ]"
-          :title="`${tag.name}: ${tag.count} 篇`"
-        >
-          {{ tag.name }}
-        </NuxtLink>
+          :title="`${t.name}: ${t.count} 篇`"
+          exact
+        >{{ t.name }}</NuxtLink>
       </div>
-      <button
-        v-if="tags.length > TAG_LIMIT"
-        class="mt-3 text-xs text-[var(--blog-subtle)] transition-colors hover:text-[var(--blog-accent)]"
-        type="button"
-        :aria-expanded="tagsExpanded"
-        @click="tagsExpanded = !tagsExpanded"
-      >
-        更多
-      </button>
+      <button v-if="tags.length > TAG_LIMIT" type="button"
+        class="mt-3 text-xs text-[var(--blog-subtle)] hover:text-blue-600"
+        @click="tagsExpanded = !tagsExpanded">更多</button>
     </section>
   </div>
 </template>
