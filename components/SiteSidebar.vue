@@ -42,11 +42,11 @@ function resolveNavigationIcon(iconName?: string | null) {
   <aside
     class="
       blog-sidebar
-      hidden w-[280px] shrink-0 flex-col
+      hidden w-[280px] shrink-0
       rounded-2xl shadow-[0_4px_24px_rgba(15,23,42,0.08)]
       bg-white
-      lg:sticky lg:top-4 lg:flex
-      overflow-hidden
+      lg:sticky lg:top-4 lg:block
+      self-start
     "
   >
     <!-- ========== Logo + 站点信息 ========== -->
@@ -85,8 +85,8 @@ function resolveNavigationIcon(iconName?: string | null) {
       </NuxtLink>
     </div>
 
-    <!-- ========== 主体内容（可滚动）========== -->
-    <div class="space-y-5 overflow-y-auto px-4 py-4" style="max-height: calc(100vh - 200px);">
+    <!-- ========== 主体内容（自适应高度）========== -->
+    <div class="space-y-5 px-4 py-4">
       <!-- 搜索框 -->
       <div class="group">
         <SearchForm
