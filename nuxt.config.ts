@@ -11,8 +11,8 @@ export default defineNuxtConfig({
   icon: {
     // 使用 SVG 模式（比 CSS 模式更可靠）
     mode: 'svg',
-    serverBundle: ['lucide'],
-    clientBundle: ['lucide'],
+    serverBundle: ['lucide', 'fa6-solid', 'fa6-brands'],
+    clientBundle: ['lucide', 'fa6-solid', 'fa6-brands'],
   },
   ssr: true,
   sourcemap: {
