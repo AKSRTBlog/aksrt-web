@@ -31,18 +31,18 @@ function resolveNavigationIcon(iconName?: string | null) {
 <template>
   <aside class="blog-rail hidden w-[280px] shrink-0 flex-col self-start rounded-2xl shadow-lg lg:sticky lg:top-4 lg:flex">
     <!-- Logo + 站点信息 -->
-    <div class="border-b border-[var(--blog-border)] px-5 py-6">
+    <div class="border-b border-[var(--blog-border)] bg-[var(--blog-soft)] px-5 py-5">
       <NuxtLink class="flex items-center gap-3" to="/">
         <AppImage
           v-if="siteSettings?.logoUrl"
           :src="siteSettings.logoUrl"
           :alt="siteSettings.siteTitle"
-          class="h-11 w-11 shrink-0 rounded-[1rem] object-cover"
+          class="h-11 w-11 shrink-0 rounded-xl object-cover"
           loading="eager"
         />
         <div
           v-else
-          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[var(--blog-ink)] text-base font-bold text-white"
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--blog-ink)] text-base font-bold text-white"
         >
           {{ (siteSettings?.siteTitle || 'Blog').slice(0, 1).toUpperCase() }}
         </div>
