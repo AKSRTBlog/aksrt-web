@@ -106,17 +106,17 @@ export interface AdminCommentItem {
   moderationAiCategories: AiCategoryDetail[] | null;
   moderationAiWeightedScore: number | null;
   moderationPipelineVersion: string | null;
-
-export interface AiCategoryDetail {
-  category: string
-  label: string
-  score: number
-  weight: number
-  weightedScore: number
-  flagged: boolean
-}
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AiCategoryDetail {
+  category: string;
+  label: string;
+  score: number;
+  weight: number;
+  weightedScore: number;
+  flagged: boolean;
 }
 
 export type MediaUsage = 'article_cover' | 'article_content' | 'banner' | 'site_asset' | 'misc';

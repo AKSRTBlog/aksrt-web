@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { AdminCommentItem, AiCategoryDetail } from '~/types/admin'
 import { adminText, getAdminReviewStatusLabel, getAdminReviewStatusTone } from '~/utils/admin'
 
 definePageMeta({
@@ -24,7 +25,6 @@ const {
   pendingCount,
   loadComments,
   reviewComment,
-  deleteComment,
   runBulkAction,
   toggleAllSelection,
   toggleSelection,
@@ -33,26 +33,25 @@ const {
   setPage,
 } = useAdminComments()
 
-// 选中的评论详情
-const selectedId = ref<string | null>(null)
-const selectedComment = computed(() =>
-  items.value.find(item => item.id === selectedId.value) ?? items.value[0] ?? null,
-)
+const expandedCommentIds = ref<string[]>([])
+const reviewCommentItem = ref<AdminCommentItem | null>(null)
+const reviewContentExpanded = ref(false)
+const categoryDetailOpen = ref(false)
 
-// 全选状态
 const allVisibleSelected = computed(() =>
   items.value.length > 0 && items.value.every(item => selectedIds.value.includes(item.id)),
 )
 
-// 加载数据
+const selectedCount = computed(() => selectedIds.value.length)
+
 watch([page, keyword, status], () => {
   loadComments()
 }, { immediate: true })
 
-// 选中第一条
 watch(items, (newItems) => {
-  if (newItems.length > 0 && !selectedId.value) {
-    selectedId.value = newItems[0].id
+  if (reviewCommentItem.value && !newItems.some(item => item.id === reviewCommentItem.value?.id)) {
+    reviewCommentItem.value = null
+    categoryDetailOpen.value = false
   }
 })
 
@@ -64,608 +63,428 @@ function handleKeywordChange(value: string) {
   setKeyword(value)
 }
 
-function getRiskTone(level: 'low' | 'medium' | 'high' | null) {
-  if (level === 'high') {
-    return 'bg-rose-100 text-rose-700'
-  }
-  if (level === 'medium') {
-    return 'bg-amber-100 text-amber-700'
-  }
-  if (level === 'low') {
-    return 'bg-emerald-100 text-emerald-700'
-  }
-  return 'bg-slate-100 text-slate-600'
+function isExpanded(commentId: string) {
+  return expandedCommentIds.value.includes(commentId)
 }
 
-function getRiskLabel(level: 'low' | 'medium' | 'high' | null) {
-  if (level === 'high') {
-    return '高风险'
-  }
-  if (level === 'medium') {
-    return '中风险'
-  }
-  if (level === 'low') {
-    return '低风险'
-  }
+function toggleExpanded(commentId: string) {
+  expandedCommentIds.value = isExpanded(commentId)
+    ? expandedCommentIds.value.filter(id => id !== commentId)
+    : [...expandedCommentIds.value, commentId]
+}
+
+function shouldFold(content: string) {
+  return content.length > 120 || content.split(/\r?\n/).length > 4
+}
+
+function openReview(comment: AdminCommentItem) {
+  reviewCommentItem.value = comment
+  reviewContentExpanded.value = false
+  categoryDetailOpen.value = false
+}
+
+function closeReview() {
+  reviewCommentItem.value = null
+  categoryDetailOpen.value = false
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function getRiskTone(level: AdminCommentItem['moderationRiskLevel']) {
+  if (level === 'high') return 'bg-rose-100 text-rose-700 ring-1 ring-rose-200'
+  if (level === 'medium') return 'bg-amber-100 text-amber-700 ring-1 ring-amber-200'
+  if (level === 'low') return 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200'
+  return 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
+}
+
+function getRiskLabel(level: AdminCommentItem['moderationRiskLevel']) {
+  if (level === 'high') return '高风险'
+  if (level === 'medium') return '中风险'
+  if (level === 'low') return '低风险'
   return '未评级'
 }
 
-function formatModerationSignal(raw: string | null) {
-  if (!raw) {
-    return 'No signal payload.'
+function getRiskPercent(comment: AdminCommentItem | null) {
+  if (!comment) return 0
+  if (typeof comment.moderationAiWeightedScore === 'number') {
+    return Math.round(Math.min(Math.max(comment.moderationAiWeightedScore, 0), 1) * 100)
+  }
+  if (typeof comment.moderationRiskScore === 'number') {
+    return Math.round(Math.min(Math.max(comment.moderationRiskScore, 0), 100))
+  }
+  return 0
+}
+
+function getRiskBarClass(percent: number) {
+  if (percent >= 70) return 'bg-rose-500'
+  if (percent >= 40) return 'bg-amber-500'
+  return 'bg-emerald-500'
+}
+
+function getCategoryLabel(category: AiCategoryDetail) {
+  const labels: Record<string, string> = {
+    harassment: '骚扰',
+    'harassment/threatening': '威胁性骚扰',
+    hate: '仇恨',
+    'hate/threatening': '威胁性仇恨',
+    violence: '暴力',
+    'violence/graphic': '血腥暴力',
+    sexual: '色情',
+    'sexual/minors': '未成年人色情',
+    self_harm: '自残',
+    'self-harm/intent': '自残意图',
+    'self-harm/instructions': '自残指导',
+    illicit: '非法内容',
+    spam: '垃圾信息',
   }
 
-  try {
-    const parsed = JSON.parse(raw)
-    return JSON.stringify(parsed, null, 2)
-  } catch {
-    return raw
-  }
+  return category.label || labels[category.category] || labels[category.category.toLowerCase()] || category.category
 }
 
-// AI Confidence Color Helpers
-function getConfidenceColor(score: number | null) {
-  if (!score || score <= 0.25) return 'text-emerald-600'
-  if (score <= 0.50) return 'text-blue-600'
-  if (score <= 0.70) return 'text-amber-600'
-  return 'text-rose-600'
-}
-
-function getConfidenceBarColor(score: number | null) {
-  if (!score || score <= 0.25) return 'bg-emerald-500'
-  if (score <= 0.50) return 'bg-blue-500'
-  if (score <= 0.70) return 'bg-amber-500'
-  return 'bg-rose-500'
-}
-
-// Category Visual Helpers
-function getCategoryIconClass(score: number | undefined) {
-  if (!score || score < 0.30) return 'bg-emerald-100 text-emerald-700'
-  if (score < 0.60) return 'bg-blue-100 text-blue-700'
-  if (score < 0.80) return 'bg-amber-100 text-amber-700'
-  return 'bg-rose-100 text-rose-700'
-}
-
-// AI 分类 Emoji 图标
-const CATEGORY_ICON_MAP: Record<string, string> = {
-  sexual_violence: '🛡️',
-  child_sexual_abuse: '👥',
-  self_harm: '💔',
-  harassment: '💬',
-  'harassment/threatening': '⚠️',
-  hate: '🚫',
-  'hate/threatening': '🔥',
-  violence: '🔒',
-  'violence/graphic': '⚡',
-  sexual: '🔔',
-  'sexual/minors': '🚨',
-  spam: '📦',
-  fairness: '🧭',
-  medical: '📈',
-  illicit: '🛡️',
-  'illicit/violent': '💣',
-  'illicit/violent/physical': '⚡',
-  'illicit/child': '🛑',
-  'self-harm/instructions': '📋',
-  'self-harm/intent': '😔',
-}
-
-const DEFAULT_CATEGORY_ICON = '🔍'
-
-function getCategoryEmoji(category: string | undefined): string {
-  if (!category) return DEFAULT_CATEGORY_ICON
-
-  const lowerCat = category.toLowerCase()
-
-  // Exact match
-  if (CATEGORY_ICON_MAP[lowerCat] || CATEGORY_ICON_MAP[category]) return CATEGORY_ICON_MAP[lowerCat] || CATEGORY_ICON_MAP[category]
-
-  // Partial match
-  for (const [key, emoji] of Object.entries(CATEGORY_ICON_MAP)) {
-    if (lowerCat.includes(key.toLowerCase()) || lowerCat.includes(key.replace(/\//g, ''))) {
-      return emoji
-    }
-  }
-
-  // Keyword fallback
-  if (/illicit|非法/.test(lowerCat)) return CATEGORY_ICON_MAP.illicit
-  if (/self.harm|自残/.test(lowerCat)) return CATEGORY_ICON_MAP.self_harm
-  if (/sexual|色情/.test(lowerCat)) return CATEGORY_ICON_MAP.sexual
-  if (/violent|暴力/.test(lowerCat)) return CATEGORY_ICON_MAP.violence
-  if (/child|未成年|儿童/.test(lowerCat)) return CATEGORY_ICON_MAP['sexual/minors']
-  if (/spam|垃圾|广告/.test(lowerCat)) return CATEGORY_ICON_MAP.spam
-  if (/hate|仇恨/.test(lowerCat)) return CATEGORY_ICON_MAP.hate
-  if (/harass|骚扰/.test(lowerCat)) return CATEGORY_ICON_MAP.harassment
-
-  return DEFAULT_CATEGORY_ICON
-}
-
-// AI 分类名称中文翻译
-const CATEGORY_LABEL_MAP: Record<string, string> = {
-  sexual_violence: '性暴力',
-  child_sexual_abuse: '儿童性虐待',
-  self_harm: '自残行为',
-  harassment: '骚扰言论',
-  'harassment/threatening': '威胁性骚扰',
-  hate: '仇恨言论',
-  'hate/threatening': '威胁性仇恨',
-  violence: '暴力内容',
-  'violence/graphic': '血腥暴力画面',
-  sexual: '色情内容',
-  'sexual/minors': '未成年人色情',
-  spam: '垃圾信息',
-  fairness: '公平性问题',
-  medical: '医疗健康相关',
-  illicit: '非法内容',
-  'illicit/violent': '非法暴力',
-  'illicit/violent/physical': '非法肢体暴力',
-  'illicit/child': '非法涉及儿童',
-  'self-harm/instructions': '自残指导',
-  'self-harm/intent': '自残倾向',
-}
-
-function getCategoryLabel(category: string): string {
-  const label = CATEGORY_LABEL_MAP[category] || CATEGORY_LABEL_MAP[category.toLowerCase()]
-  if (label) return label
-
-  for (const [key, translated] of Object.entries(CATEGORY_LABEL_MAP)) {
-    if (category.toLowerCase().includes(key.replace(/\//g, '').toLowerCase())) {
-      return translated
-    }
-  }
-
-  return category
-}
-
-async function handleApprove(comment: typeof selectedComment.value) {
-  if (comment) {
-    await reviewComment(comment.id, 'approved')
-    selectedId.value = comment.id
+async function handleApprove(comment: AdminCommentItem | null) {
+  if (!comment) return
+  const updated = await reviewComment(comment.id, 'approved')
+  if (updated && reviewCommentItem.value?.id === comment.id) {
+    reviewCommentItem.value = updated
   }
 }
 
-async function handleReject(comment: typeof selectedComment.value) {
-  if (comment) {
-    await reviewComment(comment.id, 'rejected', '内容不符合发布规则')
-    selectedId.value = comment.id
+async function handleReject(comment: AdminCommentItem | null) {
+  if (!comment) return
+  const updated = await reviewComment(comment.id, 'rejected', '内容不符合发布规则')
+  if (updated && reviewCommentItem.value?.id === comment.id) {
+    reviewCommentItem.value = updated
   }
 }
 
-async function handleReset(comment: typeof selectedComment.value) {
-  if (comment) {
-    await reviewComment(comment.id, 'pending')
-    selectedId.value = comment.id
-  }
-}
-
-async function handleDelete(comment: typeof selectedComment.value) {
-  if (comment) {
-    const success = await deleteComment(comment)
-    if (success && selectedId.value === comment.id) {
-      selectedId.value = items.value[0]?.id ?? null
-    }
-  }
-}
 </script>
 
 <template>
   <div class="space-y-6">
-    <AdminPageHeader title="评论管理" description="按状态筛选评论，并支持单条或批量审核。" />
+    <AdminPageHeader title="评论管理" description="集中审核评论内容、访客信息与 AI 风险信号，支持单条处理和批量操作。" />
 
-    <!-- 搜索和筛选 -->
-    <div class="admin-card p-4">
+    <section class="admin-card p-4">
       <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <AdminSearchField v-model="keyword" placeholder="搜索昵称、内容或文章标题" @update:model-value="handleKeywordChange" />
+        <AdminSearchField
+          v-model="keyword"
+          placeholder="搜索昵称、邮箱、评论内容或文章标题"
+          @update:model-value="handleKeywordChange"
+        />
 
         <div class="flex flex-wrap gap-2">
-          <button
-            class="admin-button-secondary"
-            :class="{ 'admin-button-primary': status === 'all' }"
-            @click="handleStatusChange('all')"
-          >
+          <button class="admin-tab-button" :class="{ 'admin-tab-active': status === 'all' }" type="button" @click="handleStatusChange('all')">
             全部
           </button>
-          <button
-            class="admin-button-secondary"
-            :class="{ 'admin-button-primary': status === 'pending' }"
-            @click="handleStatusChange('pending')"
-          >
+          <button class="admin-tab-button" :class="{ 'admin-tab-active': status === 'pending' }" type="button" @click="handleStatusChange('pending')">
             {{ adminText.reviewPending }}
           </button>
-          <button
-            class="admin-button-secondary"
-            :class="{ 'admin-button-primary': status === 'approved' }"
-            @click="handleStatusChange('approved')"
-          >
+          <button class="admin-tab-button" :class="{ 'admin-tab-active': status === 'approved' }" type="button" @click="handleStatusChange('approved')">
             {{ adminText.reviewApproved }}
           </button>
-          <button
-            class="admin-button-secondary"
-            :class="{ 'admin-button-primary': status === 'rejected' }"
-            @click="handleStatusChange('rejected')"
-          >
+          <button class="admin-tab-button" :class="{ 'admin-tab-active': status === 'rejected' }" type="button" @click="handleStatusChange('rejected')">
             {{ adminText.reviewRejected }}
           </button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- 错误提示 -->
     <div v-if="error" class="admin-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
       {{ error }}
     </div>
 
-    <!-- 评论列表和详情 -->
-    <section class="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-      <!-- 列表 -->
-      <div class="admin-card overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-border)] px-5 py-4">
-          <div>
-            <p class="text-sm font-semibold text-slate-900">当前页 {{ items.length }} 条</p>
-            <p class="text-xs text-slate-500">{{ pendingCount }} 条{{ adminText.reviewPending }}</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              class="admin-button-secondary"
-              :disabled="loading || items.length === 0"
-              @click="toggleAllSelection(allVisibleSelected)"
-            >
-              {{ allVisibleSelected ? '取消本页全选' : '本页全选' }}
-            </button>
-            <button
-              class="admin-button-primary"
-              :disabled="loading || selectedIds.length === 0 || busyId === 'bulk'"
-              @click="runBulkAction('approved')"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              批量通过
-            </button>
-            <button
-              class="admin-button-secondary"
-              :disabled="loading || selectedIds.length === 0 || busyId === 'bulk'"
-              @click="runBulkAction('rejected')"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              批量驳回
-            </button>
-            <button
-              class="admin-button-danger"
-              :disabled="loading || selectedIds.length === 0 || busyId === 'bulk'"
-              @click="runBulkAction('delete')"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              批量删除
-            </button>
-          </div>
+    <section class="admin-card overflow-hidden">
+      <div class="flex flex-col gap-4 border-b border-[var(--admin-border)] bg-white/80 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
+        <div>
+          <p class="text-sm font-semibold text-slate-900">
+            当前页 {{ items.length }} 条评论
+          </p>
+          <p class="mt-1 text-xs text-slate-500">
+            本页待审核 {{ pendingCount }} 条，已选择 {{ selectedCount }} 条
+          </p>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse">
-            <thead>
-              <tr class="border-b border-[var(--admin-border)] bg-slate-50/90 text-left">
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">选择</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">评论</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">状态</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">时间</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loading">
-                <td class="px-5 py-10 text-sm text-slate-400" colspan="5">
-                  正在加载评论...
-                </td>
-              </tr>
-              <tr v-else-if="items.length === 0">
-                <td class="px-5 py-10 text-sm text-slate-400" colspan="5">
-                  暂无符合筛选条件的评论。
-                </td>
-              </tr>
-              <tr
-                v-for="comment in items"
-                v-else
-                :key="comment.id"
-                class="border-b border-[var(--admin-border)] transition hover:bg-slate-50"
-                :class="{ 'bg-blue-50/50': selectedComment?.id === comment.id }"
-              >
-                <td class="px-5 py-4">
-                  <input
-                    :checked="selectedIds.includes(comment.id)"
-                    type="checkbox"
-                    @change="toggleSelection(comment.id, ($event.target as HTMLInputElement).checked)"
-                  >
-                </td>
-                <td class="px-5 py-4">
-                  <button class="block text-left" type="button" @click="selectedId = comment.id">
-                    <p class="text-sm font-semibold text-slate-900">{{ comment.nickname }}</p>
-                    <p class="mt-1 line-clamp-2 text-sm leading-7 text-slate-500">{{ comment.content }}</p>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                      <span
-                        class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                        :class="getRiskTone(comment.moderationRiskLevel)"
-                      >
-                        {{ getRiskLabel(comment.moderationRiskLevel) }}
-                      </span>
-                      <span v-if="comment.moderationRiskScore !== null" class="text-xs text-slate-500">
-                        score {{ comment.moderationRiskScore }}
-                      </span>
-                    </div>
-                    <p class="mt-2 text-xs text-slate-400">{{ comment.article.title }}</p>
-                  </button>
-                </td>
-                <td class="px-5 py-4">
-                  <AdminStatusBadge :tone="getAdminReviewStatusTone(comment.status)">
-                    {{ getAdminReviewStatusLabel(comment.status) }}
-                  </AdminStatusBadge>
-                </td>
-                <td class="px-5 py-4 text-sm text-slate-500">
-                  {{ new Date(comment.createdAt).toLocaleDateString('zh-CN') }}
-                </td>
-                <td class="px-5 py-4">
-                  <button class="admin-button-secondary" type="button" @click="selectedId = comment.id">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    查看
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="flex flex-wrap gap-2">
+          <button class="admin-button-secondary min-h-11" :disabled="loading || items.length === 0" type="button" @click="toggleAllSelection(allVisibleSelected)">
+            {{ allVisibleSelected ? '取消本页全选' : '本页全选' }}
+          </button>
+          <button class="admin-button-primary min-h-11" :disabled="loading || selectedCount === 0 || busyId === 'bulk'" type="button" @click="runBulkAction('approved')">
+            <Icon name="lucide:check" class="h-4 w-4" />
+            批量通过
+          </button>
+          <button class="admin-button-secondary min-h-11" :disabled="loading || selectedCount === 0 || busyId === 'bulk'" type="button" @click="runBulkAction('rejected')">
+            <Icon name="lucide:x" class="h-4 w-4" />
+            批量驳回
+          </button>
+          <button class="admin-button-danger min-h-11" :disabled="loading || selectedCount === 0 || busyId === 'bulk'" type="button" @click="runBulkAction('delete')">
+            <Icon name="lucide:trash-2" class="h-4 w-4" />
+            批量删除
+          </button>
         </div>
-
-        <AdminPagination
-          label="评论分页"
-          :page="Math.min(page, totalPages)"
-          :total="total"
-          :total-pages="totalPages"
-          @update:page="setPage"
-        />
       </div>
 
-      <!-- 详情 -->
-      <div class="admin-card p-6">
-        <template v-if="selectedComment">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-lg font-semibold text-slate-900">{{ selectedComment.nickname }}</p>
-              <p class="mt-1 text-sm text-slate-500">来自 {{ selectedComment.article.title }}</p>
+      <div v-if="loading" class="px-5 py-12 text-sm text-slate-400">
+        正在加载评论...
+      </div>
+
+      <div v-else-if="items.length === 0" class="px-5 py-12 text-sm text-slate-400">
+        暂无符合筛选条件的评论。
+      </div>
+
+      <div v-else class="divide-y divide-slate-100">
+        <article
+          v-for="comment in items"
+          :key="comment.id"
+          class="grid gap-4 px-4 py-5 transition hover:bg-slate-50/70 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:px-5"
+        >
+          <div class="flex items-start gap-3">
+            <input
+              class="admin-checkbox mt-1"
+              :checked="selectedIds.includes(comment.id)"
+              type="checkbox"
+              :aria-label="`选择 ${comment.nickname} 的评论`"
+              @change="toggleSelection(comment.id, ($event.target as HTMLInputElement).checked)"
+            >
+          </div>
+
+          <div class="min-w-0 space-y-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="text-sm font-semibold text-slate-900">
+                {{ comment.nickname }}
+              </p>
+              <AdminStatusBadge :tone="getAdminReviewStatusTone(comment.status)">
+                {{ getAdminReviewStatusLabel(comment.status) }}
+              </AdminStatusBadge>
+              <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="getRiskTone(comment.moderationRiskLevel)">
+                {{ getRiskLabel(comment.moderationRiskLevel) }}
+              </span>
+              <span class="text-xs text-slate-400">{{ formatDateTime(comment.createdAt) }}</span>
             </div>
-            <AdminStatusBadge :tone="getAdminReviewStatusTone(selectedComment.status)">
-              {{ getAdminReviewStatusLabel(selectedComment.status) }}
-            </AdminStatusBadge>
-          </div>
 
-          <div class="mt-6 rounded-[4px] bg-slate-50 p-5">
-            <p class="text-sm leading-8 text-slate-700">{{ selectedComment.content }}</p>
-          </div>
-
-          <div class="mt-6 space-y-3 text-sm text-slate-500">
-            <p>创建时间: {{ new Date(selectedComment.createdAt).toLocaleString('zh-CN') }}</p>
-            <p>邮箱: {{ selectedComment.email }}</p>
-            <p>网站: {{ selectedComment.website || '未填写' }}</p>
             <div>
-              <p class="mb-2">Location:</p>
+              <p class="whitespace-pre-wrap text-sm leading-7 text-slate-700" :class="{ 'line-clamp-4': shouldFold(comment.content) && !isExpanded(comment.id) }">
+                {{ comment.content }}
+              </p>
+              <button
+                v-if="shouldFold(comment.content)"
+                class="mt-1 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                type="button"
+                @click="toggleExpanded(comment.id)"
+              >
+                {{ isExpanded(comment.id) ? '收起全文' : '展开全文' }}
+              </button>
+            </div>
+
+            <div class="grid gap-2 text-xs text-slate-500 md:grid-cols-2 xl:grid-cols-4">
+              <p class="truncate">
+                <span class="font-medium text-slate-600">邮箱：</span>{{ comment.email || '未填写' }}
+              </p>
+              <p class="truncate">
+                <span class="font-medium text-slate-600">真实 IP：</span>{{ comment.ip || 'unknown' }}
+              </p>
+              <p class="truncate">
+                <span class="font-medium text-slate-600">来源：</span>{{ comment.article.title }}
+              </p>
+              <p class="truncate" :title="comment.userAgent || 'unknown'">
+                <span class="font-medium text-slate-600">UA：</span>{{ comment.userAgent || 'unknown' }}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 lg:flex-col lg:items-stretch lg:justify-center">
+            <button class="admin-button-secondary min-h-11" type="button" @click="openReview(comment)">
+              <Icon name="lucide:scan-search" class="h-4 w-4" />
+              审核
+            </button>
+            <button class="admin-button-danger min-h-11" :disabled="busyId === comment.id || busyId === 'bulk'" type="button" @click="handleReject(comment)">
+              <Icon name="lucide:x" class="h-4 w-4" />
+              驳回
+            </button>
+            <button class="admin-button-primary min-h-11" :disabled="busyId === comment.id || busyId === 'bulk'" type="button" @click="handleApprove(comment)">
+              <Icon name="lucide:check" class="h-4 w-4" />
+              通过
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <AdminPagination
+        label="条评论"
+        :page="Math.min(page, totalPages)"
+        :total="total"
+        :total-pages="totalPages"
+        @update:page="setPage"
+      />
+    </section>
+
+    <Teleport to="body">
+      <div v-if="reviewCommentItem" class="admin-modal-overlay admin-modal-overlay-sheet px-0 sm:px-4" role="dialog" aria-modal="true" aria-labelledby="comment-review-title">
+        <div class="flex max-h-[94vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-w-3xl sm:rounded-2xl">
+          <header class="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+            <div class="min-w-0">
+              <p id="comment-review-title" class="text-lg font-bold text-slate-950">
+                审核评论
+              </p>
+              <p class="mt-1 truncate text-sm text-slate-500">
+                {{ reviewCommentItem.nickname }} · {{ reviewCommentItem.article.title }}
+              </p>
+            </div>
+            <button class="admin-button-secondary h-10 w-10 flex-none p-0" type="button" aria-label="关闭弹窗" @click="closeReview">
+              <Icon name="lucide:x" class="h-4 w-4" />
+            </button>
+          </header>
+
+          <div class="flex-1 overflow-y-auto px-5 py-5">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-semibold text-slate-900">
+                  评论内容
+                </p>
+                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="getRiskTone(reviewCommentItem.moderationRiskLevel)">
+                  {{ getRiskLabel(reviewCommentItem.moderationRiskLevel) }}
+                </span>
+              </div>
+              <p class="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700" :class="{ 'line-clamp-5': shouldFold(reviewCommentItem.content) && !reviewContentExpanded }">
+                {{ reviewCommentItem.content }}
+              </p>
+              <button
+                v-if="shouldFold(reviewCommentItem.content)"
+                class="mt-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                type="button"
+                @click="reviewContentExpanded = !reviewContentExpanded"
+              >
+                {{ reviewContentExpanded ? '收起全文' : '展开全文' }}
+              </button>
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+              <div class="rounded-lg border border-slate-200 bg-white p-4">
+                <p class="text-xs font-semibold uppercase text-slate-400">邮箱</p>
+                <p class="mt-1 break-words text-sm text-slate-800">{{ reviewCommentItem.email || '未填写' }}</p>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-white p-4">
+                <p class="text-xs font-semibold uppercase text-slate-400">真实 IP</p>
+                <p class="mt-1 break-words text-sm text-slate-800">{{ reviewCommentItem.ip || 'unknown' }}</p>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-white p-4">
+                <p class="text-xs font-semibold uppercase text-slate-400">创建时间</p>
+                <p class="mt-1 text-sm text-slate-800">{{ formatDateTime(reviewCommentItem.createdAt) }}</p>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-white p-4">
+                <p class="text-xs font-semibold uppercase text-slate-400">来源页面</p>
+                <NuxtLink class="mt-1 block truncate text-sm font-semibold text-blue-600 hover:text-blue-700" :to="`/articles/${reviewCommentItem.article.slug}`" target="_blank">
+                  {{ reviewCommentItem.article.title }}
+                </NuxtLink>
+              </div>
+            </div>
+
+            <div class="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs font-semibold uppercase text-slate-400">User-Agent</p>
+              <p class="mt-2 break-words text-sm leading-6 text-slate-700">{{ reviewCommentItem.userAgent || 'unknown' }}</p>
               <CommentMeta
-                :browser-label="selectedComment.browserLabel"
-                :os-label="selectedComment.osLabel"
-                :user-agent="selectedComment.userAgent"
-                :country-name="selectedComment.countryName"
+                class="mt-3"
+                :browser-label="reviewCommentItem.browserLabel"
+                :os-label="reviewCommentItem.osLabel"
+                :user-agent="reviewCommentItem.userAgent"
+                :country-name="reviewCommentItem.countryName"
                 compact
               />
             </div>
-            <p class="break-words">User-Agent: {{ selectedComment.userAgent || 'unknown' }}</p>
 
-            <!-- Enhanced Risk Level Display with Visual Indicator -->
-            <div v-if="selectedComment.moderationRiskLevel" class="mt-4">
-              <p class="text-sm font-medium text-slate-700 mb-2">风险等级评估</p>
-              <div class="flex items-center gap-3">
-                <span
-                  class="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-semibold"
-                  :class="getRiskTone(selectedComment.moderationRiskLevel)"
-                >
-                  {{ getRiskLabel(selectedComment.moderationRiskLevel) }}
-                </span>
-                <span class="text-slate-600">
-                  综合得分: <strong>{{ selectedComment.moderationRiskScore ?? 0 }}/100</strong>
-                </span>
-              </div>
-
-              <!-- Confidence Bar -->
-              <div v-if="selectedComment.moderationAiWeightedScore !== null && selectedComment.moderationAiWeightedScore > 0" class="mt-3">
-                <div class="flex justify-between items-center mb-1">
-                  <span class="text-xs text-slate-500">AI 加权风险指数</span>
-                  <span class="text-xs font-mono font-semibold" :class="getConfidenceColor(selectedComment.moderationAiWeightedScore)">
-                    {{ (selectedComment.moderationAiWeightedScore * 100).toFixed(1) }}%
-                  </span>
+            <div class="mt-4 rounded-lg border border-blue-100 bg-blue-50/70 p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-slate-900">AI 风险指数</p>
+                  <p v-if="reviewCommentItem.moderationSummary" class="mt-1 text-xs leading-5 text-slate-500">
+                    {{ reviewCommentItem.moderationSummary }}
+                  </p>
                 </div>
-                <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
-                  <div
-                    class="h-full transition-all duration-300 ease-out rounded-full"
-                    :class="getConfidenceBarColor(selectedComment.moderationAiWeightedScore)"
-                    :style="{ width: Math.min(selectedComment.moderationAiWeightedScore * 100, 100) + '%' }"
-                  />
-                </div>
-                <p class="mt-1 text-xs text-slate-400">
-                  越高表示AI检测到越多的违规信号
+                <p class="text-2xl font-bold text-slate-950">
+                  {{ getRiskPercent(reviewCommentItem) }}%
                 </p>
               </div>
-            </div>
-
-            <p v-if="selectedComment.moderationSummary" class="break-words mt-3">
-              审核摘要:
-              <span class="font-normal">{{ selectedComment.moderationSummary }}</span>
-            </p>
-            <p v-if="selectedComment.moderationPipelineVersion">
-              审核管道版本: {{ selectedComment.moderationPipelineVersion }}
-            </p>
-            <p>回复层级: {{ selectedComment.parent ? `回复 ${selectedComment.parent.nickname}` : '一级评论' }}</p>
-            <p v-if="selectedComment.rejectReason">驳回原因: {{ selectedComment.rejectReason }}</p>
-          </div>
-
-          <!-- Enhanced AI Category Visualization -->
-          <div v-if="selectedComment.moderationAiCategories?.length" class="mt-6 rounded-[4px] border border-[var(--admin-border)] bg-gradient-to-br from-blue-50/50 to-indigo-50/30 p-5">
-            <h4 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-              AI 智能分类详情
-            </h4>
-
-            <div class="space-y-3">
-              <div
-                v-for="(cat, index) in selectedComment.moderationAiCategories"
-                :key="cat.category || index"
-                class="flex items-center justify-between p-3 rounded-lg bg-white/80 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow"
+              <div class="mt-4 h-3 overflow-hidden rounded-full bg-white ring-1 ring-blue-100">
+                <div class="h-full rounded-full transition-all" :class="getRiskBarClass(getRiskPercent(reviewCommentItem))" :style="{ width: `${getRiskPercent(reviewCommentItem)}%` }" />
+              </div>
+              <button
+                class="admin-button-secondary mt-4 w-full min-h-11"
+                type="button"
+                :disabled="!reviewCommentItem.moderationAiCategories?.length"
+                @click="categoryDetailOpen = true"
               >
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                  <!-- Category Icon/Indicator -->
-                  <span
-                    class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-base"
-                    :class="getCategoryIconClass(cat.score)"
-                  >
-                    {{ getCategoryEmoji(cat.category) }}
-                  </span>
-
-                  <!-- Category Info -->
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-semibold text-slate-800 truncate">
-                      {{ getCategoryLabel(cat.category) }}
-                    </p>
-                    <p class="text-xs text-slate-500 truncate">
-                      原始分值: {{ (cat.score * 100).toFixed(1) }}% | 权重: {{ cat.weight.toFixed(1) }}x
-                    </p>
-                  </div>
-                </div>
-
-                <!-- Score Badge & Progress -->
-                <div class="flex-shrink-0 ml-4 w-32">
-                  <div class="flex items-center justify-between mb-1">
-                    <span
-                      class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                      :class="cat.flagged ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'"
-                    >
-                      {{ cat.flagged ? '触发' : '正常' }}
-                    </span>
-                    <span class="text-[10px] font-mono text-slate-600">
-                      {{ (cat.weightedScore * 100).toFixed(1) }}%
-                    </span>
-                  </div>
-                  <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      class="h-full rounded-full transition-all duration-300"
-                      :class="cat.flagged ? 'bg-rose-500' : 'bg-emerald-500'"
-                      :style="{ width: Math.min(cat.weightedScore * 100, 100) + '%' }"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- AI Analysis Summary -->
-            <div class="mt-4 pt-4 border-t border-slate-200/60">
-              <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="rounded-lg bg-white/60 p-2.5">
-                  <p class="text-[10px] uppercase tracking-wider text-slate-500 mb-1">检测类别</p>
-                  <p class="text-lg font-bold text-slate-800">{{ selectedComment.moderationAiCategories.length }}</p>
-                </div>
-                <div class="rounded-lg bg-white/60 p-2.5">
-                  <p class="text-[10px] uppercase tracking-wider text-slate-500 mb-1">触发类别</p>
-                  <p class="text-lg font-bold" :class="selectedComment.moderationAiCategories.some(c => c.flagged) ? 'text-rose-600' : 'text-emerald-600'">
-                    {{ selectedComment.moderationAiCategories.filter(c => c.flagged).length }}
-                  </p>
-                </div>
-                <div class="rounded-lg bg-white/60 p-2.5">
-                  <p class="text-[10px] uppercase tracking-wider text-slate-500 mb-1">最高风险</p>
-                  <p class="text-lg font-bold text-slate-800">
-                    {{ (Math.max(...selectedComment.moderationAiCategories.map(c => c.score)) * 100).toFixed(0) }}%
-                  </p>
-                </div>
-              </div>
+                <Icon name="lucide:list-tree" class="h-4 w-4" />
+                查看分类详情
+              </button>
             </div>
           </div>
 
-          <div class="mt-6 space-y-3">
-            <p class="text-sm font-semibold text-slate-900">审核命中详情（原始信号）</p>
-
-            <details class="rounded-[4px] border border-[var(--admin-border)] bg-slate-50/70">
-              <summary class="cursor-pointer list-none px-4 py-3 text-sm font-medium text-slate-700">
-                Akismet 原始信号
-              </summary>
-              <pre class="overflow-x-auto border-t border-[var(--admin-border)] bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ formatModerationSignal(selectedComment.moderationAkismetRaw) }}</pre>
-            </details>
-
-            <details class="rounded-[4px] border border-[var(--admin-border)] bg-slate-50/70">
-              <summary class="cursor-pointer list-none px-4 py-3 text-sm font-medium text-slate-700">
-                AI 审核原始信号
-              </summary>
-              <pre class="overflow-x-auto border-t border-[var(--admin-border)] bg-slate-950 p-4 text-xs leading-6 text-slate-100">{{ formatModerationSignal(selectedComment.moderationAiRaw) }}</pre>
-            </details>
-          </div>
-
-          <div class="mt-6 grid gap-3 sm:grid-cols-2">
-            <button
-              class="admin-button-primary"
-              :disabled="busyId === selectedComment.id || busyId === 'bulk'"
-              @click="handleApprove(selectedComment)"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
+          <footer class="grid gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:grid-cols-3">
+            <button class="admin-button-primary min-h-11" :disabled="busyId === reviewCommentItem.id || busyId === 'bulk'" type="button" @click="handleApprove(reviewCommentItem)">
+              <Icon name="lucide:check" class="h-4 w-4" />
               通过
             </button>
-            <button
-              class="admin-button-secondary"
-              :disabled="busyId === selectedComment.id || busyId === 'bulk'"
-              @click="handleReset(selectedComment)"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              设为{{ adminText.reviewPending }}
-            </button>
-            <button
-              class="admin-button-danger"
-              :disabled="busyId === selectedComment.id || busyId === 'bulk'"
-              @click="handleReject(selectedComment)"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-              </svg>
+            <button class="admin-button-danger min-h-11" :disabled="busyId === reviewCommentItem.id || busyId === 'bulk'" type="button" @click="handleReject(reviewCommentItem)">
+              <Icon name="lucide:x" class="h-4 w-4" />
               驳回
             </button>
-            <button
-              class="admin-button-secondary"
-              :disabled="busyId === selectedComment.id || busyId === 'bulk'"
-              @click="handleDelete(selectedComment)"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              删除
+            <button class="admin-button-secondary min-h-11" type="button" @click="closeReview">
+              关闭弹窗
             </button>
-          </div>
-
-          <NuxtLink
-            class="mt-6 inline-flex text-sm font-medium text-blue-600 hover:underline"
-            :to="`/articles/${selectedComment.article.slug}`"
-            target="_blank"
-          >
-            打开文章
-          </NuxtLink>
-        </template>
-
-        <div v-else class="flex h-full min-h-64 items-center justify-center text-sm text-slate-400">
-          请选择一条评论查看详情
+          </footer>
         </div>
       </div>
-    </section>
+
+      <div v-if="categoryDetailOpen && reviewCommentItem" class="admin-modal-overlay admin-modal-overlay-center px-4" role="dialog" aria-modal="true" aria-labelledby="category-detail-title">
+        <div class="flex max-h-[82vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <header class="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
+            <p id="category-detail-title" class="text-lg font-bold text-slate-950">
+              AI 分类详情
+            </p>
+            <button class="admin-button-secondary h-10 w-10 p-0" type="button" aria-label="关闭分类详情" @click="categoryDetailOpen = false">
+              <Icon name="lucide:x" class="h-4 w-4" />
+            </button>
+          </header>
+
+          <div class="flex-1 space-y-3 overflow-y-auto px-5 py-5">
+            <div
+              v-for="category in reviewCommentItem.moderationAiCategories || []"
+              :key="category.category"
+              class="rounded-lg border border-slate-200 bg-white p-4"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-slate-900">
+                    {{ getCategoryLabel(category) }}
+                  </p>
+                  <p class="mt-1 text-xs text-slate-500">
+                    {{ category.category }} · 权重 {{ category.weight.toFixed(1) }}x
+                  </p>
+                </div>
+                <span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="category.flagged ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'">
+                  {{ category.flagged ? '触发' : '正常' }}
+                </span>
+              </div>
+              <div class="mt-3 flex items-center gap-3">
+                <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div class="h-full rounded-full" :class="getRiskBarClass(Math.round(category.weightedScore * 100))" :style="{ width: `${Math.min(category.weightedScore * 100, 100)}%` }" />
+                </div>
+                <span class="w-14 text-right text-xs font-mono text-slate-600">{{ (category.score * 100).toFixed(1) }}%</span>
+              </div>
+            </div>
+
+            <p v-if="!reviewCommentItem.moderationAiCategories?.length" class="py-8 text-center text-sm text-slate-400">
+              暂无 AI 分类详情。
+            </p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
