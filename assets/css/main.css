@@ -334,19 +334,20 @@ img {
 }
 
 .article-content .markdown-collapse-card summary::before {
-  content: '‹';
-  display: inline-flex;
+  content: '';
+  display: block;
   width: 1.15rem;
+  height: 1.15rem;
   flex: 0 0 1.15rem;
-  align-items: center;
-  justify-content: center;
-  color: var(--blog-accent);
-  font-size: 1.35rem;
-  line-height: 1;
+  background: var(--blog-accent);
+  clip-path: polygon(30% 18%, 78% 50%, 30% 82%);
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition: transform 0.18s ease;
 }
 
 .article-content .markdown-collapse-card[open] summary::before {
-  content: '⌄';
+  transform: rotate(90deg);
 }
 
 .article-content .markdown-collapse-title {
