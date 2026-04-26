@@ -13,7 +13,10 @@ export default defineNuxtConfig({
     mode: 'css',
     // 本地打包常用图标集
     serverBundle: ['lucide'],
-    clientBundle: ['lucide'],
+    clientBundle: {
+      scan: true,
+      icons: ['lucide:messages-square'],
+    },
     // 其他图标从 CDN 按需加载（包括 FA6）
     providers: ['iconify', 'local'],
   },
