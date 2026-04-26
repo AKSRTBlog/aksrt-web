@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppImage from '~/components/AppImage.vue';
 import type { PublicSiteSettingsItem } from '~/types/blog';
+import { resolveNavigationIconClass, resolveNavigationIconName } from '~/utils/navigation-icons';
 
 const props = defineProps<{
   siteSettings?: PublicSiteSettingsItem;
@@ -10,32 +11,6 @@ const navigationItems = computed(() =>
   (props.siteSettings?.navigationItems ?? []).filter((item) => item.enabled),
 );
 
-/**
- * 将数据库存储的图标名统一转换为 Nuxt Icon 可用的格式
- * 支持：
- *   fa6-solid-home        → 原样返回
- *   lucide:home          → 原样返回
- *   fa-solid fa-circle-user → fa6-solid-circle-user
- *   fa-brands github     → fa6-brands-github
- *   house                 → lucide:house
- */
-function resolveNavigationIcon(iconName?: string | null) {
-  const raw = iconName?.trim();
-  if (!raw) return '';
-
-  // 已是 Nuxt Icon 格式，直接返回
-  if (raw.startsWith('fa6-') || raw.includes(':')) return raw;
-
-  // 传统 FA 多段式：fa-solid fa-circle-user → 拆成多段再合并
-  if (raw.startsWith('fa-')) {
-    const parts = raw.split(/\s+/);
-    const cleaned = parts.map(p => p.replace(/^fa-/, ''));
-    return `fa6-${cleaned.join('-').toLowerCase()}`;
-  }
-
-  // 纯名称 → 当作 lucide 图标
-  return `lucide:${raw.toLowerCase()}`;
-}
 </script>
 
 <template>
@@ -141,9 +116,15 @@ function resolveNavigationIcon(iconName?: string | null) {
             aria-hidden="true"
           >
             <Icon
-              v-if="resolveNavigationIcon(item.iconUrl)"
-              :name="resolveNavigationIcon(item.iconUrl)"
+              v-if="resolveNavigationIconName(item.iconUrl)"
+              :name="resolveNavigationIconName(item.iconUrl)"
               class="h-[18px] w-[18px]"
+            />
+            <i
+              v-else-if="resolveNavigationIconClass(item.iconUrl)"
+              :class="resolveNavigationIconClass(item.iconUrl)"
+              class="h-[18px] w-[18px] text-center text-[15px] leading-[18px]"
+              aria-hidden="true"
             />
             <Icon
               v-else

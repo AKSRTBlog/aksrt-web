@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppImage from '~/components/AppImage.vue';
 import type { PublicSiteSettingsItem } from '~/types/blog';
+import { resolveNavigationIconClass, resolveNavigationIconName } from '~/utils/navigation-icons';
 
 const props = defineProps<{
   siteSettings?: PublicSiteSettingsItem;
@@ -11,11 +12,6 @@ const mobileOpen = ref(false);
 const navigationItems = computed(() =>
   (props.siteSettings?.navigationItems ?? []).filter((item) => item.enabled),
 );
-
-function resolveNavigationIcon(iconName?: string | null) {
-  const value = iconName?.trim();
-  return value && value.startsWith('fa6-') ? value : '';
-}
 
 // 路由变化时自动关闭菜单
 watch(() => useRoute().fullPath, () => {
@@ -81,7 +77,13 @@ watch(() => useRoute().fullPath, () => {
             :style="{ animationDelay: `${80 + index * 50}ms` }"
             @click="mobileOpen = false"
           >
-            <Icon v-if="resolveNavigationIcon(item.iconUrl)" :name="resolveNavigationIcon(item.iconUrl)" class="h-4 w-4 shrink-0 text-[var(--blog-accent)]" />
+            <Icon v-if="resolveNavigationIconName(item.iconUrl)" :name="resolveNavigationIconName(item.iconUrl)" class="h-4 w-4 shrink-0 text-[var(--blog-accent)]" />
+            <i
+              v-else-if="resolveNavigationIconClass(item.iconUrl)"
+              :class="resolveNavigationIconClass(item.iconUrl)"
+              class="h-4 w-4 shrink-0 text-center text-[var(--blog-accent)] leading-4"
+              aria-hidden="true"
+            />
             <span>{{ item.label }}</span>
           </NuxtLink>
         </div>

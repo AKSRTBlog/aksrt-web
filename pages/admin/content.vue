@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { adminText } from '~/utils/admin'
+import { resolveNavigationIconClass, resolveNavigationIconName } from '~/utils/navigation-icons'
 
 definePageMeta({
   layout: 'admin',
@@ -38,17 +39,12 @@ type Tab = 'navigation' | 'categories' | 'tags'
 const activeTab = ref<Tab>('navigation')
 
 const fontAwesomeIconOptions = [
-  'fa6-solid:house',
-  'fa6-solid:newspaper',
-  'fa6-solid:box-archive',
-  'fa6-solid:magnifying-glass',
-  'fa6-solid:folder-open',
-  'fa6-solid:tags',
-  'fa6-solid:user',
-  'fa6-solid:link',
-  'fa6-regular:file-lines',
-  'fa6-regular:heart',
-  'fa6-brands:github',
+  'fa-solid fa-house',
+  'fa-solid fa-newspaper',
+  'fa-solid fa-stopwatch-20',
+  'fa-regular fa-file-lines',
+  'fa-regular fa-heart',
+  'fa-brands fa-github',
 ]
 
 // 快速添加表单
@@ -272,14 +268,21 @@ function handleTagNameChange() {
                       v-model="item.iconUrl"
                       class="admin-input pr-10"
                       list="font-awesome-navigation-icons"
-                      placeholder="FA6 图标，如 fa6-solid:house"
+                      placeholder="FA 图标，如 fa-solid fa-stopwatch-20"
                     >
                     <span
-                      v-if="item.iconUrl?.startsWith('fa6-')"
+                      v-if="resolveNavigationIconName(item.iconUrl)"
                       class="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 text-slate-500"
                       aria-hidden="true"
                     >
-                      <Icon :name="item.iconUrl" class="h-4 w-4" />
+                      <Icon :name="resolveNavigationIconName(item.iconUrl)" class="h-4 w-4" />
+                    </span>
+                    <span
+                      v-else-if="resolveNavigationIconClass(item.iconUrl)"
+                      class="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 text-slate-500"
+                      aria-hidden="true"
+                    >
+                      <i :class="resolveNavigationIconClass(item.iconUrl)" class="h-4 w-4 text-center leading-4" />
                     </span>
                   </div>
                   <div class="flex items-center gap-3">
