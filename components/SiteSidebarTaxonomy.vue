@@ -6,6 +6,12 @@ import {
   mergeCategories,
 } from '~/composables/api';
 
+const CATEGORY_LIMIT = 6;
+const TAG_LIMIT = 14;
+
+const categoriesExpanded = ref(false);
+const tagsExpanded = ref(false);
+
 const {
   data: taxonomyData,
   pending,
@@ -41,6 +47,8 @@ const tags = computed(() =>
 
 const maxCategoryCount = computed(() => Math.max(1, ...categories.value.map((item) => item.count)));
 const maxTagCount = computed(() => Math.max(1, ...tags.value.map((item) => item.count)));
+const visibleCategories = computed(() => categoriesExpanded.value ? categories.value : categories.value.slice(0, CATEGORY_LIMIT));
+const visibleTags = computed(() => tagsExpanded.value ? tags.value : tags.value.slice(0, TAG_LIMIT));
 
 function isHotCategory(count: number) {
   return count >= maxCategoryCount.value;
@@ -88,7 +96,7 @@ function tagClass(count: number) {
       </p>
       <div class="mt-3 space-y-1">
         <NuxtLink
-          v-for="category in categories"
+          v-for="category in visibleCategories"
           :key="category.id"
           :to="`/categories/${category.slug}`"
           class="flex items-center justify-between rounded-2xl border px-4 py-2.5 text-sm font-medium transition hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
@@ -100,6 +108,15 @@ function tagClass(count: number) {
           </span>
         </NuxtLink>
       </div>
+      <button
+        v-if="categories.length > CATEGORY_LIMIT"
+        class="mt-2 text-xs font-semibold text-[var(--blog-accent)] transition hover:text-[var(--blog-ink)]"
+        type="button"
+        :aria-expanded="categoriesExpanded"
+        @click="categoriesExpanded = !categoriesExpanded"
+      >
+        {{ categoriesExpanded ? '收起分类' : `展开 ${categories.length - CATEGORY_LIMIT} 个分类` }}
+      </button>
     </section>
 
     <section v-if="tags.length" aria-labelledby="sidebar-tags-title">
@@ -108,7 +125,7 @@ function tagClass(count: number) {
       </p>
       <div class="mt-3 flex flex-wrap gap-2">
         <NuxtLink
-          v-for="tag in tags"
+          v-for="tag in visibleTags"
           :key="tag.id"
           :to="`/tags/${tag.slug}`"
           class="rounded-full border px-3 py-1.5 font-medium transition hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
@@ -119,6 +136,15 @@ function tagClass(count: number) {
           <span class="ml-1 text-[10px] opacity-60">{{ tag.count }}</span>
         </NuxtLink>
       </div>
+      <button
+        v-if="tags.length > TAG_LIMIT"
+        class="mt-3 text-xs font-semibold text-[var(--blog-accent)] transition hover:text-[var(--blog-ink)]"
+        type="button"
+        :aria-expanded="tagsExpanded"
+        @click="tagsExpanded = !tagsExpanded"
+      >
+        {{ tagsExpanded ? '收起标签' : `展开 ${tags.length - TAG_LIMIT} 个标签` }}
+      </button>
     </section>
   </div>
 </template>
