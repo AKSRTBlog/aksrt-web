@@ -548,7 +548,6 @@ function formatAkismetJson(raw: string | null): string {
                   class="mt-3 max-h-48 cursor-text overflow-auto rounded-md bg-black/5 p-3 font-mono text-[10px] text-amber-400 break-all select-text whitespace-pre-wrap"
                 >{{ formatAkismetJson(reviewCommentItem.moderationAkismetRaw) }}</pre>
               </div>
-            </div>
             </template>
           </div>
 
