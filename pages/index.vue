@@ -4,10 +4,15 @@ import type { BlogArticleSummary } from '~/types/blog';
 
 const siteSettings = inject<ReturnType<typeof useAsyncData>['value']>('site-settings');
 const HOME_SPLASH_SEEN_KEY = 'home-splash-seen-v1';
+const HOME_SPLASH_MIN_MS = 280;
+const HOME_SPLASH_MAX_MS = 900;
 const hasSeenHomeSplash =
   import.meta.client && window.sessionStorage.getItem(HOME_SPLASH_SEEN_KEY) === '1';
 const showHomeSplash = ref(!hasSeenHomeSplash);
+const splashLogoUrl = computed(() => siteSettings.value?.logoUrl || '');
+const splashTitle = computed(() => siteSettings.value?.siteTitle || siteSettings.value?.seo?.title || 'Blog');
 let homeSplashTimer: ReturnType<typeof setTimeout> | null = null;
+let homeSplashStartedAt = 0;
 
 // Banner 仍用 SSR（轻量，首屏展示需要）
 const { data: banners } = await useAsyncData('home-banners', () => fetchPublicBanners('home_top'));
@@ -33,6 +38,40 @@ async function loadArticles() {
 
 usePublicLiveReload(loadArticles);
 
+function clearHomeSplashTimer() {
+  if (homeSplashTimer) {
+    clearTimeout(homeSplashTimer);
+    homeSplashTimer = null;
+  }
+}
+
+function closeHomeSplash() {
+  if (!showHomeSplash.value) {
+    return;
+  }
+
+  showHomeSplash.value = false;
+  window.sessionStorage.setItem(HOME_SPLASH_SEEN_KEY, '1');
+  clearHomeSplashTimer();
+}
+
+function closeHomeSplashAfterMinimum() {
+  if (!showHomeSplash.value || !homeSplashStartedAt) {
+    return;
+  }
+
+  const elapsed = Date.now() - homeSplashStartedAt;
+  const remaining = Math.max(HOME_SPLASH_MIN_MS - elapsed, 0);
+  clearHomeSplashTimer();
+  homeSplashTimer = window.setTimeout(closeHomeSplash, remaining);
+}
+
+watch(articlesLoading, (loading) => {
+  if (!loading) {
+    closeHomeSplashAfterMinimum();
+  }
+});
+
 onMounted(() => {
   loadArticles();
 
@@ -40,17 +79,12 @@ onMounted(() => {
     return;
   }
 
-  homeSplashTimer = window.setTimeout(() => {
-    showHomeSplash.value = false;
-    window.sessionStorage.setItem(HOME_SPLASH_SEEN_KEY, '1');
-  }, 420);
+  homeSplashStartedAt = Date.now();
+  homeSplashTimer = window.setTimeout(closeHomeSplash, HOME_SPLASH_MAX_MS);
 });
 
 onBeforeUnmount(() => {
-  if (homeSplashTimer) {
-    clearTimeout(homeSplashTimer);
-    homeSplashTimer = null;
-  }
+  clearHomeSplashTimer();
 });
 
 // SEO 元数据
@@ -76,7 +110,7 @@ useHead(() => ({
 <template>
   <div class="space-y-8">
     <ClientOnly>
-      <HomeSplashLoader :visible="showHomeSplash" />
+      <HomeSplashLoader :logo-url="splashLogoUrl" :site-title="splashTitle" :visible="showHomeSplash" />
     </ClientOnly>
 
     <section v-if="banners && banners.length > 0" class="mx-auto max-w-6xl px-2 pt-4 sm:px-6 lg:pt-0">
