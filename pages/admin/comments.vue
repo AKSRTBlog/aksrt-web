@@ -158,8 +158,6 @@ async function handleApprove(comment: AdminCommentItem | null) {
   }
 }
 
-const akismetExpanded = ref(false)
-
 /**
  * 解析 Akismet 原始 JSON 数据
  */
@@ -420,8 +418,7 @@ function formatAkismetJson(raw: string | null): string {
                 {{ reviewCommentItem.nickname }} · {{ reviewCommentItem.article.title }}
               </p>
             </div>
-            <button class="admin-button-secondary h-10 w-10 flex-none p-0" type="button" aria-label="关闭弹窗" @click="closeReview">
-              <img src="/img/icons/circle-xmark-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
+            <button class="admin-button-secondary css-close-btn h-10 w-10 flex-none p-0" type="button" aria-label="关闭弹窗" @click="closeReview">
             </button>
           </header>
 
@@ -577,8 +574,7 @@ function formatAkismetJson(raw: string | null): string {
             <p id="category-detail-title" class="text-lg font-bold text-slate-950">
               AI 分类详情
             </p>
-            <button class="admin-button-secondary h-10 w-10 p-0" type="button" aria-label="关闭分类详情" @click="categoryDetailOpen = false">
-              <img src="/img/icons/circle-xmark-solid.svg" alt="" class="h-4 w-4" style="color: currentColor;" />
+            <button class="admin-button-secondary css-close-btn h-10 w-10 p-0" type="button" aria-label="关闭分类详情" @click="categoryDetailOpen = false">
             </button>
           </header>
 
@@ -618,3 +614,36 @@ function formatAkismetJson(raw: string | null): string {
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* ========== CSS 绘制关闭按钮（X 图标）========== */
+/* 使用 ::before 和 ::after 伪元素绘制交叉线 */
+.css-close-btn {
+  position: relative;
+}
+
+.css-close-btn::before,
+.css-close-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 2px;
+  background-color: currentColor;
+  border-radius: 1px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.css-close-btn::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* hover 时轻微放大效果 */
+.css-close-btn:hover::before,
+.css-close-btn:hover::after {
+  width: 16px;
+  height: 2.5px;
+}
+</style>
