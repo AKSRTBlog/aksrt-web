@@ -86,12 +86,6 @@ watch(() => useRoute().fullPath, () => {
           </NuxtLink>
         </div>
 
-        <div class="mt-5 border-t border-[var(--blog-border)] pt-5">
-          <p class="mb-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--blog-subtle)]">
-            Browse
-          </p>
-          <SiteSidebarTaxonomy />
-        </div>
       </nav>
     </Transition>
   </header>
