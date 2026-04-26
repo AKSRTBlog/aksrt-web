@@ -38,6 +38,31 @@ const tags = computed(() =>
   deriveTags(taxonomyData.value.articles)
     .filter((item) => item.count > 0),
 );
+
+const maxCategoryCount = computed(() => Math.max(1, ...categories.value.map((item) => item.count)));
+const maxTagCount = computed(() => Math.max(1, ...tags.value.map((item) => item.count)));
+
+function isHotCategory(count: number) {
+  return count >= maxCategoryCount.value;
+}
+
+function tagWeight(count: number) {
+  if (maxTagCount.value <= 1) {
+    return 0;
+  }
+  return Math.min(1, count / maxTagCount.value);
+}
+
+function tagClass(count: number) {
+  const weight = tagWeight(count);
+  if (weight >= 0.75) {
+    return 'border-[var(--blog-accent)] bg-[var(--blog-soft)] text-[var(--blog-ink)] text-sm';
+  }
+  if (weight >= 0.45) {
+    return 'border-[var(--blog-border)] bg-white text-[var(--blog-ink)]';
+  }
+  return 'border-[var(--blog-border)] text-[var(--blog-muted)]';
+}
 </script>
 
 <template>
@@ -66,7 +91,8 @@ const tags = computed(() =>
           v-for="category in categories"
           :key="category.id"
           :to="`/categories/${category.slug}`"
-          class="flex items-center justify-between rounded-2xl px-4 py-2.5 text-sm font-medium text-[var(--blog-muted)] transition hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
+          class="flex items-center justify-between rounded-2xl border px-4 py-2.5 text-sm font-medium transition hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
+          :class="isHotCategory(category.count) ? 'border-[var(--blog-accent)] bg-[var(--blog-soft)] text-[var(--blog-ink)]' : 'border-transparent text-[var(--blog-muted)]'"
         >
           <span class="truncate">{{ category.name }}</span>
           <span class="rounded-full bg-[var(--blog-soft)] px-2 py-0.5 text-[11px] text-[var(--blog-subtle)]">
@@ -85,9 +111,12 @@ const tags = computed(() =>
           v-for="tag in tags"
           :key="tag.id"
           :to="`/tags/${tag.slug}`"
-          class="rounded-full border border-[var(--blog-border)] px-3 py-1.5 text-xs font-medium text-[var(--blog-muted)] transition hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
+          class="rounded-full border px-3 py-1.5 font-medium transition hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
+          :class="tagClass(tag.count)"
+          :title="`${tag.name}：${tag.count} 篇文章`"
         >
           #{{ tag.name }}
+          <span class="ml-1 text-[10px] opacity-60">{{ tag.count }}</span>
         </NuxtLink>
       </div>
     </section>
