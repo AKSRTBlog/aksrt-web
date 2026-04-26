@@ -305,6 +305,64 @@ img {
   color: #464d5a;
 }
 
+.article-content .markdown-collapse-card {
+  margin: 1.35rem 0;
+  overflow: hidden;
+  border: 1px solid var(--blog-border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.article-content .markdown-collapse-card[open] {
+  border-color: var(--blog-border-strong);
+}
+
+.article-content .markdown-collapse-card summary {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  color: var(--blog-ink);
+  font-weight: 700;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.article-content .markdown-collapse-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.article-content .markdown-collapse-card summary::before {
+  content: '‹';
+  display: inline-flex;
+  width: 1.15rem;
+  flex: 0 0 1.15rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--blog-accent);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.article-content .markdown-collapse-card[open] summary::before {
+  content: '⌄';
+}
+
+.article-content .markdown-collapse-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.article-content .markdown-collapse-content {
+  border-top: 1px solid var(--blog-border);
+  padding: 1rem 1rem 1.05rem 2.8rem;
+}
+
+.article-content .markdown-collapse-content > :last-child {
+  margin-bottom: 0;
+}
+
 .article-content code {
   border: 1px solid rgba(25, 29, 36, 0.08);
   border-radius: 0.5rem;

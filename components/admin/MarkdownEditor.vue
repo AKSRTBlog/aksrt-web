@@ -17,30 +17,12 @@ type ToolbarAction =
   | 'quote'
   | 'inlineCode'
   | 'codeBlock'
+  | 'collapseCard'
   | 'unorderedList'
   | 'orderedList'
   | 'link'
   | 'commentLock'
   | 'table';
-
-type FoldNodeType = 'heading' | 'code' | 'text';
-
-interface FoldNode {
-  id: string;
-  type: FoldNodeType;
-  level: number;
-  summary: string;
-  markdown: string;
-  children: FoldNode[];
-  startLine: number;
-  endLine: number;
-  language?: string;
-}
-
-interface VisibleFoldRow {
-  node: FoldNode;
-  depth: number;
-}
 
 const props = withDefaults(
   defineProps<{
@@ -88,216 +70,10 @@ const previewSource = computed(() => {
 });
 
 const previewHtml = computed(() => renderMarkdown(buildCommentLockPreviewMarkdown(previewSource.value, props.commentLockPreviewMode)));
-const foldViewEnabled = ref(false);
-const collapsedFoldIds = ref<string[]>([]);
-const foldTree = computed(() => buildMarkdownFoldTree(props.modelValue));
-const foldableNodeIds = computed(() => collectFoldableNodeIds(foldTree.value));
-const visibleFoldRows = computed(() => flattenVisibleFoldRows(foldTree.value));
 
 function emitValue(value: string) {
   emit('update:modelValue', value);
 }
-
-function createFoldNode(input: Omit<FoldNode, 'children'>): FoldNode {
-  return {
-    ...input,
-    children: [],
-  };
-}
-
-function makeFoldId(type: FoldNodeType, startLine: number, summary: string) {
-  return `${type}:${startLine}:${summary.slice(0, 24)}`;
-}
-
-function createTextNode(lines: string[], startLine: number): FoldNode | null {
-  const markdown = lines.join('\n').trim();
-  if (!markdown) {
-    return null;
-  }
-
-  const summary = markdown.split(/\r?\n/).find(line => line.trim())?.trim() ?? '文本内容';
-  return createFoldNode({
-    id: makeFoldId('text', startLine, summary),
-    type: 'text',
-    level: 7,
-    summary,
-    markdown,
-    startLine,
-    endLine: startLine + lines.length - 1,
-  });
-}
-
-function createCodeNode(lines: string[], startLine: number, language: string): FoldNode {
-  const codeLineCount = Math.max(lines.length - 2, 0);
-  const summary = `${language || '代码块'} · ${codeLineCount} 行`;
-
-  return createFoldNode({
-    id: makeFoldId('code', startLine, summary),
-    type: 'code',
-    level: 7,
-    summary,
-    markdown: lines.join('\n'),
-    startLine,
-    endLine: startLine + lines.length - 1,
-    language,
-  });
-}
-
-function buildMarkdownFoldTree(source: string): FoldNode[] {
-  const lines = source.split(/\r?\n/);
-  const root: FoldNode = createFoldNode({
-    id: 'root',
-    type: 'heading',
-    level: 0,
-    summary: 'root',
-    markdown: '',
-    startLine: 0,
-    endLine: lines.length,
-  });
-  const headingStack: FoldNode[] = [root];
-
-  function currentParent() {
-    return headingStack[headingStack.length - 1]!;
-  }
-
-  function attachNode(node: FoldNode) {
-    currentParent().children.push(node);
-  }
-
-  let index = 0;
-  while (index < lines.length) {
-    const line = lines[index] ?? '';
-    const headingMatch = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
-
-    if (/^\s*$/.test(line)) {
-      index += 1;
-      continue;
-    }
-
-    const fenceMatch = /^```([\w-]*)\s*$/.exec(line);
-    if (fenceMatch) {
-      const codeStart = index;
-      const codeLines = [line];
-      index += 1;
-
-      while (index < lines.length) {
-        const nextLine = lines[index] ?? '';
-        codeLines.push(nextLine);
-        index += 1;
-        if (/^```\s*$/.test(nextLine)) {
-          break;
-        }
-      }
-
-      attachNode(createCodeNode(codeLines, codeStart + 1, fenceMatch[1] ?? ''));
-      continue;
-    }
-
-    if (!headingMatch) {
-      const textStart = index;
-      const textLines: string[] = [];
-
-      while (index < lines.length) {
-        const nextLine = lines[index] ?? '';
-        if (/^(#{1,6})\s+(.+?)\s*$/.test(nextLine) || /^```([\w-]*)\s*$/.test(nextLine)) {
-          break;
-        }
-
-        textLines.push(nextLine);
-        index += 1;
-
-        if (/^\s*$/.test(nextLine) && textLines.some(item => item.trim())) {
-          break;
-        }
-      }
-
-      const textNode = createTextNode(textLines, textStart + 1);
-      if (textNode) {
-        attachNode(textNode);
-      }
-      continue;
-    }
-
-    const level = headingMatch[1]!.length;
-    const summary = headingMatch[2]!.trim();
-    const node = createFoldNode({
-      id: makeFoldId('heading', index + 1, summary),
-      type: 'heading',
-      level,
-      summary,
-      markdown: line,
-      startLine: index + 1,
-      endLine: index + 1,
-    });
-
-    while (headingStack.length > 1 && headingStack[headingStack.length - 1]!.level >= level) {
-      headingStack.pop();
-    }
-
-    attachNode(node);
-    headingStack.push(node);
-    index += 1;
-  }
-
-  return root.children;
-}
-
-function collectFoldableNodeIds(nodes: FoldNode[]): string[] {
-  return nodes.flatMap(node => [
-    node.id,
-    ...collectFoldableNodeIds(node.children),
-  ]);
-}
-
-function flattenVisibleFoldRows(nodes: FoldNode[], depth = 0): VisibleFoldRow[] {
-  const rows: VisibleFoldRow[] = [];
-
-  for (const node of nodes) {
-    rows.push({ node, depth });
-    if (!isFoldNodeCollapsed(node)) {
-      rows.push(...flattenVisibleFoldRows(node.children, depth + 1));
-    }
-  }
-
-  return rows;
-}
-
-function isFoldNodeCollapsed(node: FoldNode) {
-  return collapsedFoldIds.value.includes(node.id);
-}
-
-function toggleFoldNode(node: FoldNode) {
-  collapsedFoldIds.value = isFoldNodeCollapsed(node)
-    ? collapsedFoldIds.value.filter(id => id !== node.id)
-    : [...collapsedFoldIds.value, node.id];
-}
-
-function collapseAllFoldNodes() {
-  collapsedFoldIds.value = foldableNodeIds.value;
-}
-
-function expandAllFoldNodes() {
-  collapsedFoldIds.value = [];
-}
-
-function renderFoldNodeHtml(node: FoldNode) {
-  return renderMarkdown(node.markdown);
-}
-
-function getFoldNodeMeta(node: FoldNode) {
-  const range = node.startLine === node.endLine ? `L${node.startLine}` : `L${node.startLine}-${node.endLine}`;
-  if (node.type === 'heading' && node.children.length > 0) {
-    return `${range} · ${node.children.length} 项`;
-  }
-
-  return range;
-}
-
-watch(foldViewEnabled, (enabled) => {
-  if (enabled) {
-    collapseAllFoldNodes();
-  }
-});
 
 /** 待恢复的滚动位置（用于防止 focus() 导致页面跳动） */
 let pendingScrollRestore: { x: number; y: number; container: HTMLElement | null; scrollTop: number } | null = null;
@@ -504,6 +280,7 @@ function handleToolbarAction(action: ToolbarAction) {
     quote: () => insertTextAtSelection(textarea, '\n> ', '', '引用内容'),
     inlineCode: () => insertTextAtSelection(textarea, '`', '`', '行内代码'),
     codeBlock: () => insertTextAtSelection(textarea, '\n```ts\n', '\n```\n', 'console.log("hello");'),
+    collapseCard: () => insertTextAtSelection(textarea, '\n:::collapse ', '\n这里填写折叠内容。\n:::\n', '显示的标题'),
     unorderedList: () => insertMarkdownList(textarea, 'unordered'),
     orderedList: () => insertMarkdownList(textarea, 'ordered'),
     link: () => insertTextAtSelection(textarea, '[', '](https://example.com)', '链接文本'),
@@ -553,9 +330,6 @@ watch(
       />
 
       <div class="ml-auto flex flex-wrap gap-2">
-        <button class="admin-button-secondary" :class="{ 'admin-button-primary': foldViewEnabled }" type="button" @click="foldViewEnabled = !foldViewEnabled">
-          折叠
-        </button>
         <button class="admin-button-secondary" :class="{ 'admin-button-primary': viewMode === 'edit' }" type="button" @click="viewMode = 'edit'">
           编辑
         </button>
@@ -577,60 +351,7 @@ watch(
         class="min-h-[560px] lg:min-h-[720px]"
         :class="viewMode === 'split' ? 'border-r border-[var(--admin-border)]' : ''"
       >
-        <div v-if="foldViewEnabled" class="admin-fold-editor min-h-[560px] h-full lg:min-h-[720px]">
-          <div class="admin-fold-toolbar">
-            <span class="text-sm font-semibold text-slate-700">Markdown 折叠视图</span>
-            <div class="flex gap-2">
-              <button class="admin-toolbar-button" type="button" @click="expandAllFoldNodes">
-                全部展开
-              </button>
-              <button class="admin-toolbar-button" type="button" @click="collapseAllFoldNodes">
-                全部折叠
-              </button>
-            </div>
-          </div>
-
-          <div v-if="foldTree.length" class="admin-fold-tree">
-            <div
-              v-for="row in visibleFoldRows"
-              :key="row.node.id"
-              class="admin-fold-node"
-              :style="{ '--fold-depth': String(row.depth) }"
-            >
-              <button
-                class="admin-fold-row"
-                :class="{ 'admin-fold-row-open': !isFoldNodeCollapsed(row.node) }"
-                type="button"
-                :aria-expanded="!isFoldNodeCollapsed(row.node)"
-                @click="toggleFoldNode(row.node)"
-              >
-                <Icon :name="isFoldNodeCollapsed(row.node) ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="admin-fold-icon" />
-                <span
-                  class="admin-fold-heading"
-                  :class="[
-                    row.node.type === 'heading' ? `admin-fold-heading-${Math.min(row.node.level, 6)}` : '',
-                    `admin-fold-${row.node.type}`,
-                  ]"
-                >
-                  {{ row.node.summary }}
-                </span>
-                <span class="admin-fold-lines">{{ getFoldNodeMeta(row.node) }}</span>
-              </button>
-
-              <div
-                v-if="!isFoldNodeCollapsed(row.node) && row.node.type !== 'heading'"
-                class="admin-fold-content"
-                v-html="renderFoldNodeHtml(row.node)"
-              />
-            </div>
-          </div>
-
-          <div v-else class="flex min-h-[480px] items-center justify-center text-sm text-slate-400">
-            暂无可折叠内容
-          </div>
-        </div>
         <textarea
-          v-else
           ref="textareaRef"
           class="admin-editor-textarea min-h-[560px] h-full lg:min-h-[720px]"
           :value="modelValue"

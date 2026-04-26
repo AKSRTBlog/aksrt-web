@@ -71,6 +71,58 @@ function escapeAttribute(value: string) {
   return escapeHtml(value).replace(/`/g, '&#96;');
 }
 
+interface CollapseCard {
+  token: string;
+  title: string;
+  content: string;
+}
+
+function extractCollapseCards(source: string) {
+  const lines = source.split(/\r?\n/);
+  const cards: CollapseCard[] = [];
+  const output: string[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index] ?? '';
+    const match = /^:::(?:collapse|details)\s+(.+?)\s*$/.exec(line);
+
+    if (!match) {
+      output.push(line);
+      index += 1;
+      continue;
+    }
+
+    const title = match[1]?.trim() || '折叠内容';
+    const contentLines: string[] = [];
+    index += 1;
+
+    while (index < lines.length) {
+      const nextLine = lines[index] ?? '';
+      if (/^:::\s*$/.test(nextLine)) {
+        index += 1;
+        break;
+      }
+
+      contentLines.push(nextLine);
+      index += 1;
+    }
+
+    const token = `@@MARKDOWN_COLLAPSE_${cards.length}@@`;
+    cards.push({
+      token,
+      title,
+      content: contentLines.join('\n'),
+    });
+    output.push('', token, '');
+  }
+
+  return {
+    markdown: output.join('\n'),
+    cards,
+  };
+}
+
 function sanitizeUrl(rawValue: unknown, mode: 'link' | 'image') {
   const value = typeof rawValue === 'string' ? rawValue.trim() : '';
   if (!value) {
@@ -136,7 +188,21 @@ export function renderMarkdown(markdown: unknown) {
 
   renderer.html = ({ text }) => escapeHtml(text);
 
-  return marked.parse(safeMarkdown, { renderer }) as string;
+  const renderWithCollapseCards = (source: string): string => {
+    const { markdown: markdownWithoutCards, cards } = extractCollapseCards(source);
+    let html = marked.parse(markdownWithoutCards, { renderer }) as string;
+
+    for (const card of cards) {
+      const cardHtml = `<details class="markdown-collapse-card"><summary><span class="markdown-collapse-title">${escapeHtml(card.title)}</span></summary><div class="markdown-collapse-content">${renderWithCollapseCards(card.content)}</div></details>`;
+      html = html
+        .replace(`<p>${card.token}</p>`, cardHtml)
+        .replace(card.token, cardHtml);
+    }
+
+    return html;
+  };
+
+  return renderWithCollapseCards(safeMarkdown);
 }
 
 async function apiFetch<T>(path: string, init?: Parameters<typeof $fetch<ApiEnvelope<T>>>[1]) {

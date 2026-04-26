@@ -11,6 +11,7 @@ type ToolbarAction =
   | 'quote'
   | 'inlineCode'
   | 'codeBlock'
+  | 'collapseCard'
   | 'unorderedList'
   | 'orderedList'
   | 'link'
@@ -50,6 +51,7 @@ const allQuickActions = [
   { id: 'quote', title: '引用', icon: '引用' },
   { id: 'inlineCode', title: '行内代码', icon: '行内代码' },
   { id: 'codeBlock', title: '代码块', icon: '代码块' },
+  { id: 'collapseCard', title: '插入展开与折叠卡片', icon: '折叠卡片' },
   { id: 'link', title: '链接', icon: '链接' },
   { id: 'commentLock', title: '评论后可见', icon: '评论可见' },
   { id: 'table', title: '表格', icon: '表格' },
