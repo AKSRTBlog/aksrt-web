@@ -666,3 +666,28 @@
 .admin-switch-on .admin-switch-thumb {
   transform: translateX(1.35rem);
 }
+
+/* ========== Nuxt Icon / SVG 图标修复 ========== */
+/* 确保 Icon 组件（SVG 模式）正确继承颜色并显示 */
+.admin-card svg,
+.admin-button-primary svg,
+.admin-button-secondary svg,
+.admin-button-danger svg,
+.admin-toolbar-button svg,
+.admin-icon-chip svg,
+button svg,
+a svg {
+  display: inline-block;
+  flex-shrink: 0;
+  color: currentColor;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Nuxt Icon 组件容器 */
+:where([data-icon]) svg {
+  color: currentColor !important;
+}
