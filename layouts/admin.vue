@@ -13,6 +13,37 @@ import { useAdminSession } from '~/composables/useAdminSession'
 const route = useRoute()
 const mobileOpen = ref(false)
 
+/**
+ * 锁定 body 滚动（防止弹窗打开时侧栏位置偏移）
+ * 使用 padding-right 补偿滚动条宽度避免布局抖动
+ */
+function lockBodyScroll() {
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+  document.body.style.overflow = 'hidden'
+  if (scrollbarWidth > 0) {
+    document.body.style.paddingRight = `${scrollbarWidth}px`
+  }
+}
+
+/** 解除 body 滚动锁定 */
+function unlockBodyScroll() {
+  document.body.style.overflow = ''
+  document.body.style.paddingRight = ''
+}
+
+// 监听所有 admin-modal-overlay 的显示/隐藏
+watchEffect(() => {
+  // 检查页面上是否存在可见的模态框
+  nextTick(() => {
+    const hasModal = !!document.querySelector('.admin-modal-overlay')
+    if (hasModal) {
+      lockBodyScroll()
+    } else {
+      unlockBodyScroll()
+    }
+  })
+})
+
 const { hydrateSession, profile, logout, refreshProfile } = useAdminSession()
 
 const currentTitle = computed(() => getAdminRouteTitle(route.path))
