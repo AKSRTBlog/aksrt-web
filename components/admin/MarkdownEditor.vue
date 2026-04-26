@@ -23,6 +23,20 @@ type ToolbarAction =
   | 'commentLock'
   | 'table';
 
+type FoldNodeType = 'heading' | 'code' | 'text';
+
+interface FoldNode {
+  id: string;
+  type: FoldNodeType;
+  level: number;
+  summary: string;
+  markdown: string;
+  children: FoldNode[];
+  startLine: number;
+  endLine: number;
+  language?: string;
+}
+
 const props = withDefaults(
   defineProps<{
     modelValue: string;
@@ -69,10 +83,121 @@ const previewSource = computed(() => {
 });
 
 const previewHtml = computed(() => renderMarkdown(buildCommentLockPreviewMarkdown(previewSource.value, props.commentLockPreviewMode)));
+const foldViewEnabled = ref(false);
+const collapsedFoldIds = ref<string[]>([]);
+const foldTree = computed(() => buildMarkdownFoldTree(props.modelValue));
+const foldableNodeIds = computed(() => collectFoldableNodeIds(foldTree.value));
 
 function emitValue(value: string) {
   emit('update:modelValue', value);
 }
+
+function createFoldNode(input: Omit<FoldNode, 'children'>): FoldNode {
+  return {
+    ...input,
+    children: [],
+  };
+}
+
+function makeFoldId(type: FoldNodeType, startLine: number, summary: string) {
+  return `${type}:${startLine}:${summary.slice(0, 24)}`;
+}
+
+function createTextNode(lines: string[], startLine: number): FoldNode | null {
+  const markdown = lines.join('\n').trim();
+  if (!markdown) {
+    return null;
+  }
+
+  const summary = markdown.split(/\r?\n/).find(line => line.trim())?.trim() ?? '文本内容';
+  return createFoldNode({
+    id: makeFoldId('text', startLine, summary),
+    type: 'text',
+    level: 7,
+    summary,
+    markdown,
+    startLine,
+    endLine: startLine + lines.length - 1,
+  });
+}
+
+function buildMarkdownFoldTree(source: string): FoldNode[] {
+  const lines = source.split(/\r?\n/);
+  const root: FoldNode = createFoldNode({
+    id: 'root',
+    type: 'heading',
+    level: 0,
+    summary: 'root',
+    markdown: '',
+    startLine: 0,
+    endLine: lines.length,
+  });
+  const headingStack: FoldNode[] = [root];
+
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index] ?? '';
+    const headingMatch = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
+
+    if (!headingMatch) {
+      index += 1;
+      continue;
+    }
+
+    const level = headingMatch[1]!.length;
+    const summary = headingMatch[2]!.trim();
+    const node = createFoldNode({
+      id: makeFoldId('heading', index + 1, summary),
+      type: 'heading',
+      level,
+      summary,
+      markdown: line,
+      startLine: index + 1,
+      endLine: index + 1,
+    });
+
+    while (headingStack.length > 1 && headingStack[headingStack.length - 1]!.level >= level) {
+      headingStack.pop();
+    }
+
+    headingStack[headingStack.length - 1]!.children.push(node);
+    headingStack.push(node);
+    index += 1;
+  }
+
+  return root.children;
+}
+
+function collectFoldableNodeIds(nodes: FoldNode[]): string[] {
+  return nodes.flatMap(node => [
+    node.id,
+    ...collectFoldableNodeIds(node.children),
+  ]);
+}
+
+function isFoldNodeCollapsed(node: FoldNode) {
+  return collapsedFoldIds.value.includes(node.id);
+}
+
+function toggleFoldNode(node: FoldNode) {
+  collapsedFoldIds.value = isFoldNodeCollapsed(node)
+    ? collapsedFoldIds.value.filter(id => id !== node.id)
+    : [...collapsedFoldIds.value, node.id];
+}
+
+function collapseAllFoldNodes() {
+  collapsedFoldIds.value = foldableNodeIds.value;
+}
+
+function expandAllFoldNodes() {
+  collapsedFoldIds.value = [];
+}
+
+watch(foldViewEnabled, (enabled) => {
+  if (enabled) {
+    collapseAllFoldNodes();
+  }
+});
 
 /** 待恢复的滚动位置（用于防止 focus() 导致页面跳动） */
 let pendingScrollRestore: { x: number; y: number; container: HTMLElement | null; scrollTop: number } | null = null;
@@ -328,6 +453,9 @@ watch(
       />
 
       <div class="ml-auto flex flex-wrap gap-2">
+        <button class="admin-button-secondary" :class="{ 'admin-button-primary': foldViewEnabled }" type="button" @click="foldViewEnabled = !foldViewEnabled">
+          折叠
+        </button>
         <button class="admin-button-secondary" :class="{ 'admin-button-primary': viewMode === 'edit' }" type="button" @click="viewMode = 'edit'">
           编辑
         </button>
@@ -349,7 +477,52 @@ watch(
         class="min-h-[560px] lg:min-h-[720px]"
         :class="viewMode === 'split' ? 'border-r border-[var(--admin-border)]' : ''"
       >
+        <div v-if="foldViewEnabled" class="admin-fold-editor min-h-[560px] h-full lg:min-h-[720px]">
+          <div class="admin-fold-toolbar">
+            <span class="text-sm font-semibold text-slate-700">Markdown 折叠视图</span>
+            <div class="flex gap-2">
+              <button class="admin-toolbar-button" type="button" @click="expandAllFoldNodes">
+                全部展开
+              </button>
+              <button class="admin-toolbar-button" type="button" @click="collapseAllFoldNodes">
+                全部折叠
+              </button>
+            </div>
+          </div>
+
+          <div v-if="foldTree.length" class="admin-fold-tree">
+            <template v-for="node in foldTree" :key="node.id">
+              <div class="admin-fold-node" :style="{ '--fold-depth': String(Math.max(node.level - 1, 0)) }">
+                <button class="admin-fold-row" type="button" @click="toggleFoldNode(node)">
+                  <Icon :name="isFoldNodeCollapsed(node) ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="admin-fold-icon" />
+                  <span class="admin-fold-heading" :class="`admin-fold-heading-${Math.min(node.level, 6)}`">
+                    {{ node.summary }}
+                  </span>
+                  <span class="admin-fold-lines">L{{ node.startLine }}</span>
+                </button>
+                <div v-if="!isFoldNodeCollapsed(node)" class="admin-fold-children">
+                  <template v-for="child in node.children" :key="child.id">
+                    <div class="admin-fold-node" :style="{ '--fold-depth': String(Math.max(child.level - 1, 0)) }">
+                      <button class="admin-fold-row" type="button" @click="toggleFoldNode(child)">
+                        <Icon :name="isFoldNodeCollapsed(child) ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="admin-fold-icon" />
+                        <span class="admin-fold-heading" :class="`admin-fold-heading-${Math.min(child.level, 6)}`">
+                          {{ child.summary }}
+                        </span>
+                        <span class="admin-fold-lines">L{{ child.startLine }}</span>
+                      </button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <div v-else class="flex min-h-[480px] items-center justify-center text-sm text-slate-400">
+            暂无可折叠标题
+          </div>
+        </div>
         <textarea
+          v-else
           ref="textareaRef"
           class="admin-editor-textarea min-h-[560px] h-full lg:min-h-[720px]"
           :value="modelValue"
@@ -501,3 +674,118 @@ watch(
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+.admin-fold-editor {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.admin-fold-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--admin-border);
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.8rem 1rem;
+}
+
+.admin-fold-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+
+.admin-fold-node {
+  margin-left: calc(var(--fold-depth, 0) * 0.85rem);
+}
+
+.admin-fold-row {
+  display: flex;
+  min-height: 2.75rem;
+  width: 100%;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  color: #334155;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.admin-fold-row:hover {
+  border-color: rgba(37, 99, 235, 0.14);
+  background: rgba(239, 246, 255, 0.78);
+}
+
+.admin-fold-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  color: #2563eb;
+  transition: transform 0.18s ease;
+}
+
+.admin-fold-heading {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-fold-heading-1 {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.admin-fold-heading-2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.admin-fold-heading-3,
+.admin-fold-heading-4,
+.admin-fold-heading-5,
+.admin-fold-heading-6 {
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.admin-fold-lines {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #f1f5f9;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: #64748b;
+}
+
+.admin-fold-children {
+  overflow: hidden;
+  animation: fold-slide-in 0.18s ease-out;
+}
+
+@keyframes fold-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
