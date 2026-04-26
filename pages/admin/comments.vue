@@ -177,7 +177,10 @@ function getAkismetData(comment: AdminCommentItem) {
   return parseAkismetRaw(comment.moderationAkismetRaw)
 }
 
-/** 获取 Akismet 判断状态（spam/ham） */
+/**
+ * 获取 Akismet 判断状态（spam/ham）
+ * 后端返回字段: isSpam (bool), score (0-100)
+ */
 interface AkismetStatus {
   label: string
   class: string
@@ -186,32 +189,26 @@ function getAkismetStatus(comment: AdminCommentItem): AkismetStatus {
   const data = getAkismetData(comment)
   if (!data) return { label: '', class: '' }
 
-  // Akismet 返回 true 表示 spam
-  if (data === true || data?.spam === true) {
+  // 后端返回 isSpam 字段（camelCase）
+  if (data?.isSpam === true) {
     return { label: '垃圾', class: 'bg-rose-100 text-rose-700' }
   }
-  if (data === false || data?.ham === true) {
+  if (data?.isSpam === false) {
     return { label: '正常', class: 'bg-emerald-100 text-emerald-700' }
-  }
-  // 检查 spam_score
-  if (typeof data?.spam_score === 'number' && data.spam_score > 0) {
-    return { label: '垃圾', class: 'bg-rose-100 text-rose-700' }
-  }
-  if (typeof data?.spam_score === 'number' && data.spam_score <= 0) {
-    return { label: '正常', class: 'bg-emerald-100 text-em700' }
   }
 
   return { label: '未识别', class: 'bg-slate-100 text-slate-600' }
 }
 
-/** 获取 Akismet 垃圾评分（0-100，越高越危险） */
+/**
+ * 获取 Akismet 垃圾评分（0-100，越高越危险）
+ * 后端返回字段: score (number)
+ */
 function getAkismetSpamScore(comment: AdminCommentItem): number | null {
   const data = getAkismetData(comment)
   if (!data) return null
 
-  if (typeof data.spam_score === 'number') return Math.round(data.spam_score)
-  if (data.spam === true) return 99
-  if (data.spam === false) return 0
+  if (typeof data.score === 'number') return Math.round(data.score)
 
   return null
 }
