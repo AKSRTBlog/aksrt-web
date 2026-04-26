@@ -127,7 +127,7 @@ useHead(() => ({
         <nav
           v-if="archiveGroups.length > 0"
           aria-label="归档年份导航"
-          class="blog-panel flex gap-2 overflow-x-auto p-3"
+          class="blog-panel flex gap-2 overflow-x-auto p-3 lg:sticky lg:top-4 lg:z-10"
         >
           <a
             v-for="yearGroup in archiveGroups"
@@ -196,7 +196,7 @@ useHead(() => ({
               >
                 <span
                   class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] border border-[var(--blog-border)] text-sm text-[var(--blog-muted)] transition group-hover:border-[var(--blog-accent)] group-hover:text-[var(--blog-ink)]"
-                  :class="isYearExpanded(yearGroup.year) ? 'rotate-90' : ''"
+                  :class="isYearExpanded(yearGroup.year) ? 'archive-arrow-open' : ''"
                   aria-hidden="true"
                 >
                   >
@@ -228,22 +228,39 @@ useHead(() => ({
                   <span class="text-xs text-[var(--blog-subtle)]">{{ monthGroup.items.length }} 篇</span>
                 </div>
 
-                <div class="mt-4 space-y-3">
+                <div class="mt-4 overflow-hidden rounded-[4px] border border-[var(--blog-border)]">
                   <NuxtLink
                     v-for="article in monthGroup.items"
                     :key="article.id"
                     :to="`/articles/${article.slug}`"
-                    class="flex flex-col gap-2 rounded-[4px] border border-[var(--blog-border)] px-4 py-4 transition hover:border-[var(--blog-accent)] hover:bg-[var(--blog-soft)] md:flex-row md:items-center md:justify-between"
+                    class="group flex min-h-16 flex-col gap-3 border-b border-[var(--blog-border)] px-4 py-4 transition last:border-b-0 hover:bg-[var(--blog-soft)] sm:flex-row sm:items-center sm:gap-4"
                   >
-                    <div class="min-w-0">
-                      <p class="truncate text-sm font-semibold text-[var(--blog-ink)]">{{ article.title }}</p>
-                      <p class="mt-1 truncate text-xs text-[var(--blog-subtle)]">
-                        {{ article.categories?.[0]?.name || '未分类' }}
+                    <time
+                      class="shrink-0 text-sm font-semibold text-[var(--blog-accent)] sm:w-16"
+                      :datetime="article.publishedAt"
+                      :title="formatLongDate(article.publishedAt)"
+                    >
+                      {{ formatArchiveDate(article.publishedAt) }}
+                    </time>
+
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-sm font-semibold text-[var(--blog-ink)] transition group-hover:text-[var(--blog-accent)]">
+                        {{ article.title }}
+                      </p>
+                      <p v-if="article.excerpt" class="archive-excerpt mt-1 text-xs leading-5 text-[var(--blog-muted)]">
+                        {{ article.excerpt }}
                       </p>
                     </div>
-                    <time class="shrink-0 text-xs text-[var(--blog-subtle)]" :datetime="article.publishedAt">
-                      {{ formatLongDate(article.publishedAt) }}
-                    </time>
+
+                    <div class="flex shrink-0 flex-wrap gap-2 sm:max-w-48 sm:justify-end">
+                      <span
+                        v-for="categoryItem in article.categories.length ? article.categories : [{ id: 'uncategorized', name: '未分类', slug: 'uncategorized' }]"
+                        :key="`${article.id}-${categoryItem.id}`"
+                        class="rounded-[4px] bg-[var(--blog-soft)] px-2 py-1 text-xs text-[var(--blog-subtle)]"
+                      >
+                        {{ categoryItem.name }}
+                      </span>
+                    </div>
                   </NuxtLink>
                 </div>
               </div>
@@ -263,5 +280,16 @@ useHead(() => ({
 .archive-fade-enter-from {
   opacity: 0;
   transform: translateY(10px);
+}
+
+.archive-arrow-open {
+  transform: rotate(90deg);
+}
+
+.archive-excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 </style>
