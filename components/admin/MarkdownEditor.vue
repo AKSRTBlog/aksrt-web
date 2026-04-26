@@ -951,6 +951,66 @@ watch(
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+@media (max-width: 640px) {
+  .admin-fold-editor {
+    min-height: 65dvh;
+    max-height: 78dvh;
+  }
+
+  .admin-fold-toolbar {
+    align-items: stretch;
+    padding: 0.7rem;
+  }
+
+  .admin-fold-toolbar > div {
+    width: 100%;
+  }
+
+  .admin-fold-toolbar .admin-toolbar-button {
+    flex: 1;
+    min-height: 2.5rem;
+  }
+
+  .admin-fold-tree {
+    padding: 0.55rem;
+  }
+
+  .admin-fold-node {
+    margin-left: calc(var(--fold-depth, 0) * 0.55rem);
+  }
+
+  .admin-fold-row {
+    min-height: 2.55rem;
+    gap: 0.5rem;
+    border-radius: 0.7rem;
+    padding: 0.5rem 0.55rem;
+  }
+
+  .admin-fold-heading {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .admin-fold-lines {
+    max-width: 5.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .admin-fold-content {
+    margin-left: 1.7rem;
+    padding-left: 0.65rem;
+  }
+
+  .admin-fold-content :deep(pre) {
+    max-width: 100%;
+    border-radius: 0.7rem;
+    font-size: 0.78rem;
+  }
+}
+
 @keyframes fold-slide-in {
   from {
     opacity: 0;
