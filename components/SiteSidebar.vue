@@ -11,6 +11,11 @@ const navigationItems = computed(() =>
   (props.siteSettings?.navigationItems ?? []).filter((item) => item.enabled),
 );
 
+const siteTitle = computed(() => {
+  const value = typeof props.siteSettings?.siteTitle === 'string' ? props.siteSettings.siteTitle.trim() : '';
+  return value || 'Blog';
+});
+const siteInitials = computed(() => siteTitle.value.slice(0, 2).toUpperCase());
 </script>
 
 <template>
@@ -39,7 +44,7 @@ const navigationItems = computed(() =>
           <AppImage
             v-if="siteSettings?.logoUrl"
             :src="siteSettings.logoUrl"
-            :alt="siteSettings.siteTitle"
+            :alt="siteTitle"
             class="h-12 w-12 rounded-xl object-cover ring-2 ring-white shadow-sm transition group-hover:ring-[var(--blog-accent)]/30"
             loading="eager"
           />
@@ -47,14 +52,14 @@ const navigationItems = computed(() =>
             v-else
             class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--blog-ink)] to-[var(--blog-ink)]/80 text-base font-black text-white shadow-sm"
           >
-            {{ (siteSettings?.siteTitle).slice(0, 2).toUpperCase() }}
+            {{ siteInitials }}
           </div>
         </div>
 
         <!-- 站点名 -->
         <div class="min-w-0">
           <p class="truncate text-[15px] font-black leading-tight tracking-tight text-[var(--blog-ink)]">
-            {{ siteSettings?.siteTitle}}
+            {{ siteTitle }}
           </p>
         </div>
       </NuxtLink>

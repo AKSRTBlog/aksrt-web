@@ -7,7 +7,11 @@ const props = defineProps<{
 
 const logoFailed = ref(false);
 const hasLogo = computed(() => Boolean(props.logoUrl && !logoFailed.value));
-const title = computed(() => props.siteTitle || 'Blog');
+const title = computed(() => {
+  const value = typeof props.siteTitle === 'string' ? props.siteTitle.trim() : '';
+  return value || 'Blog';
+});
+const fallbackInitials = computed(() => title.value.slice(0, 2).toUpperCase());
 
 watch(
   () => props.logoUrl,
@@ -28,7 +32,7 @@ watch(
           :alt="title"
           @error="logoFailed = true"
         >
-        <span v-else class="home-splash-loader__fallback">{{ title.slice(0, 2).toUpperCase() }}</span>
+        <span v-else class="home-splash-loader__fallback">{{ fallbackInitials }}</span>
       </div>
       <p class="home-splash-loader__title">{{ title }}</p>
     </div>
