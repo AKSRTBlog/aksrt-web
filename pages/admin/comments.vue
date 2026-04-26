@@ -224,7 +224,7 @@ async function handleReject(comment: AdminCommentItem | null) {
             批量驳回
           </button>
           <button class="admin-button-danger min-h-11" :disabled="loading || selectedCount === 0 || busyId === 'bulk'" type="button" @click="runBulkAction('delete')">
-            <Icon name="fa6-solid-trash-can" class="h-4 w-4" />
+            <Icon name="fa6-solid-trash" class="h-4 w-4" />
             批量删除
           </button>
         </div>
@@ -419,7 +419,7 @@ async function handleReject(comment: AdminCommentItem | null) {
                 :disabled="!reviewCommentItem.moderationAiCategories?.length"
                 @click="categoryDetailOpen = true"
               >
-                <Icon name="fa6-solid-list-ul" class="h-4 w-4" />
+                <Icon name="fa6-solid-list" class="h-4 w-4" />
                 查看分类详情
               </button>
             </div>
