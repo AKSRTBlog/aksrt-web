@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminNavIcon from '~/components/admin/AdminNavIcon.vue'
+import { fetchPublicSiteSettings } from '~/composables/api'
 import {
   adminNavSections,
   adminPaths,
@@ -13,6 +14,7 @@ import { useAdminSession } from '~/composables/useAdminSession'
 const route = useRoute()
 const mobileOpen = ref(false)
 
+const { data: siteSettings } = await useAsyncData('site-settings', fetchPublicSiteSettings)
 const { hydrateSession, profile, logout, refreshProfile } = useAdminSession()
 
 const currentTitle = computed(() => getAdminRouteTitle(route.path))
@@ -47,13 +49,24 @@ onMounted(async () => {
   }
 })
 
-useHead({
-  meta: [
-    {
-      name: 'robots',
-      content: 'noindex, nofollow',
-    },
-  ],
+useHead(() => {
+  const logoUrl = siteSettings.value?.logoUrl || ''
+
+  return {
+    meta: [
+      {
+        name: 'robots',
+        content: 'noindex, nofollow',
+      },
+    ],
+    link: logoUrl
+      ? [
+          { key: 'site-favicon', rel: 'icon', href: logoUrl },
+          { key: 'site-shortcut-icon', rel: 'shortcut icon', href: logoUrl },
+          { key: 'site-apple-touch-icon', rel: 'apple-touch-icon', href: logoUrl },
+        ]
+      : [],
+  }
 })
 </script>
 

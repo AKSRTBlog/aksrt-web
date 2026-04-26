@@ -16,6 +16,16 @@ useHead(() => {
   const canonicalUrl = settings?.seo?.canonicalUrl || '';
   const logoUrl = settings?.logoUrl || '';
   const defaultOgImage = logoUrl ? logoUrl : '';
+  const links = [
+    ...(canonicalUrl ? [{ rel: 'canonical', href: canonicalUrl }] : []),
+    ...(logoUrl
+      ? [
+          { key: 'site-favicon', rel: 'icon', href: logoUrl },
+          { key: 'site-shortcut-icon', rel: 'shortcut icon', href: logoUrl },
+          { key: 'site-apple-touch-icon', rel: 'apple-touch-icon', href: logoUrl },
+        ]
+      : []),
+  ];
 
   return {
     titleTemplate: (titleChunk?: string) => {
@@ -35,7 +45,7 @@ useHead(() => {
       { property: 'og:site_name', content: siteTitle },
       { property: 'og:locale', content: 'zh_CN' },
     ],
-    link: canonicalUrl ? [{ rel: 'canonical', href: canonicalUrl }] : [],
+    link: links,
   };
 });
 
