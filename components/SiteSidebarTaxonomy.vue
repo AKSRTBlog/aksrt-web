@@ -16,7 +16,7 @@ const {
   data: taxonomyData,
   pending,
   refresh,
-} = await useAsyncData('sidebar-taxonomy', async () => {
+} = useAsyncData('sidebar-taxonomy', async () => {
   const [articleResult, categoryResult] = await Promise.all([
     fetchAllPublicArticles(),
     fetchPublicCategories(),
