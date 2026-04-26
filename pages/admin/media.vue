@@ -84,13 +84,10 @@ function syncPageScrollLock(open: boolean) {
     return
   }
 
-  const scrollbarWidth = Math.max(window.innerWidth - document.documentElement.clientWidth, 0)
-  const compensation = open && scrollbarWidth > 0 ? `${scrollbarWidth}px` : ''
-
   document.documentElement.style.overflow = open ? 'hidden' : ''
   document.body.style.overflow = open ? 'hidden' : ''
-  document.documentElement.style.paddingRight = compensation
-  document.body.style.paddingRight = compensation
+  document.documentElement.style.paddingRight = ''
+  document.body.style.paddingRight = ''
 }
 
 watch(detailsOpen, (open) => {
