@@ -65,8 +65,8 @@ function resolveNavigationIcon(iconName?: string | null) {
           :key="item.id"
           :to="item.href"
           exact
-          active-class="bg-[var(--blog-accent)]/8 text-[var(--blog-accent)] font-semibold"
-          class="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-[var(--blog-muted)] transition-colors hover:bg-[var(--blog-soft)] hover:text-[var(--blog-ink)]"
+          active-class="bg-blue-50 text-blue-600 font-semibold"
+          class="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-[var(--blog-muted)] transition-colors hover:bg-blue-50 hover:text-blue-600"
         >
           <span
             v-if="resolveNavigationIcon(item.iconUrl)"
