@@ -29,7 +29,7 @@ function resolveNavigationIcon(iconName?: string | null) {
 </script>
 
 <template>
-  <aside class="blog-rail hidden w-[280px] shrink-0 flex-col self-start lg:sticky lg:top-4 lg:flex">
+  <aside class="blog-rail hidden w-[280px] shrink-0 flex-col self-start rounded-2xl shadow-lg lg:sticky lg:top-4 lg:flex">
     <!-- Logo + 站点信息 -->
     <div class="border-b border-[var(--blog-border)] px-5 py-6">
       <NuxtLink class="flex items-center gap-3" to="/">
