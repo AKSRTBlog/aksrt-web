@@ -159,18 +159,8 @@ function resolveNavigationIcon(iconName?: string | null) {
         </NuxtLink>
       </nav>
 
-      <!-- 分割线 -->
-      <div class="border-t border-[var(--blog-border)]/60 mx-2"></div>
-
       <!-- 分类 & 标签 -->
       <SiteSidebarTaxonomy />
-    </div>
-
-    <!-- ========== 底部信息 ========== -->
-    <div class="border-t border-[var(--blog-border)]/60 px-5 py-3.5">
-      <p class="truncate text-center text-[11px] leading-tight text-[var(--blog-subtle)]">
-        © {{ new Date().getFullYear() }} {{ siteSettings?.siteTitle || 'Blog' }}
-      </p>
     </div>
   </aside>
 </template>
