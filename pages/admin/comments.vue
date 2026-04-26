@@ -483,6 +483,7 @@ function formatAkismetJson(raw: string | null): string {
             </div>
 
             <!-- ========== AI 风险指数（内置）========== -->
+            <template v-if="reviewCommentItem.moderationAiCategories?.length || reviewCommentItem.moderationRiskLevel">
             <div class="mt-4 rounded-lg border border-blue-100 bg-blue-50/70 p-4">
               <div class="flex items-center justify-between gap-3">
                 <div>
@@ -508,6 +509,7 @@ function formatAkismetJson(raw: string | null): string {
                 查看分类详情
               </button>
             </div>
+            </template>
 
             <!-- ========== Akismet 反垃圾判断结果 ========== -->
             <template v-if="reviewCommentItem.moderationAkismetRaw">
