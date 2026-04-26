@@ -71,6 +71,8 @@ function resolveNavigationIcon(iconName?: string | null) {
             </NuxtLink>
           </div>
         </div>
+
+        <SiteSidebarTaxonomy />
       </div>
     </div>
   </aside>
