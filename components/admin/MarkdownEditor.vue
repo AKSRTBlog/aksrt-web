@@ -284,6 +284,15 @@ function renderFoldNodeHtml(node: FoldNode) {
   return renderMarkdown(node.markdown);
 }
 
+function getFoldNodeMeta(node: FoldNode) {
+  const range = node.startLine === node.endLine ? `L${node.startLine}` : `L${node.startLine}-${node.endLine}`;
+  if (node.type === 'heading' && node.children.length > 0) {
+    return `${range} · ${node.children.length} 项`;
+  }
+
+  return range;
+}
+
 watch(foldViewEnabled, (enabled) => {
   if (enabled) {
     collapseAllFoldNodes();
@@ -588,7 +597,13 @@ watch(
               class="admin-fold-node"
               :style="{ '--fold-depth': String(row.depth) }"
             >
-              <button class="admin-fold-row" type="button" @click="toggleFoldNode(row.node)">
+              <button
+                class="admin-fold-row"
+                :class="{ 'admin-fold-row-open': !isFoldNodeCollapsed(row.node) }"
+                type="button"
+                :aria-expanded="!isFoldNodeCollapsed(row.node)"
+                @click="toggleFoldNode(row.node)"
+              >
                 <Icon :name="isFoldNodeCollapsed(row.node) ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="admin-fold-icon" />
                 <span
                   class="admin-fold-heading"
@@ -599,7 +614,7 @@ watch(
                 >
                   {{ row.node.summary }}
                 </span>
-                <span class="admin-fold-lines">L{{ row.node.startLine }}</span>
+                <span class="admin-fold-lines">{{ getFoldNodeMeta(row.node) }}</span>
               </button>
 
               <div
@@ -819,12 +834,28 @@ watch(
   background: rgba(239, 246, 255, 0.78);
 }
 
+.admin-fold-row-open {
+  border-color: rgba(37, 99, 235, 0.12);
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.admin-fold-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
 .admin-fold-icon {
   width: 1rem;
   height: 1rem;
   flex: 0 0 auto;
   color: #2563eb;
-  transition: transform 0.18s ease;
+  transition:
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.admin-fold-row:hover .admin-fold-icon {
+  transform: scale(1.08);
 }
 
 .admin-fold-heading {
@@ -877,6 +908,12 @@ watch(
   font-size: 0.72rem;
   font-weight: 650;
   color: #64748b;
+  white-space: nowrap;
+}
+
+.admin-fold-row-open .admin-fold-lines {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .admin-fold-children {
