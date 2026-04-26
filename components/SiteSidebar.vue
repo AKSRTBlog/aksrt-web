@@ -50,7 +50,7 @@ function resolveNavigationIcon(iconName?: string | null) {
     "
   >
     <!-- ========== Logo + 站点信息 ========== -->
-    <div class="relative border-b border-[var(--blog-border)] bg-gradient-to-b from-[var(--blog-soft)] to-white px-6 py-6">
+    <div class="relative border-b border-[var(--blog-border)] bg-gradient-to-b from-[var(--blog-soft)] to-white px-6 py-4">
       <!-- 装饰圆点 -->
       <div class="absolute top-4 right-6 flex gap-1.5 opacity-40">
         <div class="h-2 w-2 rounded-full bg-[var(--blog-accent)]/40"></div>
@@ -86,7 +86,7 @@ function resolveNavigationIcon(iconName?: string | null) {
     </div>
 
     <!-- ========== 主体内容（可滚动）========== -->
-    <div class="flex-1 space-y-6 overflow-y-auto px-4 py-5">
+    <div class="space-y-5 overflow-y-auto px-4 py-4" style="max-height: calc(100vh - 200px);">
       <!-- 搜索框 -->
       <div class="group">
         <SearchForm
