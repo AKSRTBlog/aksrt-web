@@ -219,7 +219,7 @@ useHead(() => {
         </aside>
       </div>
 
-      <div class="relative z-0 min-w-0 ml-[244px] flex flex-1 flex-col overflow-hidden">
+      <div class="relative z-0 min-w-0 lg:ml-[244px] flex flex-1 flex-col overflow-hidden">
         <header class="sticky top-0 z-20 border-b border-[var(--admin-border)] bg-white/90 backdrop-blur">
           <div class="flex h-16 items-center justify-between px-4 sm:px-6">
             <div class="flex items-center gap-3">
