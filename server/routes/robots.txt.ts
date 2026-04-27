@@ -1,31 +1,36 @@
 import { fetchPublicSiteSettings } from '~/composables/api';
+import { normalizeBaseUrl } from '../utils/sitemap';
 
-/**
- * robots.txt 优化：
- * - 移除多余的 Allow: /（默认就是允许，不需要写）
- * - Sitemap 指向正确的 URL
- * - 禁止后台和 API 被索引
- */
-export default defineEventHandler(async () => {
-  const settings = await fetchPublicSiteSettings();
-  const baseUrl = (settings.seo?.canonicalUrl || useRuntimeConfig().public.siteUrl || '').replace(/\/+$/, '');
+const TEXT_HEADERS = {
+  'content-type': 'text/plain; charset=utf-8',
+  'cache-control': 'max-age=3600',
+};
 
-  if (!baseUrl) {
-    // 未配置 canonical URL，返回最基础规则
-    return new Response(`User-agent: *
-Disallow: /admin/
-Disallow: /api/v1/admin/`, {
-      headers: { 'content-type': 'text/plain; charset=utf-8' },
-    });
+const DISALLOW_RULES = [
+  '/admin/',
+  '/api/v1/admin/',
+  '/api/v1/public/sync-version',
+];
+
+function renderRobots(baseUrl: string): string {
+  const lines = [
+    'User-agent: *',
+    ...DISALLOW_RULES.map((path) => `Disallow: ${path}`),
+  ];
+
+  if (baseUrl) {
+    lines.push('', `Sitemap: ${baseUrl}/sitemap.xml`);
   }
 
-  const sitemapUrl = `${baseUrl}/sitemap.xml`;
+  return `${lines.join('\n')}\n`;
+}
 
-  return new Response(`User-agent: *
-Disallow: /admin/
-Disallow: /api/v1/admin/
+export default defineEventHandler(async () => {
+  const runtimeSiteUrl = useRuntimeConfig().public.siteUrl;
+  const settings = await fetchPublicSiteSettings().catch(() => null);
+  const baseUrl = normalizeBaseUrl(settings?.seo?.canonicalUrl) || normalizeBaseUrl(runtimeSiteUrl);
 
-Sitemap: ${sitemapUrl}`, {
-    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  return new Response(renderRobots(baseUrl), {
+    headers: TEXT_HEADERS,
   });
 });

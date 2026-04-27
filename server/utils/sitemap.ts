@@ -31,7 +31,7 @@ function escapeXml(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function normalizeBaseUrl(value: unknown): string {
+export function normalizeBaseUrl(value: unknown): string {
   const raw = typeof value === 'string' ? value.trim().replace(/\/+$/, '') : '';
   if (!raw) return '';
 
