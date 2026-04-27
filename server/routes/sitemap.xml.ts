@@ -1,3 +1,4 @@
+import { getHeader } from 'h3';
 import { fetchAllPublicArticles, fetchPublicCategories, fetchPublicSiteSettings, fetchPublicStandalonePages } from '~/composables/api';
 
 /**
@@ -10,10 +11,12 @@ import { fetchAllPublicArticles, fetchPublicCategories, fetchPublicSiteSettings,
  * 3. 所有 URL 去重、按优先级排序
  * 4. 支持 sitemap index（当 URL > 50000 时自动拆分）
  * 5. lastmod 格式统一为 YYYY-MM-DD（Google 推荐）
+ * 6. escapeXml 修复 & 替换顺序（必须先替换 &）
+ * 7. getHeader 正确引入（从 h3 导入）
  */
 function escapeXml(value: string): string {
   return value
-    .replace(/&/g, '&amp;')
+    .replace(/&/g, '&amp;')   // ⚠️ 必须先替换 &
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
@@ -23,8 +26,8 @@ function escapeXml(value: string): string {
 /** 取 YYYY-MM-DD，Google 推荐此格式 */
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '';
-  const matched = iso.match(/^(\d{4}-\d{2}-\d{2})/);
-  return matched ? matched[1] : '';
+  // 兼容 "YYYY-MM-DDTHH:MM:SSZ" 和 "YYYY-MM-DD"
+  return (iso || '').slice(0, 10);
 }
 
 export default defineEventHandler(async (event) => {
@@ -60,7 +63,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // ── 收集所有 URL（去重）────────────────────────────────
+  // ── 收集所有 URL（去重）─────────────────────────────────
   const urlMap = new Map<string, { loc: string; lastmod: string; changefreq: string; priority: string }>();
 
   function addUrl(loc: string, lastmod: string | null | undefined, changefreq: string, priority: string) {
@@ -125,13 +128,12 @@ export default defineEventHandler(async (event) => {
     );
   }
 
-  // ── 如果 URL 太多，生成 sitemap index ───────────────────────
+  // ── 如果 URL 太多，生成 sitemap index ─────────────────────
   const urlList = [...urlMap.values()];
   const MAX = 50000; // Sitemap 协议上限
 
   if (urlList.length > MAX) {
-    // 拆分成多个 sitemap，返回 sitemap index
-    const chunks: string[][] = [];
+    const chunks: typeof urlList[] = [];
     for (let i = 0; i < urlList.length; i += MAX) {
       chunks.push(urlList.slice(i, i + MAX));
     }
@@ -151,7 +153,7 @@ ${chunks.map((_, i) => `  <sitemap>
     });
   }
 
-  // ── 生成标准 sitemap.xml ───────────────────────────────
+  // ── 生成标准 sitemap.xml ────────────────────────────────
   const urlEntries = urlList
     .sort((a, b) => parseFloat(b.priority) - parseFloat(a.priority))
     .map(entry => buildUrlEntry(entry))
