@@ -127,7 +127,7 @@ const displayedLinks = computed(() => {
       <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-4 text-xs text-[var(--blog-subtle)]">
         <a
           v-if="siteSettings.icpFiling"
-          href="https://beian.miit.gov.cn/"
+          :href="\`https://beian.miit.gov.cn/\${siteSettings.icpFiling}\`"
           target="_blank"
           rel="noopener noreferrer"
           class="transition hover:text-[var(--blog-ink)]"
@@ -135,7 +135,16 @@ const displayedLinks = computed(() => {
           {{ siteSettings.icpFiling }}
         </a>
         <span v-if="siteSettings.icpFiling && siteSettings.policeFiling" class="text-[var(--blog-border)]">|</span>
-        <span v-if="siteSettings.policeFiling">{{ siteSettings.policeFiling }}</span>
+        <!-- 公安备案：https://beian.mps.gov.cn/ -->
+        <a
+          v-if="siteSettings.policeFiling"
+          :href="\`https://beian.mps.gov.cn/?key=\${encodeURIComponent(siteSettings.policeFiling)}\`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="transition hover:text-[var(--blog-ink)]"
+        >
+          {{ siteSettings.policeFiling }}
+        </a>
       </div>
     </div>
 
